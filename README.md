@@ -16,7 +16,7 @@ This window is an implementation of **CMST (Cosh Moment Sturm Transform)**. Unli
 1.  **Analytically Sound ($C^\infty$):**
     The function is infinitely differentiable with no discontinuities in any derivative $f^{(n)}$. This eliminates the "spectral ringing" and mechanical jerk caused by piecewise functions like the Planck-taper or Tukey window.
 
-2.  **Zero-Preserving (Laguerre-Pólya Class):**
+2.  **Zero-Preserving :**
     Derived from CMST theorey, the kernel guarantees the preservation of realness in the signal chain. It does not introduce artificial complex roots (phantom oscillations) into the passband.
 
 3.  **Interlace-Preserving Transform:**
