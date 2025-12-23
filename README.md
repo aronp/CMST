@@ -1,8 +1,7 @@
 # cmst-window
 **The analytically sound, zero-preserving, interlace-preserving window.**
-
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-[![Stability: Verified](https://img.shields.io/badge/Stability-Verified-green)](https://github.com/yourusername/cmst-window)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Stability: Verified](https://img.shields.io/badge/Stability-Verified-green)](https://github.com/aronp/CMST)
 [![Theory: CMST](https://img.shields.io/badge/Theory-CMST-purple)](https://github.com/yourusername/cmst-window)
 
 ### 🚀 The Problem
