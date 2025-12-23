@@ -11,7 +11,7 @@ Signal processing engineers often need a "Flat-Top" window to preserve signal am
 * **Planck-taper (LIGO Standard):** Theoretically perfect flatness, but relies on **piecewise "stitching"** of functions. This creates impulsive "kicks" (discontinuities) in higher-order derivatives (Jerk/Snap) and makes hardware optimization difficult.
 
 ### 🔬 Theoretical Basis: CMST Theory
-This window is an implementation of **CMST (Cosh Moment Sturm Transform)**. Unlike standard windows which are often heuristic curve-fits, the Hyper-CMST window is constructed as a **Geometric Mollifier** with three rigorous guarantees:
+This window is an implementation of **CMST (Cosh Moment Sturm Transform)**. Unlike standard windows which are often heuristic curve-fits, the CMST window is constructed as a **Geometric Mollifier** with three rigorous guarantees:
 
 1.  **Analytically Sound ($C^\infty$):**
     The function is infinitely differentiable with no discontinuities in any derivative $f^{(n)}$. This eliminates the "spectral ringing" and mechanical jerk caused by piecewise functions like the Planck-taper or Tukey window.
@@ -23,7 +23,7 @@ This window is an implementation of **CMST (Cosh Moment Sturm Transform)**. Unli
     For the first $n$ derivatives, the window acts as a variation-diminishing operator. It preserves the root-interlacing structure of the underlying signal, ensuring that derivative noise is bounded and geometric topology is maintained even at the boundaries.
 
 ### 💡 The Formula (Hyper-CMST)
-We utilize a compensated log-concave mollifier that cancels low-order curvature to achieve "Hyper-Flatness":
+We utilize a compensated log-concave mollifier that cancels low-order curvature to achieve Flatness:
 
 $$
 w(t) = \exp\left(t^n - \frac{1}{1-t^n}\right)
@@ -35,7 +35,7 @@ $$
 
 ### 🎛️ Tunable Flatness (p-Control)
 
-Unlike traditional windows which are locked to a single profile (e.g., Hann, Blackman), the Hyper-CMST window is a parametric family. The power parameter (p) allows you to tune the window's behavior to match your specific engineering constraint:
+Unlike traditional windows which are locked to a single profile (e.g., Hann, Blackman), the CMST window is a parametric family. The power parameter (p) allows you to tune the window's behavior to match your specific engineering constraint:
 
     Mode A: The "Brick Wall" (p=6 or higher)
         Goal: Maximal Amplitude Accuracy.
@@ -53,7 +53,7 @@ Unlike traditional windows which are locked to a single profile (e.g., Hann, Bla
 Why does analytic smoothness matter? In control systems (e.g., drones, robotics), the 3rd derivative (Jerk) corresponds to mechanical stress.
 
 * **Planck-taper (Green):** Shows "impulsive" spikes in the Jerk plot where the flat section stitches to the curve. This is hidden noise.
-* **Hyper-CMST (Black):** A perfectly smooth, continuous wave.
+* **CMST (Black):** A perfectly smooth, continuous wave.
 
 ![Jerk Comparison](proofs/jerk_comparison.png)
 
