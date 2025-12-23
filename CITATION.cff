@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this window function in your research, please cite it as below."
+authors:
+- family-names: "Palmer"
+  given-names: "Aron"
+  orcid: "https://orcid.org/0009-0001-0912-0565" 
+title: "CMST: A Tunable, Analytically Smooth Window Function with Compact Support"
+version: 1.0.0
+doi: https://doi.org/10.5281/zenodo.18039911
+date-released: 2025-12-23
+url: "https://github.com/aronp/CMST" 
+repository-code: "https://github.com/aronp/CMST" 
+keywords:
+  - "Signal Processing"
+  - "Spectral Tapering"
+  - "LIGO"
+  - "Mollifier"
+  - "Window Function"
+abstract: >-
+  The CMST window is an analytically smooth (C-infinity) compact function designed to eliminate 
+  the jerk-singularities found in piecewise windows like the Planck-taper. It offers 
+  superior side-lobe suppression for high-dynamic-range signal analysis.
+  
