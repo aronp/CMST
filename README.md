@@ -33,6 +33,23 @@ $$
 * **Compensating Term ($+t^n$):** Cancels the Gaussian curvature at the origin, extending the "Table-Top" flatness to order $2n$.
 * **Mollifier Term ($-1/(1-t^n)$):** Enforces strict compact support with essential singularities at the boundaries, ensuring all derivatives decay to zero smoothly.
 
+
+### 🎛️ Tunable Flatness (p-Control)
+
+Unlike traditional windows which are locked to a single profile (e.g., Hann, Blackman), the Hyper-CMST window is a parametric family. The power parameter (p) allows you to tune the window's behavior to match your specific engineering constraint:
+
+    Mode A: The "Brick Wall" (p=6 or higher)
+        Goal: Maximal Amplitude Accuracy.
+
+        Behavior: The window remains effectively flat (>0.99) for over 70% of the duration, ensuring that signals are not attenuated in the center.
+
+    Mode B: The "Silencer" (p=2)
+        Goal: Maximal Spectral Purity.
+
+        Behavior: The window converges to an analytically smooth Gaussian-like profile. This sacrifices the "flat top" to achieve significantly faster side-lobe decay, diving into the noise floor deeper than standard piecewise functions like the Planck-taper.
+        
+        
+
 ### 📉 The "Jerk" Test (Proof)
 Why does analytic smoothness matter? In control systems (e.g., drones, robotics), the 3rd derivative (Jerk) corresponds to mechanical stress.
 
