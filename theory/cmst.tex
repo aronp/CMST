@@ -1,0 +1,1595 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amsthm,amssymb,mathtools}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{etoolbox}
+\usepackage{cleveref}
+\usepackage{fancyhdr}
+
+
+% Define the preprint header
+\fancypagestyle{preprint}{
+    \fancyhf{} % Clear all header/footer fields
+    \renewcommand{\headrulewidth}{0pt} % Remove the line
+    \fancyhead[C]{\small \textit{Preprint -- December 2025}}
+    \fancyfoot[C]{\thepage}
+}
+
+\newtheoremstyle{break}          % name
+  {6pt} {6pt}                    % space above/below
+  {\itshape}                     % body font
+  {}                             % indent
+  {\bfseries}                    % head font
+  {\newline}                     % head punctuation (forces line break)
+  {0pt}                          % space after head
+  {\thmname{#1}\thmnumber{ #2}\thmnote{ \normalfont(#3)}} % head spec
+
+% Use it for theorems that should start body on a new line:
+
+% (Optional) a matching 'definition' style with upright text:
+\newtheoremstyle{breakdef}
+  {6pt}{6pt}{\normalfont}{}{\bfseries}{\newline}{0pt}
+  {\thmname{#1}\thmnumber{ #2}\thmnote{ \normalfont(#3)}}
+\theoremstyle{breakdef}
+
+
+% ——— Theorem environments ———
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{conclusion}[theorem]{Conclusion}
+
+
+
+\AtBeginEnvironment{lemma}{\leavevmode\par\noindent\smallskip}
+
+\newcommand{\interls}{\ll}
+\newcommand{\interld}{\lessdot}
+\newcommand{\interlarrow}{\longleftarrow}
+
+\newcommand{\Rot}{\operatorname{Rot}_{\theta}}
+
+\newcommand{\Assassin}{\textbf{X}}
+
+\newcommand{\InterlacingFamily}[2]{\left\{#1, T[#1], T^2[#1], \dots, T^{#2}[#1]\right\}}
+
+\newcommand{\MutualInterlace}[2]{\mathcal{MI}\left(#1, #2\right)}
+
+\begin{document}
+\title{The Laplace Transform of Even Log concave functions having zeros on the Imaginary axis}
+\author{Aron Palmer\\ \small \texttt{palmer.aron+cmst@gmail.com}}
+\date{\today}
+\maketitle
+\thispagestyle{preprint} 
+
+\begin{abstract}
+In this paper we show that a broad class of Bilateral Laplace transforms arising from 
+even, positive, exponentially decaying kernels have all their zeros located on the 
+imaginary axis and the zeros are distinct.
+\end{abstract}
+
+\section{Introduction}
+
+In this paper we show that a broad class of Bilateral Laplace transforms arising from 
+even, positive, exponentially decaying kernels have all their zeros located on the 
+imaginary axis.  Specifically, consider functions of the form
+\begin{equation}
+F(s)=\int_{-\infty}^{\infty} e^{-f(t^{2})}\,e^{s t}\,dt,
+\qquad 
+f(t)=a_{1}t+a_{2}t^{2}+a_{3}t^{3}+\cdots+a_{n}t^{n}
+\end{equation}
+
+where $a_{n} \ge 0 $ and $n>1$ and 
+\[
+\sum_{i=1}^{n} a_i < \infty
+\]
+
+Equivalently, this means $f(1) < \infty$. \newline
+
+Under these conditions $F(s)$ extends to an entire function that has distinct zeros that lie purely on the imaginary axis.\newline
+
+
+Thus the Laplace family
+\[
+F(s)=\int_{-\infty}^{\infty} e^{-f(t^{2})}\,e^{s t}\,dt,
+\]
+constitutes a real--symmetric, genus--zero or one subclass of entire functions whose zeros are confined to the imaginary axis, are distinct, and the zeros of $F(\sqrt{-s})$ interlace with the zeros of $F''(\sqrt{-s})$
+
+We use a Cosh Transform defined as follows to produce families of functions with all real negative zeros.
+
+\[
+\mathcal{C}_{a}[f](s) := \int_{-a}^{a} f(t)\cosh(\sqrt{s}\,t)\,dt
+\]
+
+Using this, we define a "Cosh-Moment Sturm Transform" (CMST) to produce families of functions with all real negative zeros which map to pairs of imaginary zeros in the Bilateral Laplace Transform.
+
+
+\begin{definition}[Real-rooted functions]\label{def:P1}
+Let $\mathcal{P}$ be the class of real entire functions with real, simple zeros and genus at most $1$.
+Thus
+\[
+f(t) = c t^m \prod_{k=1}^{N} \left(1 + \frac{t}{r_k}\right) e^{-t/r_k}
+\]
+where $N\in\mathbb{N}\cup\{\infty\}$ and $\sum r_k^{-2} < \infty$.
+\end{definition}
+
+\begin{definition}[Real-rooted functions]\label{def:P2}
+Let $\mathcal{P}$ be the class of real entire functions with real, simple,
+ zeros and genus at most $1$.  Thus
+\[
+f(t) = c \prod_{k=1}^{N} (t+r_k)
+\]
+where $N\in\mathbb{N}\cup\{\infty\}$ and 
+$\sum_{k=1}^N \frac{1}{r_k} < \infty$ when $N=\infty$.
+\end{definition}
+
+\begin{definition}[$P_{\mathrm{pos}}$]\label{def:Ppos}
+$\mathcal{P_{\mathrm{pos}}}$ is the set of $\mathcal{P}$ that has all real distinct roots $\le$ 0 and all positive coefficients.
+
+$\mathcal{P_{\mathrm{pos-}}}$ is the equivalent of $\mathcal{P_{\mathrm{pos}}}$ but with all the functions zeros $> 0$
+
+\end{definition}
+
+\begin{definition}[Rotational operator]\label{def:rotation}
+The \emph{rotation} of two polynomials $f(t)$ and $g(t)$ by an angle
+$\theta \in \mathbb{R}$ is the linear combination
+\[
+h_\theta(t)
+:=
+\operatorname{Rot}_{\theta}(f;g)(t)
+:=
+\cos\theta \cdot f(t) + \sin\theta \cdot g(t).
+\]
+\end{definition}
+
+\begin{definition}[Fisk interlacing notation]
+\label{sec:fisk-interlacing}
+
+Let $\mathrm{roots}(f)=(a_1 < \cdots < a_n)$ and $\mathrm{roots}(g)=(b_1 < \cdots < b_m)$
+
+\begin{itemize}
+\item Same degree, largest root in $g$: $g\,\interls\,f \iff a_1<b_1<\cdots<a_n<b_n$.
+\item $g$ has one more root: $g\,\bowtie \,f \iff b_1<a_1<\cdots<b_n$.  We say that $g$ surrounds $f$
+\item Arrow shorthand: $f\,\interlarrow\,g$ means $f\interls g$ or $f \bowtie g$; the arrow points to the polynomial with the largest root.
+
+\item Arrow shorthand: $f\,\leftrightarrow \,g$ means $f$ and $g$ strictly interlace without specifying which has the largest zero.
+
+\item $f \not\leftrightarrow g$ means f and g do not strictly interlace.
+
+\end{itemize}
+\begin{lemma}[Interlacing can only break at a shared zero]\label{prop:no-break}
+Let $f\in\mathbb R[x]$ have simple real zeros $a_1<\dots<a_n$, and let $T:\mathbb R[x]\to\mathbb R[x]$ be a linear operator depending continuously on the coefficients.
+For $\lambda\in[0,1]$, set $T_\lambda := (1-\lambda)I + \lambda T$ and $g_\lambda := T_\lambda f$.
+Assume that each $g_\lambda$ is real-rooted (of degree $n$ or $n-1$).
+
+If $f$ and $g_0=f$ interlace, then the interlacing pattern can change at some $\lambda^\star$ only if
+\[
+\exists\,i\in\{1,\dots,n\}\ \text{such that}\ f(a_i)=0=g_{\lambda^\star}(a_i).
+\]
+In particular, if $f$ and $T_\lambda f$ have no common zeros for all $\lambda\in[0,1]$, then $f$ and $T_\lambda f$ interlace for all $\lambda$ (hence also $f$ and $Tf$).
+\end{lemma}
+\end{definition}
+
+
+
+
+\begin{definition}[Sturm--monotone transform ($SMT_{\sigma}$)]
+Let $\mathcal{F}$ $\in \mathcal P_{\mathrm{pos}}$.
+
+A linear operator $T:\mathcal{F}\to\mathcal{F}$ is called a \emph{Sturm--monotone transform}
+(of degree--shift $\sigma\in\{-1,0,+1\}$) if the following hold:
+\begin{enumerate}
+\item \textbf{Linearity:} $T[af+bg]=a\,T[f]+b\,T[g]$ for all $a,b\in\mathbb{R}$ and $f,g\in\mathcal{F}$.
+\item \textbf{Degree/zero shift:} For all nonzero $f\in\mathcal{F}$,
+\[
+\deg(Tf)=\deg(f)+\sigma 
+\]
+\item \textbf{Interlacing monotonicity:}
+\begin{itemize}
+
+\item  $f \leftrightarrow g \implies T f \leftrightarrow T g$.
+\item  $f \bowtie g \implies T f \bowtie T g$ 
+\end{itemize}
+\item \textbf{Positivity on $\mathcal P_{\mathrm{pos}}$:} $T$ maps $\mathcal P_{\mathrm{pos}}$ into real--rooted functions.
+\end{enumerate}
+We write $T\in\mathrm{SMT}_\sigma$ when $T$ is Sturm--monotone with degree--shift $\sigma$.
+\end{definition}
+
+\section{Rotation $\Longleftrightarrow$ Interlacing (Obreschkoff)}
+\begin{proposition}[Obreschkoff criterion; sine--cosine form]\label{prop:obreschkoff}
+Let $f,g\in\mathcal{P}$. The following are equivalent:
+
+\begin{enumerate}
+  \item $f\leftrightarrow g$
+  \item $Rot_\theta(f;g) \in\mathcal{P}$ for $\theta \in \mathbb{R} $ 
+\end{enumerate}
+
+and
+
+\begin{enumerate}
+\item $f \not\leftrightarrow g$
+\item $\exists \theta \in \mathbb{R} \text{ such that } Rot_\theta(f;g) \notin \mathcal{P}$
+\end{enumerate}
+
+\end{proposition}
+
+
+\section{Sturm Summary}
+
+Let $f$ be a real polynomial with real, simple zeros
+\[
+r_1 < r_2 < \dots < r_n.
+\]
+The following classical facts describe the behaviour of zeros under
+differentiation, perturbation, reflection, and translation.
+
+\begin{itemize}
+
+\item[\textbf{(S1)}] 
+\textbf{Sturm Separation.}
+Between any two consecutive zeros of $f$ there is exactly one zero of $f'$:
+\[
+r_1 < s_1 < r_2 < s_2 < \dots < r_{n-1} < s_{n-1} < r_n,
+\qquad f'(s_k)=0.
+\]
+Thus $f'$ has real, simple zeros strictly interlacing those of $f$.
+\textit{(See Sturm (1836); also, e.g., Karlin--Studden,
+\emph{Tchebycheff Systems}, Thm.~1.1.)}
+
+\item[\textbf{(S2)}]
+\textbf{Logarithmic derivative monotonicity.}\newline
+The function
+\[
+\phi(t)=\frac{f'(t)}{f(t)}=\sum_{i=1}^n \frac{1}{t-r_i}
+\]
+is strictly decreasing on each interval $(r_i,r_{i+1})$, with 
+$\phi(t)\to +\infty$ as $t\downarrow r_i$ and 
+$\phi(t)\to -\infty$ as $t\uparrow r_{i+1}$.
+Thus $\phi(t)=c$ has exactly one solution in each such interval.
+\textit{(Standard in Sturm theory; see Karlin--Studden, Ch.~1, or
+Marden, \emph{Geometry of Polynomials}, Ch.~6.)}
+
+\item[\textbf{(S3)}]
+\textbf{First–order perturbations preserve real zeros.} \newline
+For every real $a$,
+\[
+f + a f'
+\]
+has real, simple zeros and shares a strict interlacing with $f$.  
+(This follows from (S2) by solving $f+af'=0$ via $\phi(t)=-1/a$.)
+\textit{(See Marden, Ch.~6; also Obreschkoff,
+\emph{Verteilung und Berechnung der Nullstellen}, §10.)}
+
+\item[\textbf{(S4)}]
+\textbf{Sturm Comparison.}
+If $f$ and $g$ have strictly interlacing zeros, then $f'$ and $g'$
+also have strictly interlacing zeros.
+More generally, any differential operator of the form
+$a_0(t)f + a_1(t)f'$ with $a_1(t)$ not changing sign
+preserves interlacing.
+\textit{(See Sturm (1836); also, Gantmacher–Krein,
+\emph{Oscillation Matrices and Kernels}, Ch.~1.)}
+
+
+\item[\textbf{(S5)}]
+\textbf{Translation preserves interlacing.}
+For any real $a$, the shift operator
+\[
+exp(aD)f(t) = f(t+a)
+\]
+preserves real, simple zeros and preserves all interlacing relations.
+\textit{(Immediate from the fact that translation is a homeomorphism of $\mathbb{R}$.)}
+
+\end{itemize}
+
+Together, \textbf{(S1)}--\textbf{(S5)} imply that the operators
+$D$, $1+aD$, $e^aD$, and scalar multiples or
+compositions of these preserve real distinct zeros and preserve
+interlacing on $P$.
+
+
+\section{Exterior-root control and the sharp $\theta$-range in $\mathcal{P}_{\mathrm{pos}}$}
+
+\begin{lemma}[Exterior-root criterion in $\mathcal{P}_{\mathrm{pos}}$]\label{lem:exterior-root-Ppos}
+Let 
+\[
+f(t)=a_n t^n+\cdots+a_1 t+a_0,\qquad 
+g(t)=b_n t^n+\cdots+b_1 t+b_0,
+\]
+with  $f,g\in\mathcal{P}_{\mathrm{pos}}$ with $f\to g$, and $h_\theta:=\operatorname{Rot}_\theta(f;g)$. Then $h_\theta$ has at most one zero outside the zeros of $g$ (the others lie in the gaps), and $h_\theta\in\mathcal{P}_{\mathrm{pos}}$ iff this unique exterior zero lies in $(-\infty,0)$.
+
+Then all zeros of $h_\theta$ are real; they are negative and interlace those of $f$ and $g$ \emph{except possibly one} additional Exterior root in $[0,\infty]$. Precisely:
+
+\begin{enumerate}[label=\upshape(\roman*)]
+\item (\emph{Endpoint signs control the Exterior root}) 
+Set 
+\[
+\theta_{\infty} := \arctan{(-b_n/a_n)}
+\]
+and
+\[
+\theta_{0} := \arctan{(-b_0/a_0)}
+\]
+
+Then $h_\theta$ has a (necessarily unique) zero in $(0,\infty)$ if and only if for 
+$-\pi/2 > \theta > \pi/2$ then $\theta_{\infty} < \theta <= \theta_{0}$
+
+\item (\emph{Zero at infinity / degree drop})
+If $\theta=\theta_{\infty}$
+, then the degree of 
+$ h_{\theta} \le n-1$ 
+(the leading term cancels). 
+In this case we say the exterior zero is at $\infty$;
+ the polynomial has one fewer zero in $\mathbb R$.
+\item (\emph{$b_n/a_n$ and $b_0/a_0$})
+
+Note that in $\theta_{\infty} = arctan{(-b_n/a_n)}$ , $b_n/a_n$ is the $\lim_{t \to \infty}  g(t)/f(t)$ and in $\theta_{0} := \arctan{(-b_0/a_0)}$, $b_0/a_0 = g(0)/f(0)$ 
+\end{enumerate}
+\end{lemma}
+
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{llll}
+\hline
+\textbf{Theta range} 
+& \textbf{Interlacing} 
+& \textbf{$\mathcal{P_{\mathrm{pos}}}$} 
+& \textbf{Notes} \\
+\hline
+
+$\tfrac{\pi}{2} $ 
+& $g = h \to f$ 
+& $h \in \mathcal{P_{\mathrm{pos}}}$ 
+& \\
+
+$\tfrac{\pi}{2} \rightarrow 0$ 
+& $g \to h \to f$ 
+& $h \in \mathcal{P_{\mathrm{pos}}}$ 
+& \\
+
+$ 0$ 
+& $g \to h = f$ 
+& $h \in \mathcal{P_{\mathrm{pos}}}$ 
+& \\
+
+
+$0 \rightarrow \theta_{0}$ 
+& $g \to f \to h$ 
+& $h \in \mathcal{P_{\mathrm{pos}}}$ 
+& \\
+
+$\theta_{0}$ 
+& $g \to f \to h$ 
+& $h \in \mathcal{P_{\mathrm{pos}}}$ 
+& $0$ at zero \\
+
+$\theta_{0} \rightarrow \theta_{\infty}$ 
+& $g \to f \to h$ 
+& $h \notin \mathcal{P_{\mathrm{pos}}}$ 
+& \\
+
+$\theta_{\infty}$ 
+& $g \to f \bowtie h$ 
+& $h \in \mathcal{P_{\mathrm{pos}}}$ 
+& $0$ at infinity \\
+
+$\theta_{\infty} \rightarrow -\tfrac{\pi}{2}$ 
+& $h \to g \to f$ 
+& $-h \in \mathcal{P_{\mathrm{pos}}}$ 
+& \\
+
+$-\tfrac{\pi}{2}$ 
+& $-h = g \to f$ 
+& $-h \in \mathcal{P_{\mathrm{pos}}}$ 
+& \\
+
+\hline
+\end{tabular}
+\caption{Interlacing and $\mathcal{P_{\mathrm{pos}}}$ Behaviour of $h_\theta = 
+\cos\theta\,f + \sin\theta\,g$ as $\theta$ varies for $g \to f, (f,g \in \mathcal{P_{\mathrm{pos}}})$.}
+\end{table}
+
+
+
+\begin{remark}[Exceptional nullspace case: $Tf\equiv 0$]
+Let $T$ be a Sturm--monotone transform (linear, degree-shift $\sigma\in\{-1,0,+1\}$, interlacing-monotone on its domain).
+If $f$ lies in the nullspace  (i.e.\ $Tf\equiv 0$), the usual interlacing statements must be read with care:
+
+\begin{enumerate}
+\item \textbf{Pairwise interlacing becomes vacuous.}
+If $Tf\equiv 0$ but $Tg\not\equiv 0$, then assertions like “$Tf$ interlaces $Tg$” are void since $Tf$ has no zeros to order.
+
+\item \textbf{Finite--defect mechanism via annihilation of a reference.}
+Many operators annihilate a specific reference (e.g.\ $(1{+}D^2)\cos\equiv 0$).  
+When one factor in a Wronskian identity is killed by $T$, the resulting interlacing with that reference fails only in a finite prefix (the “finite defect”) but is intact thereafter.  
+\end{enumerate}
+\end{remark}
+
+
+\section*{Summary of Operator Properties}
+
+\begin{description}
+    \item[The Derivative Operator ($D$)] \hfill \\
+    \textbf{Effect:} $D(t^n) = n t^{n-1}$ \\
+    \textbf{Stability:} Preserves $P$ (real roots) and $\mathcal{P_{\mathrm{pos}}}$ (non-positive roots). \\
+    \textbf{Interlacing:} Preserves interlacing for any real-rooted polynomial. \\
+    \textbf{Sturm Class:} $D\in\mathrm{SMT}_{-1}$
+
+
+    \item[The Affine Derivative ($1 + aD$)] \hfill \\
+    \textbf{Effect:} $t^n \mapsto t^n + a n t^{n-1}$ \\
+    \textbf{Stability:} Preserves $P$ for all $a \in \mathbb{R}$. \\
+    \textit{Note:} Preserves $\mathcal{P_{\mathrm{pos}}}$ if $a \ge 0$. If $a < 0$, roots may shift out of the non-positive half-line. \\
+    \textbf{Sturm Class:} $D\in\mathrm{SMT}_{0}$
+
+
+    \item[The Euler Operator ($tD$)] \hfill \\
+    \textbf{Effect:} $t^n \mapsto n t^n$ \\
+    \textbf{Stability:} Preserves $P$ unconditionally (provided $f'(0) \neq 0$). \\
+    \textbf{Interlacing:} Preserves interlacing for $\mathcal{P_{\mathrm{pos}}}$ and $\mathcal{P_{\mathrm{neg}}}$. \\
+    \textbf{Sturm Class:} $D\in\mathrm{SMT}_{0}$
+
+
+    \item[The Generalized Euler Operator ($1 + a tD$)] \hfill \\
+    \textbf{Effect:} $t^n \mapsto (1 + a n)t^n$ \\
+    \textbf{Stability:} Preserves $P$ for all $a > 0$. \\
+    \textit{Note:} Preserves $\mathcal{P}_{\mathrm{pos}}$ if $a \ge 0$. If $a < 0$, stability cannot be guaranteed for $\mathcal{P}_{\mathrm{pos}}$. \\
+        \textbf{Sturm Class:} $D\in\mathrm{SMT}_{0}$
+
+\end{description}
+
+
+\begin{theorem}
+Let $F_0,F_1,\dots,F_m$ be real entire functions (or real polynomials) each having simple real zeros, all lying on
+the same side of the real line. 
+
+Assume:
+\begin{enumerate}
+    \item[\textup{(i)}] (\textbf{Adjacent interlacing, same
+    orientation}) For each $k=0,1,\dots,m-1$ we have 
+    $F_k \to F_{k+1}$
+   
+    \item[\textup{(ii)}] (\textbf{Endpoint interlacing, same
+    orientation}) We also have $F_0 \to F_m$
+    
+\end{enumerate}
+
+
+
+Then the entire family $\{F_0,\dots,F_m\}$ is \emph{pairwise
+interlacing}: for every $0\le i < k \le m$ 
+\begin{proof}
+Since all the zeros of $\{F_1,\dots,F_{m-1}\}$ are ordered and confined to be between the zeros of $F_0$ and $F_m$.
+Thus every pair of functions in the family interlaces, with the same
+orientation.
+\end{proof}
+
+\end{theorem}
+
+\begin{theorem}
+If $\mathcal{C}_{a}[f](s) \in \mathcal{P}_{\mathrm{pos}}$ and interlaces with 
+$\mathcal{C}_{a}[g](s) \in \mathcal{P}_{\mathrm{pos}}$ 
+then $\mathcal{C}_{a}[t^2 f](s)$ interlaces with 
+$\mathcal{C}_{a}[t^2 g](s)$ and both are in $\mathcal{P}_{\mathrm{pos}}$
+
+\begin{proof}
+Consider
+$F(s^2) = \mathcal{C}_{a}[f](s^2)$ which will be a function with all imaginary roots.
+Take the second derivative of this.
+\[
+\frac{\partial^2F\left(s^2\right)}{\partial s^2} = 4 s^2 F''\left(s^2\right)+2 F'\left(s^2\right)
+\]
+
+and map $s^2$ back to $s$ giving us the operator
+
+\[
+4 s F''(s)+2 F'(s) \text{ or }  D(4sD + 2)
+\]
+
+Both $D$ and $(4sD + 2)$ preserve interlacing in $\mathcal{P}_{\mathrm{pos}}$ and map $\mathcal{P}_{\mathrm{pos}}$ to $\mathcal{P}_{\mathrm{pos}}$
+
+\end{proof}
+\end{theorem}
+
+
+\section{Cosh--Moment Sturm Family (CMST) and Global Interlacing}
+\begin{definition}[Cosh--moment family]\label{def:CMST}
+For $n \in \mathbb{N}_0$ and $s\ge0$ define
+\[
+F_n(s):=(2n+1)\int_{-1}^1 t^{2n}\cosh(\sqrt{s}\,t)\,dt
+\]
+\end{definition}
+\begin{lemma}[$F_n(s) \in P_{\mathrm{pos}}$]
+\[
+F_0(s) = 2\frac{\sinh \left(\sqrt{s}\right)}{\sqrt{s}}
+\]  which only has zeros on the negative real axis and noting that $ t^2$ maps $P_{\mathrm{pos}} \to P_{\mathrm{pos}} $
+\end{lemma}
+
+\subsection*{Coshine--Moment Sturm Tower (CMST)}
+
+\begin{definition}[CMST family]
+A \emph{Cosine--Moment Sturm Tower} (CMST) is a collection
+\[
+\mathcal{C}_a = \{F_\alpha : \alpha\in A\}
+\]
+of real functions together
+with a distinguished total order $<$ $A$ on the index set $A$, such that:
+
+\begin{enumerate}
+  \item[(i)] (\textbf{Real--rootedness}) Each $F_\alpha$ has only real,
+  simple zeros, all lying in a fixed interval. $(-\infty,0)$.
+
+  \item[(ii)] (\textbf{Global interlacing}) For any $\alpha<\beta$ in $A$,
+  the pair $(F_\alpha,F_\beta)$ has interlacing zeros in the direction
+  \[
+  F_\alpha \;\to\; F_\beta.
+  \]
+  In particular, every pair of distinct members of $\mathcal{C}_a$
+  interlaces with a consistent arrow direction.
+
+  \item[(iii)] (\textbf{$t^2$ interlacing})
+  $F_\alpha \to t^2 F_{\alpha+1}$
+\end{enumerate}
+
+We say that $(\mathcal{C}_a)$ is a CMST structure if it
+satisfies (i)--(iii).
+We also say that $f(t) \in CMST$ if it preserves CMST.
+We will refer to $f(t)$ even if its an even function and $f(t)$ not even if $f(t) \ne f(-t)$
+\end{definition}
+
+\begin{theorem}[Interlacing Direction by Reciprocal Roots]\label{def:Roots}
+Let $f(s)$ and $g(s)$ be two polynomials of degree $n$ in $\mathcal{P}_{\text{pos}}$ that interlace. We normalize them such that $f(0)=g(0)=1$, so they can be expressed in the product form:
+$$
+f(s) = \prod_{k=1}^n \left(1 + \frac{s}{r_k}\right) \quad \text{and} \quad g(s) = \prod_{k=1}^n \left(1 + \frac{s}{s_k}\right)
+$$
+where $r_k > 0$ and $s_k > 0$ are the magnitudes of the non-positive roots.
+
+The coefficient of the linear term, $s^1$, is the sum of the reciprocal roots:
+$$
+f(s) = 1 + a_1 s + \dots \implies a_1 = \sum_{k=1}^n \frac{1}{r_k}
+$$
+$$
+g(s) = 1 + b_1 s + \dots \implies b_1 = \sum_{k=1}^n \frac{1}{s_k}
+$$
+
+The direction of interlacing is determined by comparing these sums:
+$$
+a_1 < b_1 \quad \iff \quad  f \to g 
+$$
+This means that if the sum of the reciprocal roots of $f$ is smaller than that of $g$, then the roots of $f$ are more negative than the roots of $g$.
+\end{theorem}
+
+
+\begin{theorem}[Globally interlacing family]
+\[
+F_n(s):=(2n+1)\int_{-1}^1 t^{2n}\cosh(\sqrt{s}\,t)\,dt,
+\]
+is a family of mutually interlacing functions with 
+$F_{n} \to F_{n+a} \, \forall \, n \,\in \mathbb{N}_0, a \in \mathbb{N} $
+\end{theorem}
+\begin{proof}
+\[
+F_0(s) = \frac{\sinh \left(\sqrt{s}\right)}{\sqrt{s}}
+\]
+\[
+F_1(s) =  3 \left(\frac{(s+2) \sinh \left(\sqrt{s}\right)}{s^{3/2}}-\frac{2 \cosh \left(\sqrt{s}\right)}{s}\right)
+\]
+We know that $F_1(s) \in \mathcal{P}_{\mathrm{pos}}$ If we look at the zeros of $F_0(s)$ we can see that $F_1(s)$ alternates in sign at each zero.
+Looking at the coefficients of s we get for $F_0(s)$ its $1/6$ and for $F_1(s)$ its  $3/10$ therefore $F_0(s) \to F_1(s)$
+
+Since $t^2$ preserves interlacing, $F_0(s) \to F_1(s) \implies F_1(s) \to F_2(s)$ and in general $F_n(s) \to F_{n+1}(s)$
+
+$F_{\infty}(s) = \cosh \left(\sqrt{s}\right) $ so $F_0(s) \to F_{\infty}(s)$ and we have a complete family of mutually interlacing functions in $\mathcal{P}_{\mathrm{pos}}$ with each having zeros strictly between 
+$\frac{\sinh \left(\sqrt{s}\right)}{\sqrt{s}}$ and $\cosh \left(\sqrt{s}\right)$ except for the first and the last which are those functions.
+
+\end{proof}
+
+\begin{remark}
+The s coefficient in $F_n(s)$ is $\frac{1}{2} \left(1-\frac{2}{2 n+3}\right)$ which can be seen to be increasing with n. As $ n \to \infty$ the first term converges to $1/2$ which is the sum of the reciprocals of the roots of $\cosh \left(\sqrt{s}\right)$
+\[
+\sum _{n=1}^{\infty } \frac{4}{\pi ^2 (1-2 n)^2} = 1/2
+\]
+
+\end{remark}
+
+\begin{theorem}[An Application of Cauchy--Schwarz inequality]\label{def:Cauchy}
+Let $f(t)$ be a non-negative, continuous function on the interval $[-1, 1]$. The following inequality holds:
+$$
+\frac{\int_{-1}^1 t^4 f(t) \, dt}{\int_{-1}^1 t^2 f(t) \, dt} > \frac{\int_{-1}^1 t^2 f(t) \, dt}{\int_{-1}^1 f(t) \, dt}
+$$
+
+\begin{proof}
+We define the $2k$-th moment of $f(t)$ over the interval $[-1, 1]$ as:
+$$
+\mu_{2k} = \int_{-1}^1 t^{2k} f(t) \, dt
+$$
+Assuming $f(t) \ge 0$ and $f(t)$ is not identically zero, we have $\mu_0 > 0$, $\mu_2 > 0$, and $\mu_4 > 0$.
+
+The inequality is equivalent to proving the log-concavity of the moment sequence:
+$$
+\mu_4 \mu_0 > (\mu_2)^2
+$$
+
+The Cauchy--Schwarz inequality for the weighted inner product $\langle g, h \rangle_f = \int_{-1}^1 g(t) h(t) f(t) \, dt$ states that:
+$$
+\left( \int_{-1}^1 g(t) h(t) f(t) \, dt \right)^2 \le \left( \int_{-1}^1 g(t)^2 f(t) \, dt \right) \left( \int_{-1}^1 h(t)^2 f(t) \, dt \right)
+$$
+We choose the functions $g(t)$ and $h(t)$ as follows:
+\begin{enumerate}
+    \item Let $\mathbf{g(t) = 1}$
+    \item Let $\mathbf{h(t) = t^2}$
+\end{enumerate}
+
+Substituting these into the Cauchy--Schwarz inequality:
+\begin{itemize}
+    \item The Left-Hand Side (LHS) of the inequality becomes:
+    $$
+    \left( \int_{-1}^1 1 \cdot t^2 f(t) \, dt \right)^2 = \left( \int_{-1}^1 t^2 f(t) \, dt \right)^2 = (\mu_2)^2
+    $$
+    \item The Right-Hand Side (RHS) of the inequality becomes:
+    $$
+    \left( \int_{-1}^1 1^2 f(t) \, dt \right) \left( \int_{-1}^1 (t^2)^2 f(t) \, dt \right) = \left( \int_{-1}^1 f(t) \, dt \right) \left( \int_{-1}^1 t^4 f(t) \, dt \right) = \mu_0 \mu_4
+    $$
+\end{itemize}
+Applying the Cauchy--Schwarz inequality yields:
+$$
+(\mu_2)^2 \le \mu_0 \mu_4
+$$
+Dividing both sides by the positive quantity $\mu_0 \mu_2$:
+$$
+\frac{\mu_2^2}{\mu_0 \mu_2} \le \frac{\mu_0 \mu_4}{\mu_0 \mu_2} \quad \implies \quad \frac{\mu_2}{\mu_0} \le \frac{\mu_4}{\mu_2}
+$$
+
+The equality $(\mu_2)^2 = \mu_0 \mu_4$ holds if and only if the functions $g(t)=1$ and $h(t)=t^2$ are linearly dependent, i.e., $t^2 = c \cdot 1$ for some constant $c$. This is impossible on the interval $[-1, 1]$ since $t^2$ is not a constant function. \newline
+
+Therefore, the inequality is strict:
+$$
+\mu_4 \mu_0 > (\mu_2)^2
+$$
+which proves the original statement:
+$$
+\frac{\int_{-1}^1 t^4 f(t) \, dt}{\int_{-1}^1 t^2 f(t) \, dt} > \frac{\int_{-1}^1 t^2 f(t) \, dt}{\int_{-1}^1 f(t) \, dt}
+$$
+
+
+\end{proof}
+\end{theorem}
+
+\begin{theorem}
+For $f(t) \in CMST_1$ 
+\[
+\mathcal{C}_{1}(f)(s) \to \mathcal{C}_{1}(t^2 f)(s)
+\]
+
+\begin{proof}
+If we look at the normalised $\mathcal{C}_{1}(f)(s)$ and $\mathcal{C}_{1}(t^2 f)(s)$
+and then look at the $s$ term in the expansion, we see that using $\cref{def:Cauchy}$ and $\cref{def:Roots}$ we get this result. (Noting that $f(t)$ needs to be of constant sign to be in CMST.)
+\end{proof}
+\end{theorem}
+
+\section{Assumption on Operator Convergence}
+\label{sec:convergence_assumption}
+
+\begin{remark}[Convergence Assumption]
+\label{rem:convergence}
+Unless explicitly stated otherwise, all differential and integral operators, particularly those defined on spaces of polynomials or analytic functions, are assumed to operate within domains where the resulting integrals and series expressions **converge**. Specifically, any results concerning zero-preserving properties or interlacing are valid only when the formal application of the operator yields a well-defined function. This includes, but is not limited to, the proper convergence of integrals used in generating function representations or the convergence of series expansions for associated polynomials.
+\end{remark}
+
+\section{CMST Zero-Preserving Operators}
+\begin{definition}[CMSTZP]\label{def:CMSTZP}
+An operator $T$ acting on CMST members is a \emph{CMST Zero-Preserving Operator} 
+if: (i) $T(F) \in \mathcal{P}_{\mathrm{pos}}$  whenever $F$ is CMST; and (ii) $F \to t^2 F \implies T(F) \to T(t^2F)$.
+\end{definition}
+
+\begin{proposition}[Simple even kernel]\label{def:k-simple-even}
+Let
+\[
+k(t^2)=(1+a t^2) \qquad a > 0.
+\]
+\end{proposition}
+
+
+\begin{remark}
+This is  $F_n(s) + (a(3 + 2n))/(1 + 2n) F_{n+1}(s)$ so all the zeros are between $F_{n}$ and $F_{n+1}$
+\end{remark}
+
+\begin{proposition}
+If $f(t), g(t)$ both even maps CMST to CMST then $f(t)g(t)$ maps CMST to CMST.
+\end{proposition}
+
+\begin{proposition}[$k(t) \in \mathcal{P}_{\mathrm{pos}} \implies k(t^2) \in CMST $]\label{def:k-ppos-even}
+If $k(t) \in \mathcal{P}_{\mathrm{pos}}$ then
+$k(t^2) \in CMST$
+This is just $\cref{def:k-simple-even}$ repeated.  
+\begin{remark}
+Note that this is a little too strict, since we can have repeated zeros and this still holds.
+\end{remark}
+\end{proposition}
+
+
+
+\begin{proposition}[Positive even kernel]\label{def:k-positive-even}
+Let
+\[
+k(t^2)=\sum_{i\ge1} a_i\,t^{2i},\qquad a_i \ge 0.
+\]
+
+We can see that at zeros of $F_0(s)$, $F_{n>}(s)$ are all the same sign alternating in signs at each zero of $F_0(s)$  Therefore $F_0(s) \to F_0 k(t^2) (s)$ and since $t^2$ preserves interlacing our whole family is preserved.
+
+\end{proposition}
+
+\begin{proposition}[An even $T \in CMST \implies T^n \in CMST$]\label{def:k-powers1}
+
+This is just repeated application of the transform.
+
+\end{proposition}
+
+\begin{proposition}[$k(t^2) \in CMST \implies e^{a k(t^2)} \in CMST, a > 0$]\label{def:k-powers2}
+
+
+If $k(t^2) \in CMST$ then so is $1+k(t^2)/n \in CMST, n \in \mathbb{N}$
+We then take the limit of $(1+k(t^2)/n)^n$ as $n \to \infty$
+
+\end{proposition}
+
+
+
+\section{Rotation and Interlacing under Operators}
+\begin{corollary}[Local preservation on admissible arcs]\label{cor:local-Ppos-arcs}
+If $f \in CMST$ and $f(t) > 0, \forall, t \in [-1,1]$ 
+then $\Rot({f},{f t^2}) \in \mathcal{P}_{\mathrm{pos}}$ in the admissible range of $\cref{lem:exterior-root-Ppos}$,
+Thus, along each admissible arc, the rotation orbit remains real-rooted after applying $t^2$.
+
+In the case of 
+$\mathcal{C}_{1}(\Rot({f},{f t^2}))(s)$
+
+$\theta_0$ is when 
+\[
+\mathcal{C}_{1}(\Rot({f(0)},{t^2 f}(0)) = 0
+\]
+or more simply.
+\[
+\int_{-1}^1 \Rot({f},{f t^2}) \, dt = 0 
+\]
+In terms of the whole family, this doesnt help us much though, since 
+\[
+\int_{-1}^1 \Rot({f},{f t^2}) \, dt \to \int_{-1}^1 t^2 \Rot({f},{f t^2}) \, dt 
+\]
+so therefore, $\int_{-1}^1 t^2 \Rot({f},{f t^2}) \, dt \not \in \mathcal{P}_{\mathrm{pos}}$ 
+So to preserve the whole family in $\mathcal{P}_{\mathrm{pos}}$ we need
+\[
+\Rot\left(\cosh \left(\sqrt{s}\right),\cosh \left(\sqrt{s}\right)\right) \in \mathcal{P}_{\mathrm{pos}}
+\]
+
+This is true for $\theta \in [\pi/2, -\pi/4)$ and then, because $f \in CMST$ 
+then 
+\[
+\mathcal{C}_{1}(\Rot({f},{f t^2}))(s) \in CMST
+\]
+
+When $\theta = -\pi/4$ then 
+\[
+\text{Rot}\left(\theta ,\cosh \left(\sqrt{s}\right),\cosh \left(\sqrt{s}\right)\right) = 0 
+\]
+
+This corresponds to $(1-t^2) = 0$ at $t = 1$
+
+
+We will call this function the Assassin \Assassin
+
+$\theta_{\infty}$ is when 
+\[
+\mathcal{C}_{1}(\Rot({f},{f t^2}))(s) 
+\]
+has any positve zeros.
+
+Looking at
+\[
+\int_{-1}^1 \left(1-a t^2\right) \cosh \left(\sqrt{s} t\right) \, dt
+\]
+we can see that for $a \le 1$ we will have no positive zeros since $\left(1-a t^2\right) \cosh \left(\sqrt{s} t\right) \ge 0$ for $s>0$ and $t \in [0,1]$ and for $3 > a \ge 1$ we will have a positive zero since at $s = 0$ ,$\int_0^1 \left(1-a t^2\right) \, dt >0 $ and limit $\underset{s\to \infty }{\text{lim}}\int_0^1 \left(1-a t^2\right) \cosh \left(\sqrt{s} t\right) \, dt$ is negative.  We don't have to worry about $a \ge 3$ since even though $(1-a t^2)$ will have no positive zeros, $t^2(1-a t^2)$ will or some power of $t^2$ will.
+
+Thus $\theta_{\infty} = -\pi/4$ 
+
+
+In summary
+\[
+\mathcal{C}_{1}(\Rot({f},{f t^2}))(s) 
+\]
+preserves CMST in  $\theta \in [\pi/2, -\pi/4)$
+
+We will consider the case of $\theta = -\pi/4$ next
+
+\end{corollary}
+\begin{remark}[Behaviour at $\theta = -\pi/4$]
+At $\theta = -\pi/4$ we have
+\[
+\int_{-1}^1 \left(1-t^2\right) \cosh \left(\sqrt{s} t\right) \, dt
+\]
+since $\theta = -\pi/4$ is $\theta =\theta_{\infty}$ we have 
+\[
+\int_{-1}^1 \cosh \left(\sqrt{s} t\right) \, dt \bowtie \int_{-1}^1 \left(1-t^2\right) \cosh \left(\sqrt{s} t\right) \, dt
+\]
+which preserves the family however applying it again gives
+\[
+\int_{-1}^1 \left(1-t^2\right) \cosh \left(\sqrt{s} t\right) \, dt \bowtie \int_{-1}^1 \left(1-t^2\right)^2 \cosh \left(\sqrt{s} t\right) \, dt
+\]
+which means that 
+\[
+ \int_{-1}^1 \left(1-t^2\right)^2 \cosh \left(\sqrt{s} t\right) \, dt
+\]
+has two less zeros than
+\[
+\int_{-1}^1 \cosh \left(\sqrt{s} t\right) \, dt
+\]
+so interlacing is impossible.  The zeros we have lost are the largest roots, so we have one defect in the interlacing.
+
+\end{remark}
+
+\begin{remark}[The Assassin \Assassin]
+In summary $\Assassin$ removes a zero, kills our $\cosh \left(\sqrt{s}\right)$ function the tail of our interlacing and applied twice breaks our tower of mutually interlacing functions.  We still have 
+\[
+\mathcal{C}_{1}({f}))(s) \to \mathcal{C}_{1}({t^2 f}))(s)
+\]
+all the way up the tower, but we have lost the final interlacing which guaranteed that they were all mutually interlacing.
+Note that the Assassin appears in terms like $(1-t^4) = (1-t^2)(1+t^2)$ and in general in terms like $(1-t^{2n})$
+\end{remark}
+
+\begin{remark}
+CMST vs. General Laguerre-Pólya Operators: It is crucial to distinguish the stability of operators within the CMST framework from their behavior in the general Laguerre-Pólya class (P). In the broader space P, infinite-order differential operators such as $e^{D^2}$ (the backward heat operator) are generally not zero-preserving; they can force real roots to migrate into the complex plane. However, the CMST class is a "protected subalgebra" defined by a strict constraint. Within this restricted domain, operators like $e^{D^2}$ map CMST to CMST. Thus, the structural rigidity of the CMST allows for the use of powerful operators that are "forbidden" or unstable in the general theory of real-rooted functions.
+\end{remark}
+
+\section*{P\'olya--Levin Background (for reference)}
+\begin{theorem}[P\'olya; see Levin]\label{thm:Polya}
+If $w:[0,1]\to[0,\infty)$ is nondecreasing and not almost everywhere zero, then
+\[
+G(a):=\int_0^1 w(t)\cos(a t)\,dt
+\]
+extends to an entire function of exponential type whose real zeros are simple and appear once in each interval $(k\pi,(k+1)\pi)$; nonreal zeros lie on the imaginary axis.
+\end{theorem}
+
+\begin{remark}
+References: G.\ P\'olya \cite{Polya1918,Polya1927}; B.\ Ya.\ Levin \cite[Chapter II, Thm.\ 7]{Levin1964}.
+\end{remark}
+\begin{theorem}[Obreschkoff, strict version]
+Let $p$ and $q$ be real-rooted polynomials with simple zeros. Then the following are equivalent:
+
+
+    \item Every nontrivial linear combination $\alpha p + \beta q$ $(\alpha,\beta \in \mathbb{R})$ 
+    is
+     real-rooted.
+     
+    \item The zeros of $p$ and $q$ strictly interlace.
+\end{theorem}
+
+
+\begin{proposition}[Contrapositive of Obreschkoff]
+Let $p,q\in\mathbb{R}[x]$ be real-rooted polynomials. 
+If the zeros of $p$ and $q$ do \emph{not} interlace, then there exists
+$\lambda\in\mathbb{R}$ such that $p+\lambda q$ has a nonreal zero (equivalently,
+is not real-rooted).
+\end{proposition}
+
+\begin{proof}[Proof sketch]
+We first treat the generic case: $p$ and $q$ have simple zeros and no common zeros.
+Set the Wronskian
+\[
+W(x):=p(x)q'(x)-p'(x)q(x).
+\]
+A standard equivalent form of Obreschkoff’s theorem states that
+$p$ and $q$ interlace if and only if $W$ has constant sign on $\mathbb{R}$.
+Thus, if $p$ and $q$ do not interlace, $W$ changes sign, so there exists $x_0\in\mathbb{R}$ with $W(x_0)=0$.
+
+At such an $x_0$, the linear system
+\[
+p(x_0)+\lambda q(x_0)=0,\qquad p'(x_0)+\lambda q'(x_0)=0
+\]
+has a real solution $\lambda_0$ (the determinant is $W(x_0)=0$).
+Hence $r_{\lambda_0}(x):=p(x)+\lambda_0 q(x)$ has a multiple real root at $x_0$.
+As $\lambda$ varies across $\lambda_0$, a standard root‐continuity argument shows that this
+double root splits into a pair of complex conjugate roots for nearby $\lambda$, so
+$r_\lambda$ fails to be real-rooted for some real $\lambda$ arbitrarily close to $\lambda_0$.
+
+If $p$ and $q$ have a common factor, factor it out and apply the argument to the coprime
+quotients; if multiple roots occur, perturb coefficients slightly (or use a limiting
+argument) to reduce to the simple-root case and pass to the limit.
+\end{proof}
+
+\begin{proposition}[Positive combinations of iterates preserve interlacing]
+Let $T\in\mathrm{SMT}_\sigma$ and suppose all iterates $T^i$ act on $\mathcal{F}$ and satisfy the same
+interlacing clause as in the definition. For any finite family of nonnegative coefficients $a_i\ge 0$ (not all zero),
+define
+\[
+S \;=\; \sum_{i=0}^m a_i\, T^i .
+\]
+Then $S$ preserves the corresponding interlacing relation:
+\begin{itemize}
+\item If $\sigma=0$ and $f\to g$, then $Sf\to Sg$.
+\item If $\sigma=-1$ and $f\bowtie g$, then $Sf\bowtie Sg$ (one-sided removal persists).
+\item If $\sigma=+1$ and $f\to g$, then $Sf\to Sg$ (one-sided addition persists).
+\end{itemize}
+\end{proposition}
+
+\begin{theorem}[Pólya, 1918–1927]\label{thm:polya-cosine}
+For an even integer exponent $2q$ with $q\ge1$,
+\[
+U_q(s)\;=\;\int_{0}^{\infty} e^{-t^{2q}}\cos(st)\,dt
+\]
+extends to an entire even function of $s$ whose zeros are all real. 
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Pólya’s method places these cosine/Fourier transforms in the Laguerre–Pólya class by constructing them from kernels that are totally positive (``universal factors''). For $e^{-t^{2q}}$ (even, rapidly decaying, log-convex tails), one obtains an entire function of order $2q/(2q-1)\in(1,2)$ with only real zeros. See the survey of Dimitrov–Rusev for a modern consolidation $\cite{dimitrov2011}$, especially the discussion of Pólya’s 1918 and 1927 papers and the explicit statement that
+\[
+\int_{0}^{\infty}\!e^{-t^{2q}}\cos(zt)\,dt
+\quad\text{has only real zeros.}
+\]
+\end{proof}
+
+\begin{remark}
+For non-even exponents $2+\varepsilon$ (with $\varepsilon\notin 2\mathbb{N}$), the transform
+$\displaystyle \int_{0}^{\infty} e^{-t^{2+\varepsilon}}\cos(st)\,dt$
+is still an entire even function of Genus 1 with an infinity of zeros
+\end{remark}
+
+\begin{definition}[Entire functions of genus one]\label{def:genus1}
+An entire function $f$ is said to be of \emph{genus~1} if it admits a canonical Weierstrass factorization
+\[
+f(z)=e^{a z + b}\,z^{m}\!\prod_{k=1}^{\infty}
+\Big(1-\frac{z}{z_k}\Big)\exp\!\!\Big(\frac{z}{z_k}\Big),
+\]
+and the zero sequence $\{z_k\}$ satisfies
+$\sum_k |z_k|^{-2}<\infty$ but $\sum_k |z_k|^{-1}=\infty$.
+Equivalently, $f$ is of finite order $1<\rho\le2$.
+Typical examples include $\sin(\pi z)$, $\cos z$, and $\int_{0}^{\infty} e^{-t^{4}}\cos(z t)\,dt$.
+\end{definition}
+
+\begin{definition}[Entire functions of genus zero]\label{def:genus0}
+An entire function $f$ is of \emph{genus~0} if it admits the Weierstrass product
+\[
+f(z)=e^{a z + b}\,z^{m}\!\!\prod_{k=1}^{\infty}\Bigl(1-\frac{z}{z_k}\Bigr),
+\qquad
+\sum_{k}\frac{1}{|z_k|}<\infty.
+\]
+Equivalently, the canonical product converges without any exponential
+correction factors and $f$ has finite order $\rho\le1$.
+Typical examples include exponential functions and products with
+quadratically or faster growing zeros, such as
+$\displaystyle \prod_{n=1}^{\infty}\!\!\bigl(1-\frac{z}{n^2}\bigr)$.
+\end{definition}
+\begin{theorem}[Pólya]\label{thm:polya-genus1}
+Fix $\varepsilon>0$ and set $m=2+\varepsilon$. Define
+\[
+F_\varepsilon(s)\;=\;\int_{0}^{\infty} e^{-t^{m}}\cos(st)\,dt
+\qquad (s\in\mathbb{R}).
+\]
+Then $F_\varepsilon$ extends to an even entire function on $\mathbb{C}$ of order
+\[
+\rho=\frac{m}{\,m-1\,}=\frac{2+\varepsilon}{1+\varepsilon}\in(1,2),
+\]
+and hence of \emph{genus} $1$ (since $1<\rho<2$).
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+\emph{Entirety.} For $s\in\mathbb{C}$ one has
+\[
+\bigl|e^{-t^{m}}\cos(st)\bigr|\;\le\;e^{-t^{m}}\,e^{|\Im s|\,t},
+\]
+and $\int_{0}^{\infty} e^{-t^{m}+|\Im s|\,t}\,dt<\infty$ for every $s$ because $t^{m}$ ($m>1$) dominates linearly as $t\to\infty$. Thus the integral converges absolutely and defines an entire function by dominated convergence (differentiate under the integral).
+
+\emph{Order.} By the Laplace/Legendre-transform asymptotics,
+\[
+\log |F_\varepsilon(s)| \;=\; O\!\bigl(|s|^{\rho}\bigr)
+\quad\text{with}\quad
+\rho=\frac{m}{m-1},
+\]
+and this bound is sharp (saddle-point/steepest-descent at $t\sim c\,|s|^{1/(m-1)}$). Hence $F_\varepsilon$ has order $\rho\in(1,2)$. For entire functions with noninteger order $\rho$, the \emph{genus} equals $\lfloor \rho\rfloor$; therefore $F_\varepsilon$ has genus $1$.
+\end{proof}
+
+\begin{remark}
+The importance of this result for the paper is that functions of order $m=2+\varepsilon$ produce transforms with infinite zeros in most of the cases we will be looking at.
+\end{remark}
+
+\begin{remark}[Genus and reciprocal-sum criterion]
+If an entire function admits the canonical product
+\[
+f(s)=e^{a s+b}\prod_{k=1}^{\infty}\Bigl(1-\frac{s}{s_k}\Bigr),
+\]
+then the product converges (and $f$ is of genus $0$) precisely when
+\[
+\sum_{k}\frac{1}{|s_k|}<\infty.
+\]
+If instead $\sum|s_k|^{-1}$ diverges but $\sum|s_k|^{-2}<\infty$, one must include the exponential correction
+$e^{s/s_k}$, yielding a genus-$1$ product.
+Thus, informally, \emph{a finite sum of reciprocals of zeros corresponds to genus~0.}
+\end{remark}
+
+\begin{remark}[Genus of $\cos s$ versus $\cos\!\sqrt{s}$]
+The zeros of $\cos s$ are $s_k=(k+\tfrac12)\pi$, which grow linearly.
+Hence the exponent of convergence of $\{s_k\}$ is $\lambda=1$, and
+the minimal integer $p$ with $p+1>\lambda$ is $p=1$; thus
+$\cos s$ is an entire function of genus~1.  Its canonical product can
+be paired symmetrically as
+\[
+\cos s
+  = \prod_{k=0}^{\infty}
+    \left(1-\frac{s^{2}}{\bigl((k+\tfrac12)\pi\bigr)^{2}}\right),
+\]
+an even product that converges absolutely without exponential factors.
+
+For $\cos\!\sqrt{s}$, the zeros are
+$s_k=((k+\tfrac12)\pi)^{2}$, which grow quadratically.
+Then $\lambda=\tfrac12$, so the genus is $p=0$.
+Its Weierstrass product is
+\[
+\cos\!\sqrt{s}
+  = \prod_{k=0}^{\infty}
+    \left(1-\frac{s}{\bigl((k+\tfrac12)\pi\bigr)^{2}}\right),
+\]
+showing explicitly that $\cos\!\sqrt{s}$ is entire of genus~0
+while $\cos s$ is entire of genus~1.
+\end{remark}
+
+\begin{remark}[Known cases whose transform produces only real zeros]
+\leavevmode
+\begin{enumerate}[label=(\alph*)]
+\item The Gaussian, $\,e^{-t^{2}}$ is zero free (though I think we show here that on any finite domain it has an infinity of real zeros).
+\item For the monomial case $\phi(t)=e^{-t^{2m}}$ with $m\ge 2$, it is classical (Pólya) that $\widehat{\phi}$ has only real zeros
+\item Known “universal factor’’ results (Pólya–de~Bruijn type) and total-positivity criteria cover several two– and three–term exponents (e.g.\ $e^{-(a t^{4}+b t^{2})}$ and, more generally, $e^{-(a t^{4q}+b t^{2q}+c t^{2})}$ under constraints)
+\item $e^{-\cosh(t)}$
+G. Pólya, "Über trigonometrische Integrale mit nur reellen Nullstellen" (1927)
+\end{enumerate}
+\end{remark}
+
+
+\section{Stability and Destruction in Mutually Interlacing Families}
+
+In this section, we examine the stability of mutually interlacing families in $\mathcal{P}_{\mathrm{pos}}$ under linear combinations. Specifically, we analyze how the introduction of negative coefficients (the "Assassin" mechanism) affects the preservation of the family structure.
+
+\begin{definition}[Generated Family]
+Let $\mathcal{F} = \{F_0, F_1, \dots, F_n\}$ be a family of mutually interlacing functions in $\mathcal{P}_{\mathrm{pos}}$, generated by an interlacing-preserving operator $T$ (typically $Tf \approx t^2 f$), such that $F_k \to F_{k+1}$ for all $k$ and $T$ maps $\mathcal{P}_{\mathrm{pos}}$ to $\mathcal{P}_{\mathrm{pos}}$
+\end{definition}
+
+\subsection{Positive Coefficients: Absolute Stability}
+\begin{proposition}[Convex Combinations Preserve Family]
+Any linear combination of the family members with strictly positive coefficients:
+\[
+H(s) = \sum_{k=0}^n c_k F_k(s), \quad c_k \ge 0
+\]
+remains in $\mathcal{P}_{\mathrm{pos}}$ and preserves the global interlacing structure.
+\end{proposition}
+\begin{proof}
+At the least negative root of the largest $F_k(s)$ all the terms are positive.  At the next zero down they are all negative, so there is a zero between $F_0(s)$ and $F_k(s)$.  This repeats all the way down the zeros.  This means that $F_0(s) \to H(s) \to F_k(s)$.  Since $T$ maps $\mathcal{P}_{\mathrm{pos}}$ and preserves interlacing this means that $T F_0(s) \to T H(s) \to T F_k(s)$ and a new family of mutually interlacing functions is produced.  If we let the transform
+\[
+T_{+} = \sum_{k=0}^n c_k F_k(s) \quad c_k \ge 0
+\]
+We get $T_{+} F_0(s) \to T_{+} F_1(s) \cdots \to T_{+} F_k(s)$
+and  $T_{+} F_0(s) \to T_{+} F_k(s)$
+
+\end{proof}
+\begin{remark}
+Positive coefficients are very safe in interlacing terms and move zeros away from 0.
+\end{remark}
+
+\subsection{Negative Coefficients: The Rightward Shift}
+\begin{remark}[The Assassin's Shift]
+Introducing a negative coefficient acts as a perturbation that shifts roots to the right. 
+Consider $H_\epsilon = F_0 - \epsilon F_k$ with $\epsilon > 0$. 
+As $\epsilon$ increases, the largest root of $H_\epsilon$ moves towards the origin. If $\epsilon$ exceeds a critical threshold, the root crosses zero onto the positive real axis, causing the function to exit $\mathcal{P}_{\mathrm{pos}}$.
+\end{remark}
+
+
+\subsection{The Critical Value: Surrounding}
+\begin{proposition}[Creation of Surrounding Relation]
+There exists a critical value $\epsilon^*$ for the negative coefficient such that the largest zero is removed (pushed to infinity or the boundary). 
+At this value, the new function $H_{\epsilon^*}$ has one fewer root than the base family. Consequently, the original family members now \emph{surround} the new function:
+\[
+F_k \bowtie H_{\epsilon^*}
+\]
+This state represents a "Finite Defect."
+\end{proposition}
+
+\subsection{High-End Negative Terms: The Assassin}
+\begin{proposition}[Lowest Negative Term Principle]
+If the negative coefficients are confined to high-order terms (e.g., terms corresponding to $F_k$ for large $k$), there exists a value that removes a zero and produces the surrounding relation.
+Specifically, if 
+\[
+H(s) = F_0(s) - \lambda F_m(s)
+\]
+the negative tail acts as a single block. The dominant negative term at infinity cancels the positive behavior of lower terms, executing the "Assassin" mechanism and reducing the effective degree of the function.
+\end{proposition}
+
+\subsection{One Sign Change: Variation Diminishing}
+\begin{theorem}[Admissibility of One Sign Change]
+Let the sequence of coefficients $\{c_k\}$ in the combination $H(s) = \sum c_k F_k(s)$ have exactly one sign change (from positive to negative).
+Then $H(s)$ retains real-rootedness (with at most one positive root, which can be pushed to infinity).
+\end{theorem}
+\begin{proof}
+This follows from the variation diminishing property of totally positive kernels (as established by Schoenberg/Fisk). One sign change in the coefficient sequence implies at most one sign change in the function values (roots) on the positive half-line. By adjusting the magnitude of the negative tail, this single "bad" root is pushed to the boundary, leaving the remaining roots in $\mathcal{P}_{\mathrm{pos}}$.
+\end{proof}
+
+\subsection{Family Size Limitation}
+\begin{conclusion}[Truncation of Mutual Interlacing]
+The term $(1 - F_m)$ is only guaranteed to preserve mutual interlacing for the first $m$ terms of the family.
+
+While the lower-order members $F_0, \dots, F_{m-1}$ interlace with the modified function (due to the surrounding property $F \bowtie G$), terms higher than $F_m$ rely on geometric root positioning that is destroyed by the defect introduced at index $m$.
+Thus, the "Assassin" creates a ceiling: the global mutual interlacing of the tower is truncated, and the sustainable family size is determined by the index $m$ of the lowest negative term.
+\end{conclusion}
+
+
+\begin{theorem}[Infinite series exponent (part 1)]\label{thm:infinite-series-exp}
+Let $f(t) = a_1 t + a_2 t^2 + a_3 t^3 + \cdots$ be a power series with  $a_i > 0$
+and $\sum_{i=1}
+^{\infty} a_i < \infty$. Then the bilateral Laplace transform
+\[
+F(s) = \int_{-1}^{1} e^{-f(t^2)} e^{st}\,dt
+\]
+has all its zeros on the imaginary axis.
+\end{theorem}
+
+\begin{proof}
+
+Let $a = \sum_{i=1}^{\infty} a_i$ which is finite by assumption.
+
+Then
+\[
+(1-(a_1 t^2 + a_2 t^4 + a_3 t^6 \cdots)/a) \ge 0 \in [-1,1]
+\]
+Therefore
+\[
+\mathcal{C}_{1}  (1-(a_1 t^2 + a_2 t^4 + a_3 t^6 \cdots)/n)(s) \in \mathcal{P}_{\mathrm{pos}} \, \text{if} \, n \ge a
+\]
+and this is true for any n larger than a.
+
+So taking the limit
+\[
+(1-(a_1 t^2 + a_2 t^4 + a_3 t^6 \cdots)/n)^n = e^{-f(t^2)} \,\text{as} \, n \to\infty
+\]
+
+we get 
+\[
+F(s) =\mathcal{C}_{1} e^{-f(t^2)} (s) \in \mathcal{P}_{\mathrm{pos}}
+\]
+and in fact
+\[
+\mathcal{C}_{1} e^{-f(t^2)} (s) \to  \mathcal{C}_{1}t^2 e^{-f(t^2)}(s)
+\]
+
+So provided that any terms of the series expansion of $e^{-f(t^2)}$ of $1- t^{2n}$ don't fall in $[-1,1]$ the full family is preserved.
+
+\end{proof}
+
+
+
+\section{To Infinity and Beyond}
+
+In this section we examine what happens to the interlacing structure of our families as we extend the domain of integration from $[-1,1]$ to $[-\infty,\infty]$. We discover that \emph{global mutual interlacing} is destroyed, though \emph{sequential interlacing} survives and some families do survive.
+
+\subsection{On the Infinite Domain: The Damage}
+\begin{theorem}
+All is not lost though. Using the above techniques we arrive at another proof of Polya's result that $\mathcal{C}_{\infty}e^{-t^{2k}}(s)$ has all real distinct zeros in $\mathcal{P}_{\mathrm{pos}}$ and that they interlace with $\mathcal{C}_{\infty} t^2 e^{-t^{2k}}(s)$.  We now show that 
+$\mathcal{C}_{\infty} e^{-t^{2k}}(s)$ has a family size of $k+1$.
+\end{theorem}
+
+
+\begin{proof}
+Moving back to the Bilateral Laplace, lets consider
+\[
+\frac{\partial}{\partial s}  \int_{-\infty }^{\infty } \exp (-s t) \frac{\partial }{\partial t}\exp \left(-t^{2 k}\right) \, dt
+\]
+which we can express as
+\[
+-2 k \int_{-\infty }^{\infty }  e^{-t^{2 k}} t^{2 k} e^{-s t} \, dt
+\]
+
+The operator we have applied is $Ds$ so this clearly preserves interlacing so back in CMST we have
+\[
+\mathcal{C}_{\infty}[e^{-t^{2 k}}](s) \to \mathcal{C}_{\infty}[t^{2 k} e^{-t^{2 k}}](s)
+\]
+and since we know that
+\[
+\mathcal{C}_{\infty}[e^{-t^{2 k}}](s) \to \mathcal{C}_{\infty}[t^{2} e^{-t^{2 k}}](s)
+\]
+and that $t^2$ preserves interlacing we have a family back of mutually interlacing functions.
+\[
+\mathcal{C}_{\infty}[e^{-t^{2 k}}](s) \to \mathcal{C}_{\infty}[t^{2} e^{-t^{2 k}}](s) \to \cdots \to \mathcal{C}_{\infty}[ t^{2 k} e^{-t^{2 k}}](s)
+\]
+which is of size $k+1$
+\end{proof}
+
+\begin{remark}
+The kernel $e^{-t^{2k}}$  serves as a critical benchmark for the stability of the CMST on infinite domains. It demonstrates that the 'Assassin' mechanism does not induce a catastrophic collapse of the zero set. Instead, it imposes a finite defect, truncating the mutually interlacing family to a precise size of k+1. 
+
+\end{remark}
+
+
+\begin{remark}
+\[
+\lim_{n \to \infty}e^{-t^{2n}}
+\]
+is basically compact support so we can see some of the differences between compact support and infinite support.Compact support means that we can have infinite size families and often do.  Infinite support means finite size families, and indeed in order to converge we need an "Assassin" term that limits the size of the family.
+\end{remark}
+
+\section*{Hotel California}
+We get that if
+\[
+\mathcal{C}_{a} f(t^2) \in CMST
+\]
+then so is
+\[
+\mathcal{C}_{a} \mathcal{C}_{a} f(t^2) 
+\]
+So we have a closed family. 
+\newline
+\begin{quote}
+\textit{"Such a lovely place... you can check out any time you like, but you can never leave."}
+\end{quote}
+
+\subsection*{The Isomorphism of Symmetry}
+The closure property is structurally enforced by the isomorphism between the additive and multiplicative groups. Consider the mapping $x = e^t$. (Remember $e^t \in CMST$) We observe a direct correspondence between the symmetries:
+\begin{align*}
+    \text{Additive Domain ($t \in \mathbb{R}$):} & \quad \phi(t) = f(e^t) + f(e^{-t}) \quad (\text{Even Symmetry } t \to -t) \\
+    \text{Multiplicative Domain ($x \in \mathbb{R}^+$):} & \quad \psi(x) = f(x) + f(1/x) \quad (\text{Inversion Symmetry } x \to 1/x)
+\end{align*}
+If the operator $\mathcal{C}_a$ preserves the real-rootedness of the even function $\phi(t)$ (trapping zeros on the line $\Im(t)=0$), the rigidity of the exponential map mandates that the zeros of $\psi(x)$ are preserved in the corresponding locus (typically the unit circle $|x|=1$ or the real line, depending on the specific class).
+
+Thus, the "Hotel California" principle applies strictly: the preservation of zeros in the $f(e^t) + f(e^{-t})$ form \textit{guarantees} the zero-preserving nature of $f(x) + f(1/x)$. The geometry allows no escape.
+
+\section{The Gaussian Limit}
+
+\subsection{The Vanishing Act: Limit of the Finite Domain}
+The Gaussian kernel arises as the singular limit of the polynomial family defined on compact domains. Consider the standard generator sequence from the ``Assassin'' class:
+\begin{equation}
+    f_N(t) = \left( 1 - \frac{t^2}{N} \right)^N, \quad t \in [-\sqrt{N}, \sqrt{N}].
+\end{equation}
+The zeros of $f_N(t)$ are located at $t = \pm \sqrt{N}$. As $N \to \infty$, these zeros migrate to infinity, leaving the limit function devoid of finite roots:
+\begin{equation}
+    \lim_{N \to \infty} f_N(t) = e^{-t^2}.
+\end{equation}
+
+The Gaussian is on the limit of zero destruction.  As we increase the range of the integral it manages to destroy zeros at the same rate so that by $\infty$  they are all gone.  Maybe of interest, but on any finite range it has an infinite number of real zeros.
+
+The Gaussian is an entire function of order 2 that has no zeros. It can pull out a set of functions for which $ f(n+1) \bowtie f(n)$.  This is also the only place in this paper where you can actually see the $\bowtie$ working.
+
+\[
+f(n) = \mathcal{C}_{\infty} t^{2n} e^{-t^2} (s) \in \mathcal{P}_{\mathrm{pos}}
+\]
+
+which is a modified form of the even Hermite polynomials.
+
+
+\begin{remark}
+Note we can do this with other exponential terms and get families of mutually interlacing polynomials.
+\[
+\mathcal{C}_{\infty} t^{2n} e^{-t^{2k}} (s) \in \mathcal{P}_{\mathrm{pos}}
+\]
+resulting in functions with infinite numbers of zeros with $f(n) \to f(n+1)$ and a family of rolling mutually interlacing functions of size $k+1$
+\end{remark}
+
+\section{Asymptotic Distribution of Zeros}
+This section is all known theory based on the works of $E.~C.~Titchmarsh$,
+$G.~P\acute{o}lya$ and 
+$F.~W.~J.~Olver$ \newline
+\newline
+
+We wont be using these results further on, but if you are here, looking at zeros, their distribution is probably of interest. \newline
+
+
+If we think of 
+\begin{equation}
+F(s) = \int_{-\infty }^{\infty } f(t) e^{s t} \, dt
+\end{equation}
+where $f(t)$ is very log concave then if we normalise the integral we get a sharper and shaper peak, approaching a Dirac delta function at the point where $\log{f'(t)}=-s$. Lets call point that $z(s)$
+ This gives us that 
+\begin{equation}
+F(s) = \int_{-\infty }^{\infty } 
+f(t) e^{s t} \, dt \sim  
+\int_{-\infty }^{\infty } 
+\delta(t-z(s))f(z) e^{s t} \, = e^{s z(s)}
+\end{equation}
+So
+
+\begin{equation}
+F(s)+F(-s) \sim  \cosh(s z)
+\end{equation}
+
+By performing the substitution $s \to is$, we move to the cosine series:
+\begin{equation}
+    F(is) + F(-is) = \int_{-\infty }^{\infty } f(t) \cos{s t} \, dt \sim  \cos(s z(s))
+\end{equation}
+
+
+\begin{remark}
+Asymptoticically we should expect the function to behave like $\cos(s z(s))$
+This approximation should get better and better for higher values of s as the function becomes more Dirac delta  like
+\end{remark}
+\begin{remark}
+We wont be proving this, but the second derivative looks very like a term that would interlace with the original function.  We almost get the Wronskian and I think the Laplace transform preserves the Wronskian, but thats for another day.
+\[
+\left( z'(s)+z(s)\right)^2 \cos (s z(s))+\sin (s z(s)) \left(s z''(s)+2 z'(s)\right)
+\]
+
+\end{remark}
+\begin{remark}
+It becomes very clear if you try to numerically integrate functions like
+\[
+\int_0^{\infty } e^{s t-\cosh (t)} \, dt
+\]
+near say $s=100$ where the normalisation term is of the order of $\sim 10^{274}$ and the function becomes really sharp.  And since its Dirac delta like, we get that the terms in $s$ have the ratio of roughly the saddle point and since the shape is skewed to the high side each term will increase in ratio over the previous terms.  This results in the terms having a strict Log Concavity. This is not meant to be rigourous, just an insight into whats going on with large exponential type functions.
+\end{remark}
+
+
+\section{Beyond}
+
+\subsection*{1. The Role of Parity in the Transform}
+So far, our analysis has primarily focused on even functions, $f(t) = f(-t)$, due to their algebraic simplicity. For the linear action of the operator $\mathcal{C}_a$, non-even functions can often be simplified because the operator annihilates the odd component. Specifically, if we decompose any function into even and odd parts, the odd component vanishes under the transform:
+\begin{equation}
+\mathcal{C}_{a} \left[ f(t) - f(-t) \right](s) \equiv 0.
+\end{equation}
+However, linearity is not the only concern. To build this theory, we must consider the \textit{multiplicative structure} of the family. When multiplying two non-even functions $f(t)$ and $g(t)$, the odd components interact to produce a new even component that survives the transform:
+\begin{equation}
+f(t)g(t) = \underbrace{(f_{\text{even}}g_{\text{even}} + f_{\text{odd}}g_{\text{odd}})}_{\text{Surviving Even Part}} + \underbrace{(f_{\text{even}}g_{\text{odd}} + f_{\text{odd}}g_{\text{even}})}_{\text{Vanishing Odd Part}}.
+\end{equation}
+Therefore, to ensure that the product $f(t)g(t)$ preserves interlacing, we must impose conditions on the coefficients of the full expansion, not just the even ones.
+
+\subsection*{2. The Positive Coefficient Condition}
+We established previously that even functions of the form:
+\begin{equation}
+f(t) = \sum _{n=0}^{\infty } a_n t^{2n}, \quad a_n \ge 0
+\end{equation}
+preserve the interlacing property of the kernel, mapping to $\mathcal{C}_{a} f(t) (s)$. We can extend this to general power series. Consider:
+\begin{equation}
+f(t) = \sum _{n=0}^{\infty } a_n t^n, \quad a_n \ge 0.
+\end{equation}
+Under the action of $\mathcal{C}_a$, all odd powers vanish, leaving only the sum over even powers with positive coefficients. Thus, strict positivity of the Maclaurin coefficients is a sufficient condition for preserving interlacing. Consequently, if $f(t)$ and $g(t)$ possess non-negative coefficients, their product $f(t)g(t)$ will also possess non-negative coefficients (by Cauchy convolution), preserving the ``safe'' status of the function.
+
+\begin{remark}
+Note that this works for negative odd coefficients as well, we just have to make sure that we don't multiply a function with negative odd coefficents with a function with positive odd coefficients.
+\end{remark}
+
+\subsection*{3. Connection to Stability (Hermite-Biehler)}
+This condition links directly to the \textbf{Hermite-Biehler Theorem}. If a polynomial (or entire function) $f(t)$ has all its zeros in the left half-plane (including the imaginary axis, $\operatorname{Re}(t) \le 0$), it implies a specific structure in its coefficients. For real polynomials, strict Hurwitz stability implies that the coefficients are all of the same sign (typically positive). Thus, functions in the Hurwitz class serve as valid generators for our sequence.
+
+\begin{remark}
+This can be seen in the expansion of
+\[
+\left(1+\frac{s}{a-i b}\right) \left(1+\frac{s}{a+i b}\right)
+\]
+which is 
+\[
+\frac{a^2+2 a s+b^2+s^2}{a^2+b^2}
+\]
+with the only odd term being $2 a s$. So any product of these terms will have all positive coeffients.
+
+\end{remark}
+
+\subsection*{4. Building the Tower: Exponentials and Double Exponentials}
+We begin with the elementary exponential functions:
+\begin{enumerate}
+    \item $f(t) = e^t$: All coefficients are strictly positive. Stable.
+    \item $f(t) = e^{-t}$: Even function $\cosh(t)$, odd function $\sinh(t)$ valid class.all zeros on the imaginary axis and interlacing.
+\end{enumerate}
+
+\begin{remark}
+$e^{-t}$ has negative odd coefficients so we should really only combine it with operators with negative odd coefficients
+\end{remark}
+\begin{remark}
+Note: While $e^t$ looks like a shift operator, in the context of CMST it behaves differently.
+\end{remark}
+
+By taking the composition limit, we can construct the double exponential:
+\begin{equation}
+\lim_{n \to \infty} \left(1 - \frac{e^{-t}}{n}\right)^n = e^{-e^{-t}}.
+\end{equation}
+Since this is derived from stability-preserving operations, $e^{-e^{-t}}$ is an interlacing-preserving function. 
+
+\begin{remark}
+$e^{-e^{-t}}$ doesnt really have any zeros and if it does they are at $-\infty$, so we are in the stable region.
+\end{remark}
+
+By extension, the following bounded forms are also interlacing preserving:
+\begin{equation}
+1 - e^{-e^{-t}} > 0 \quad \text{and} \quad 1 + e^{-e^{-t}} > 0
+\end{equation}
+
+\begin{lemma} [CMST Property of the Operator]
+If $f(t) \in CMST$ then so is $\lambda^2 f ''(t) - f(t)$ provided its  $ \ge 0$
+We note that
+\[
+\frac{\int_{-\infty}^{\infty} f(t) (\lambda  s+1) \cosh \left(\sqrt{s} t\right) \, dt}{\lambda  s+1} = \int_{-\infty}^{\infty} f(t) \cosh \left(\sqrt{s} t\right) \, dt
+\]
+so we havent really done anything.  But another expression of this via the Bilateral Laplace transform is
+\[
+\frac{\int_{-\infty}^\infty \cosh \left(\sqrt{s} t\right) \left(\lambda^2  f''(t)-f(t)\right) \, dt}{\lambda  s+1}
+\]
+provided that $\left(\lambda^2  f''(t)-f(t)\right) > 0$
+if needed we can multiply by $(1 + \lambda s)$ to get a function in $\mathcal{P}_{\mathrm{pos}}$
+\end{lemma}
+
+\begin{lemma}[Conditions around a function $e^{-a t}f(t)$ that is even]
+Consider a generic function $f(t)$ and construct the weighted function with a parameter $a$:
+\begin{equation}
+    g(t) = e^{-at} f(t).
+\end{equation}
+We decompose $f(t)$ into its even and odd components, $f(t) = f_{\text{even}}(t) + f_{\text{odd}}(t)$.
+Expressing the exponential weight as $e^{-at} = \cosh(at) - \sinh(at)$, we expand the product:
+\begin{align*}
+    g(t) &= \left[ \cosh(at) - \sinh(at) \right] \left[ f_{\text{even}}(t) + f_{\text{odd}}(t) \right] \\
+         &= \cosh(at) f_{\text{even}}(t) + \cosh(at) f_{\text{odd}}(t) - \sinh(at) f_{\text{even}}(t) - \sinh(at) f_{\text{odd}}(t).
+\end{align*}
+Grouping the terms by parity:
+\begin{align*}
+    g_{\text{even}}(t) &= \cosh(at) f_{\text{even}}(t) - \sinh(at) f_{\text{odd}}(t) \\
+    g_{\text{odd}}(t)  &= \cosh(at) f_{\text{odd}}(t) - \sinh(at) f_{\text{even}}(t).
+\end{align*}
+For the resulting function $g(t)$ to be strictly \textbf{even}, its odd component must vanish identically:
+\begin{equation}
+    \cosh(at) f_{\text{odd}}(t) - \sinh(at) f_{\text{even}}(t) \equiv 0.
+\end{equation}
+This yields the necessary condition for symmetry:
+\begin{equation}
+    f_{\text{odd}}(t) = f_{\text{even}}(t) \tanh(at).
+\end{equation}
+Substituting this condition back into the expression for the even component $g_{\text{even}}(t)$:
+\begin{align*}
+    g(t) &= \cosh(at) f_{\text{even}}(t) - \sinh(at) \left( f_{\text{even}}(t) \tanh(at) \right) \\
+         &= f_{\text{even}}(t) \left[ \cosh(at) - \frac{\sinh^2(at)}{\cosh(at)} \right] \\
+         &= f_{\text{even}}(t) \left[ \frac{\cosh^2(at) - \sinh^2(at)}{\cosh(at)} \right].
+\end{align*}
+Using the identity $\cosh^2 x - \sinh^2 x = 1$, we arrive at the form:
+\begin{equation}
+    g(t) = \frac{f_{\text{even}}(t)}{\cosh(at)}
+\end{equation}
+or
+\begin{equation}
+   \cosh(at) g(t) = f_{\text{even}}(t)
+\end{equation}
+with $\cosh(at) \in CMST$
+
+\end{lemma}
+
+
+
+\subsection*{5. Application to the Modular Product $R(t)$}
+We now apply this to the even function $R(t)$, constructed as a product of these stable factors:
+\begin{equation}
+R(t) = e^{-t/2} \prod _{n=1}^{\infty } \left(1 + e^{\pi (1-2n) e^{-2t}}\right)^2 \left(1 - e^{-2\pi n e^{-2t}}\right).
+\end{equation}
+Since every term in this infinite product belongs to our class of interlacing-preserving functions in CMST, and has negative odd coeffients, we conclude that:
+\begin{equation}
+\mathcal{C}_{a} [R(t)](s) \in \mathcal{P}_{\text{pos}}.
+\end{equation}
+While the direct transform of $R(t)$ does not converge as $a \to \infty$, the regularization involving the differential operator does. Specifically, the term associated with the operator $(2s+1)$ corresponds to the action $4D_t^2 - 1$. The zero at $s=1/2$ is removed in this limit, yielding the convergent result:
+
+\begin{equation}
+(2s+1)\mathcal{C}_{\infty} \left[R(t) \right](s) 
+\end{equation}
+which is in $\mathcal{P}_{\mathrm{pos}}$ with the possible exception of the zero at $-\frac{1}{2}$ becomes
+\begin{equation}
+\mathcal{C}_{\infty} \left[ 4R''(t) - R(t) \right](s) \in \mathcal{P}_{\text{pos}}.
+\end{equation}
+since $4R''(t) - R(t)$ is positive, very log concave and has no real zeros \newline
+
+In this case 
+\begin{equation}
+4R''(t) - R(t) = \sum _{n=1}^{\infty } 8 \pi  n^2 e^{\frac{9 t}{2}-\pi  n^2 e^{2 t}} \left(2 \pi  n^2-3 e^{-2 t}\right)
+\end{equation}
+
+
+Looking at this function which is even, we can see that for $t > 0$ all the terms are positive and very sharply decaying.  The only term that could be zero is $2 \pi  n^2-3 e^{2 t}$  which only has real zeros at $\frac{1}{2} \log \left(\frac{3}{2 \pi  n^2}  \right)$ so no zeros for 
+$t \ge 0, n \ge 1 $
+\newline
+
+This means:
+\begin{equation}
+\mathcal{C}_{\infty} \left[ 4R''(t) - R(t) \right](s) \;\longrightarrow\; \mathcal{C}_{\infty} \left[ t^2 (4R''(t) - R(t)) \right](s).
+\end{equation}
+
+
+Which back in the Bilateral Laplace transform world this means
+\[
+\frac{R'(\sqrt{-s})}{\sqrt{s}} \to R(\sqrt{-s}) 
+\]
+and
+\[
+R(\sqrt{-s}) \to R''(\sqrt{-s})
+\]
+which means all the zeros are real and distinct.
+
+\subsection*{Positivity and Geometric Structure}
+We emphasize that the log-convexity of $R(t)$ is not an assumed property, but a structural consequence of its modular definition. 
+Recall that $R(t)$ corresponds to the Jacobi Theta series $\theta_3(0, q)$ with the substitution $q = e^{-\pi e^{-2t}}$. The series expansion is given explicitly by:
+\begin{equation}
+    \theta_3(0, q) = \sum_{n=-\infty}^{\infty} q^{n^2} = 1 + 2q + 2q^4 + 2q^9 + \cdots
+\end{equation}
+The coefficients of this expansion are strictly non-negative integers. 
+By the Artin-H{\"o}lder theorem, any superposition of log-convex functions (such as $q^{n^2}$) with positive weights must itself be log-convex. 
+Therefore, the "smile" geometry of $R(t)$ is rigidly enforced by the arithmetic positivity of the underlying sum, precluding the existence of negative coefficients or local concavity in the modular domain.
+
+
+
+
+
+\section*{Acknowledgments}
+
+I would like to thank my family for their compact support. As this paper demonstrates, keeping families together is important. 
+The two main references are $S.~Fisk,$  and $G.Polya$. While it is true that when it comes to zeros, it is always $Polya$, I wouldn't be here without $Fisk$
+\begin{thebibliography}{99}
+
+\bibitem{Fisk}
+S.~Fisk,
+\emph{Polynomials, roots, and interlacing},
+arXiv preprint arXiv:0612833, 2008.
+
+
+\bibitem{polya1918}
+G.~P\'olya,
+\emph{\"Uber die Nullen von Integralen, die der Riemannschen $\zeta$-Funktion analog sind},
+Mathematische Zeitschrift, Vol.~2, 1918, pp.~352--383.
+
+\bibitem{Polya1923}
+G.~Pólya,
+On the zeros of entire functions,
+\emph{Mathematische Zeitschrift}, 1923.
+
+\bibitem{Polya1927}
+G. P\'{o}lya, 
+\emph{{\"U}ber die algebraisch-funktionentheoretischen Untersuchungen von J. L. W. V. Jensen} [On the algebraic-functional investigations of J. L. W. V. Jensen], 
+\textit{Kgl. Danske Vid. Selsk. Math.-Fys. Medd.}, vol. 7, no. 17, pp. 1--33, 1927.
+
+\bibitem{PolyaSzego}
+G.~Pólya and G.~Szegő,
+\emph{Problems and Theorems in Analysis}, Vol.~II.
+Springer.
+
+\bibitem{Obreschkoff}
+N.~Obreschkoff,
+\emph{Verteilung und Berechnung der Nullstellen reeller Polynome}.
+Berlin, 1963.
+
+\bibitem{Levin1996}
+B.~Ya. Levin,
+\textit{Distribution of Zeros of Entire Functions},
+Revised Edition, Translations of Mathematical Monographs, Vol. 5,
+American Mathematical Society, Providence, RI, 1996.
+(See Chapter VII for the generalized theorem on Entire Functions).
+
+\bibitem{sturm1835}
+C. Sturm, 
+\textit{M\'emoire sur la r\'esolution des \'equations num\'eriques}, 
+M\'emoires pr\'esent\'es par divers savants \`a l'Acad\'emie royale des sciences de l'Institut de France, Vol. 6, 1835, pp. 271--318.
+
+\bibitem{titchmarsh1948}
+E.~C. Titchmarsh,
+\emph{Introduction to the Theory of Fourier Integrals},
+2nd ed., Oxford University Press, 1948.
+(See Chapter VIII, "Asymptotic expansions", specifically regarding the zeros of transforms of exponential type).
+
+\bibitem{olver1974}
+F.~W.~J. Olver,
+\emph{Asymptotics and Special Functions},
+Academic Press, 1974.
+
+\bibitem{dimitrov2011}
+D.~K. Dimitrov and P.~K. Rusev,
+\textit{Zeros of entire Fourier transforms},
+East J. Approx. \textbf{17} (2011), no.~1, 1--108.
+
+\bibitem{riemann1859}
+B. Riemann, 
+\textit{Ueber die Anzahl der Primzahlen unter einer gegebenen Gr\"osse}, 
+Monatsber. K\"onigl. Preuss. Akad. Wiss. Berlin, 1859, pp. 671--680.
+
+\end{thebibliography}
+
+\end{document}
+
+
