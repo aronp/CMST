@@ -49,13 +49,11 @@ Unlike traditional windows which are locked to a single profile (e.g., Hann, Bla
         
         
 
-### 📉 The "Jerk" Test (Proof)
+### 📉 Spectral Purity
 Why does analytic smoothness matter? In control systems (e.g., drones, robotics), the 3rd derivative (Jerk) corresponds to mechanical stress.
 
-* **Planck-taper (Green):** Shows "impulsive" spikes in the Jerk plot where the flat section stitches to the curve. This is hidden noise.
-* **CMST (Black):** A perfectly smooth, continuous wave.
 
-![Jerk Comparison](theory/Figure_1_Composite.pdf)
+![Spectral Purity](theory/Figure_1_Composite.png)
 
 ### 📦 Installation
 
