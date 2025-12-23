@@ -37,7 +37,7 @@ Why does analytic smoothness matter? In control systems (e.g., drones, robotics)
 * **Planck-taper (Green):** Shows "impulsive" spikes in the Jerk plot where the flat section stitches to the curve. This is hidden noise.
 * **Hyper-CMST (Black):** A perfectly smooth, continuous wave.
 
-`![Jerk Comparison](proofs/jerk_comparison.png)`
+![Jerk Comparison](proofs/jerk_comparison.png)
 
 ### 📦 Installation
 
