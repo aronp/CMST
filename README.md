@@ -1,5 +1,5 @@
 # cmst-window
-**The analytically sound, zero-preserving, interlace-preserving window.**
+**The analytically sound, zero-preserving, interlace-preserving compact window.**
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Stability: Verified](https://img.shields.io/badge/Stability-Verified-green)](https://github.com/aronp/CMST)
 [![Theory: CMST](https://img.shields.io/badge/Theory-CMST-purple)](https://github.com/yourusername/cmst-window)
@@ -29,7 +29,7 @@ $$
 w(t) = \exp\left(t^n - \frac{1}{1-t^n}\right)
 $$
 
-* **Compensating Term ($+t^n$):** Cancels the Gaussian curvature at the origin, extending the "Table-Top" flatness to order $2n$.
+* **Compensating Term $t^n$:** Cancels the Gaussian curvature at the origin, extending the "Table-Top" flatness to order $2n$.
 * **Mollifier Term ($-1/(1-t^n)$):** Enforces strict compact support with essential singularities at the boundaries, ensuring all derivatives decay to zero smoothly.
 
 
@@ -55,7 +55,7 @@ Why does analytic smoothness matter? In control systems (e.g., drones, robotics)
 * **Planck-taper (Green):** Shows "impulsive" spikes in the Jerk plot where the flat section stitches to the curve. This is hidden noise.
 * **CMST (Black):** A perfectly smooth, continuous wave.
 
-![Jerk Comparison](proofs/jerk_comparison.png)
+![Jerk Comparison](theory/Figure_1_Composite.pdf)
 
 ### 📦 Installation
 
