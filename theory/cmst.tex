@@ -1410,7 +1410,38 @@ provided that $\left(\lambda^2  f''(t)-f(t)\right) > 0$
 if needed we can multiply by $(1 + \lambda s)$ to get a function in $\mathcal{P}_{\mathrm{pos}}$
 \end{lemma}
 
+\section{The Geometric-Exponential Kernel}
 
+We consider the specific kernel defined by the infinite product of exponential monomials, which corresponds to the following compact-support function on $[-1, 1]$:
+
+\begin{equation}
+    \Phi(t) = \prod_{n=0}^{\infty} e^{-t^{2nk}} = \exp\left( \frac{1}{t^{2k}-1} \right), \quad t \in (-1, 1)
+\end{equation}
+
+and $\Phi(t) = 0$ for $|t| \ge 1$. This function is $C^\infty$ and vanishes with all its derivatives at the boundaries $t = \pm 1$.
+
+\begin{theorem}[CMST Membership of the Geometric Kernel]
+The function $\Phi(t) = \exp\left( \frac{1}{t^{2k}-1} \right)$ belongs to the CMST class on the interval $[-1, 1]$. Consequently, its CMST 
+$F_n(s) = \mathcal{C}_1[t^{2n}\Phi(t)](s)$ is a globally interlacing family in 
+$\mathcal{P}_{\mathrm{pos}}$ 
+
+\end{theorem}
+
+\begin{proof}
+First, we observe the power series expansion of the exponent for $t \in (-1, 1)$:
+\begin{equation}
+    \frac{1}{t^{2k}-1} = -\sum_{n=0}^{\infty} t^{2nk} = -(1 + t^{2k} + t^{k4} + \dots)
+\end{equation}
+The kernel can be expressed as $e^{-f(t^2)}$ where $f(t) = \sum_{n=0}^{\infty} a_n t^n$ with $a_n = 1$ for all $n$. 
+\end{proof}
+
+\begin{remark}
+The $e^{t^{2n}}$ operators are benine and in $LP$ so we can flatten this function with 
+\[
+e^{t^{2 k}+\frac{1}{t^{2 k}-1}}
+\]
+and produce a tunable window suitable for signal processing with compact support and good zero preserving properties.
+\end{remark}
 
 
 \section*{Acknowledgments}
