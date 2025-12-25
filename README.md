@@ -20,7 +20,7 @@ This window is an implementation of **CMST (Cosh Moment Sturm Transform)**. Unli
     Derived from CMST theorey, the kernel guarantees the preservation of realness in the signal chain. It does not introduce artificial complex roots (phantom oscillations) into the passband.
 
 3.  **Interlace-Preserving Transform:**
-    For the first $n$ derivatives, the window acts as a variation-diminishing operator. It preserves the root-interlacing structure of the underlying signal, ensuring that derivative noise is bounded and geometric topology is maintained even at the boundaries.
+    For all derivatives, the window acts as a variation-diminishing operator. It preserves the root-interlacing structure of the underlying signal, ensuring that derivative noise is bounded and geometric topology is maintained even at the boundaries.
 
 ### 💡 The Formula (Hyper-CMST)
 We utilize a compensated log-concave mollifier that cancels low-order curvature to achieve Flatness:
