@@ -22,7 +22,7 @@ This window is an implementation of **CMST (Cosh Moment Sturm Transform)**. Unli
 3.  **Interlace-Preserving Transform:**
     For all derivatives, the window acts as a variation-diminishing operator. It preserves the root-interlacing structure of the underlying signal, ensuring that derivative noise is bounded and geometric topology is maintained even at the boundaries.
 
-### 💡 The Formula (Hyper-CMST)
+### 💡 The Formula (CMST)
 We utilize a compensated log-concave mollifier that cancels low-order curvature to achieve Flatness:
 
 $$
