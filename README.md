@@ -14,7 +14,7 @@ Signal processing engineers often need a "Flat-Top" window to preserve signal am
 This window is an implementation of **CMST (Cosh Moment Sturm Transform)**. Unlike standard windows which are often heuristic curve-fits, the CMST window is constructed as a **Geometric Mollifier** with three rigorous guarantees:
 
 1.  **Analytically Sound ($C^\infty$):**
-    The function is infinitely differentiable with no discontinuities in any derivative $f^{(n)}$. This eliminates the "spectral ringing" and mechanical jerk caused by piecewise functions like the Planck-taper or Tukey window.
+    The function is infinitely differentiable with no discontinuities in any derivative. This eliminates the "spectral ringing" and mechanical jerk caused by piecewise functions like the Planck-taper or Tukey window.
 
 2.  **Zero-Preserving :**
     Derived from CMST theorey, the kernel guarantees the preservation of realness in the signal chain. It does not introduce artificial complex roots (phantom oscillations) into the passband.
