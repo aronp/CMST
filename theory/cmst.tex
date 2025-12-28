@@ -57,23 +57,25 @@
 \newcommand{\InterlacingFamily}[2]{\left\{#1, T[#1], T^2[#1], \dots, T^{#2}[#1]\right\}}
 
 \newcommand{\MutualInterlace}[2]{\mathcal{MI}\left(#1, #2\right)}
+\newcommand{\Trad}{\mathcal{T}_{\text{rad}}}
+
 
 \begin{document}
-\title{The Laplace Transform of Even Log concave functions having zeros on the Imaginary axis}
+\title{The Laplace Transform of Even Log-concave functions having zeros on the Imaginary axis}
 \author{Aron Palmer\\ \small \texttt{palmer.aron+cmst@gmail.com}}
 \date{\today}
 \maketitle
 \thispagestyle{preprint} 
 
 \begin{abstract}
-In this paper we show that a broad class of Bilateral Laplace transforms arising from 
+In this paper we show that a broad class of bilateral Laplace transforms arising from 
 even, positive, exponentially decaying kernels have all their zeros located on the 
 imaginary axis and the zeros are distinct.
 \end{abstract}
 
 \section{Introduction}
 
-In this paper we show that a broad class of Bilateral Laplace transforms arising from 
+In this paper we show that a broad class of bilateral Laplace transforms arising from 
 even, positive, exponentially decaying kernels have all their zeros located on the 
 imaginary axis.  Specifically, consider functions of the form
 \begin{equation}
@@ -89,10 +91,11 @@ where $a_{n} \ge 0 $ and $n>1$ and
 
 Equivalently, this means $f(1) < \infty$. \newline
 
-Under these conditions $F(s)$ extends to an entire function that has distinct zeros that lie purely on the imaginary axis.\newline
+Under these conditions $F(s)$ extends to an entire function that has distinct zeros that lie purely on the imaginary axis. \newline
 
 
-Thus the Laplace family
+
+Thus the bilateral Laplace family
 \[
 F(s)=\int_{-\infty}^{\infty} e^{-f(t^{2})}\,e^{s t}\,dt,
 \]
@@ -104,17 +107,7 @@ We use a Cosh Transform defined as follows to produce families of functions with
 \mathcal{C}_{a}[f](s) := \int_{-a}^{a} f(t)\cosh(\sqrt{s}\,t)\,dt
 \]
 
-Using this, we define a "Cosh-Moment Sturm Transform" (CMST) to produce families of functions with all real negative zeros which map to pairs of imaginary zeros in the Bilateral Laplace Transform.
-
-
-\begin{definition}[Real-rooted functions]\label{def:P1}
-Let $\mathcal{P}$ be the class of real entire functions with real, simple zeros and genus at most $1$.
-Thus
-\[
-f(t) = c t^m \prod_{k=1}^{N} \left(1 + \frac{t}{r_k}\right) e^{-t/r_k}
-\]
-where $N\in\mathbb{N}\cup\{\infty\}$ and $\sum r_k^{-2} < \infty$.
-\end{definition}
+Using this, we define a "Cosh-Moment Sturm Transform" (CMST) to produce families of functions with all real negative zeros which map to pairs of imaginary zeros in the bilateral Laplace Transform.
 
 \begin{definition}[Real-rooted functions]\label{def:P2}
 Let $\mathcal{P}$ be the class of real entire functions with real, simple,
@@ -160,6 +153,8 @@ Let $\mathrm{roots}(f)=(a_1 < \cdots < a_n)$ and $\mathrm{roots}(g)=(b_1 < \cdot
 \item $f \not\leftrightarrow g$ means f and g do not strictly interlace.
 
 \end{itemize}
+\end{definition}
+
 \begin{lemma}[Interlacing can only break at a shared zero]\label{prop:no-break}
 Let $f\in\mathbb R[x]$ have simple real zeros $a_1<\dots<a_n$, and let $T:\mathbb R[x]\to\mathbb R[x]$ be a linear operator depending continuously on the coefficients.
 For $\lambda\in[0,1]$, set $T_\lambda := (1-\lambda)I + \lambda T$ and $g_\lambda := T_\lambda f$.
@@ -171,8 +166,6 @@ If $f$ and $g_0=f$ interlace, then the interlacing pattern can change at some $\
 \]
 In particular, if $f$ and $T_\lambda f$ have no common zeros for all $\lambda\in[0,1]$, then $f$ and $T_\lambda f$ interlace for all $\lambda$ (hence also $f$ and $Tf$).
 \end{lemma}
-\end{definition}
-
 
 
 
@@ -424,21 +417,28 @@ When one factor in a Wronskian identity is killed by $T$, the resulting interlac
     \textbf{Effect:} $t^n \mapsto t^n + a n t^{n-1}$ \\
     \textbf{Stability:} Preserves $P$ for all $a \in \mathbb{R}$. \\
     \textit{Note:} Preserves $\mathcal{P_{\mathrm{pos}}}$ if $a \ge 0$. If $a < 0$, roots may shift out of the non-positive half-line. \\
-    \textbf{Sturm Class:} $D\in\mathrm{SMT}_{0}$
+    \textbf{Sturm Class:} $1 + aD \in\mathrm{SMT}_{0}$
 
 
     \item[The Euler Operator ($tD$)] \hfill \\
     \textbf{Effect:} $t^n \mapsto n t^n$ \\
     \textbf{Stability:} Preserves $P$ unconditionally (provided $f'(0) \neq 0$). \\
     \textbf{Interlacing:} Preserves interlacing for $\mathcal{P_{\mathrm{pos}}}$ and $\mathcal{P_{\mathrm{neg}}}$. \\
-    \textbf{Sturm Class:} $D\in\mathrm{SMT}_{0}$
+    \textbf{Sturm Class:} $tD\in\mathrm{SMT}_{0}$
 
 
     \item[The Generalized Euler Operator ($1 + a tD$)] \hfill \\
     \textbf{Effect:} $t^n \mapsto (1 + a n)t^n$ \\
     \textbf{Stability:} Preserves $P$ for all $a > 0$. \\
     \textit{Note:} Preserves $\mathcal{P}_{\mathrm{pos}}$ if $a \ge 0$. If $a < 0$, stability cannot be guaranteed for $\mathcal{P}_{\mathrm{pos}}$. \\
-        \textbf{Sturm Class:} $D\in\mathrm{SMT}_{0}$
+        \textbf{Sturm Class:} $1 + a tD \in\mathrm{SMT}_{0}$
+
+
+   \item[The Radial Operator ($ D(4sD + 2)$), $\mathcal{T}_{\text{rad}}$] \hfill \\
+    \textbf{Effect:} $t^n \mapsto 2 n (2 n-1) t^{n-1} $ \\
+    \textbf{Stability:} Preserves $\mathcal{P}_{\mathrm{pos}}$ . \\
+    \textbf{Sturm Class:} $\mathcal{T}_{\text{rad}} \in \mathrm{SMT}_{-1}$
+
 
 \end{description}
 
@@ -487,7 +487,7 @@ Take the second derivative of this.
 and map $s^2$ back to $s$ giving us the operator
 
 \[
-4 s F''(s)+2 F'(s) \text{ or }  D(4sD + 2)
+4 s F''(s)+2 F'(s) \text{ or }  D(4sD + 2) = \mathcal{T}_{\text{rad}}
 \]
 
 Both $D$ and $(4sD + 2)$ preserve interlacing in $\mathcal{P}_{\mathrm{pos}}$ and map $\mathcal{P}_{\mathrm{pos}}$ to $\mathcal{P}_{\mathrm{pos}}$
@@ -853,7 +853,7 @@ extends to an entire function of exponential type whose real zeros are simple an
 \end{theorem}
 
 \begin{remark}
-References: G.\ P\'olya \cite{Polya1918,Polya1927}; B.\ Ya.\ Levin \cite[Chapter II, Thm.\ 7]{Levin1964}.
+References: G.\ P\'olya \cite{polya1918,Polya1927}; B.\ Ya.\ Levin \cite[Chapter II, Thm.\ 7]{Levin1996}.
 \end{remark}
 \begin{theorem}[Obreschkoff, strict version]
 Let $p$ and $q$ be real-rooted polynomials with simple zeros. Then the following are equivalent:
@@ -1177,7 +1177,7 @@ $\mathcal{C}_{\infty} e^{-t^{2k}}(s)$ has a family size of $k+1$.
 
 
 \begin{proof}
-Moving back to the Bilateral Laplace, lets consider
+Moving back to the bilateral Laplace, lets consider
 \[
 \frac{\partial}{\partial s}  \int_{-\infty }^{\infty } \exp (-s t) \frac{\partial }{\partial t}\exp \left(-t^{2 k}\right) \, dt
 \]
@@ -1273,7 +1273,7 @@ If we think of
 \begin{equation}
 F(s) = \int_{-\infty }^{\infty } f(t) e^{s t} \, dt
 \end{equation}
-where $f(t)$ is very log concave then if we normalise the integral we get a sharper and shaper peak, approaching a Dirac delta function at the point where $\log{f'(t)}=-s$. Lets call point that $z(s)$
+where $f(t)$ is very log-concave then if we normalise the integral we get a sharper and shaper peak, approaching a Dirac delta function at the point where $\log{f'(t)}=-s$. Lets call point that $z(s)$
  This gives us that 
 \begin{equation}
 F(s) = \int_{-\infty }^{\infty } 
@@ -1392,7 +1392,7 @@ We note that
 \[
 \frac{\int_{-\infty}^{\infty} f(t) (\lambda  s+1) \cosh \left(\sqrt{s} t\right) \, dt}{\lambda  s+1} = \int_{-\infty}^{\infty} f(t) \cosh \left(\sqrt{s} t\right) \, dt
 \]
-so we havent really done anything.  But another expression of this via the Bilateral Laplace transform is
+so we havent really done anything.  But another expression of this via the bilateral Laplace transform is
 \[
 \frac{\int_{-\infty}^\infty \cosh \left(\sqrt{s} t\right) \left(\lambda^2  f''(t)-f(t)\right) \, dt}{\lambda  s+1}
 \]
@@ -1484,6 +1484,18 @@ While Log-Concavity is preserved in the limit, the existence of zeros requires t
   $e^{-t^{(2+\epsilon)}}$  (or faster), which satisfies the Newman condition for infinite real zeros \cite{Newman1976}
 
 \end{proof}
+\begin{theorem}
+For functions of the form $e^{-f(t^2)}$ where $f(t)$ is convex 
+\begin{equation}
+\mathcal{C}_{a} e^{-f(t^2)} \leftrightarrow  \mathcal{T}_{\text{rad}}f'(\mathcal{T}_{\text{rad}}) \mathcal{C}_{a} e^{-f(t^2)}
+\end{equation}
+\end{theorem}
+\begin{proof}
+That is simply the result of applying $sD$ to the transform, and moving the $t^2$ terms outside to their $\mathcal{T}_{\text{rad}}$ equivalents.
+\end{proof}
+\begin{remark}
+When $f(t)$ is not a regular power of t, its possible this term may introduce some drift in the interlacing patterns
+\end{remark}
 
 \section{The CMST Window}
 
