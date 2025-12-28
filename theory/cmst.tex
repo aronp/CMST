@@ -1229,16 +1229,6 @@ So we have a closed family.
 \textit{"Such a lovely place... you can check out any time you like, but you can never leave."}
 \end{quote}
 
-\subsection*{The Isomorphism of Symmetry}
-The closure property is structurally enforced by the isomorphism between the additive and multiplicative groups. Consider the mapping $x = e^t$. (Remember $e^t \in CMST$) We observe a direct correspondence between the symmetries:
-\begin{align*}
-    \text{Additive Domain ($t \in \mathbb{R}$):} & \quad \phi(t) = f(e^t) + f(e^{-t}) \quad (\text{Even Symmetry } t \to -t) \\
-    \text{Multiplicative Domain ($x \in \mathbb{R}^+$):} & \quad \psi(x) = f(x) + f(1/x) \quad (\text{Inversion Symmetry } x \to 1/x)
-\end{align*}
-If the operator $\mathcal{C}_a$ preserves the real-rootedness of the even function $\phi(t)$ (trapping zeros on the line $\Im(t)=0$), the rigidity of the exponential map mandates that the zeros of $\psi(x)$ are preserved in the corresponding locus (typically the unit circle $|x|=1$ or the real line, depending on the specific class).
-
-Thus, the "Hotel California" principle applies strictly: the preservation of zeros in the $f(e^t) + f(e^{-t})$ form \textit{guarantees} the zero-preserving nature of $f(x) + f(1/x)$. The geometry allows no escape.
-
 \section{The Gaussian Limit}
 
 \subsection{The Vanishing Act: Limit of the Finite Domain}
@@ -1410,7 +1400,89 @@ provided that $\left(\lambda^2  f''(t)-f(t)\right) > 0$
 if needed we can multiply by $(1 + \lambda s)$ to get a function in $\mathcal{P}_{\mathrm{pos}}$
 \end{lemma}
 
-\section{The Geometric-Exponential Kernel}
+
+
+\section{Interlacing of Zeros for Convex Kernels}
+
+\begin{theorem}[Interlacing Property]
+Let $g(t)$ be a real-valued function on $[0,1]$ satisfying the following conditions:
+\begin{enumerate}
+    \item Boundary Conditions: $g(0) = 0$ and $g'(0) = 0$.
+    \item Growth: $g(1) > 0$ and $g'(1) > 0$.
+    \item Convexity: $g(t)$ is strictly convex, i.e., $g''(t) > 0$ for $t \in (0,1]$.
+\end{enumerate}
+Then, the zeros $\rho_n$ of the finite Fourier transform
+$$ F(s) = \int_0^1 g(t) \cos(st) \, dt $$
+are all real and strictly interlace with the zeros of the Sinc function, $z_n = n\pi$. Specifically, for large $n$, each zero lies in the interval:
+$$ n\pi - \frac{\pi}{2} < \rho_n < n\pi $$
+\end{theorem}
+
+\begin{proof}
+We analyze the asymptotic behavior of $F(s)$ by performing integration by parts twice to isolate the boundary contributions.
+
+\noindent \textbf{1. Expansion via Integration by Parts} \\
+Applying integration by parts to $F(s)$:
+$$ F(s) = \left[ g(t) \frac{\sin(st)}{s} \right]_0^1 - \frac{1}{s} \int_0^1 g'(t) \sin(st) \, dt $$
+Using the condition $g(0)=0$:
+$$ F(s) = g(1)\frac{\sin(s)}{s} - \frac{1}{s} \int_0^1 g'(t) \sin(st) \, dt $$
+Applying integration by parts a second time to the integral term:
+$$ \int_0^1 g'(t) \sin(st) \, dt = \left[ -g'(t) \frac{\cos(st)}{s} \right]_0^1 + \frac{1}{s} \int_0^1 g''(t) \cos(st) \, dt $$
+Using the condition $g'(0)=0$, the lower boundary term vanishes. Substituting back into the expression for $F(s)$, we obtain the master equation:
+\begin{equation}
+F(s) = g(1)\frac{\sin(s)}{s} + g'(1)\frac{\cos(s)}{s^2} - \frac{1}{s^2} \underbrace{\int_0^1 g''(t) \cos(st) \, dt}_{R(s)}
+\label{eq:master}
+\end{equation}
+
+\noindent \textbf{2. Sign Analysis at the Grid Points $s = n\pi$} \\
+We evaluate $F(s)$ at the zeros of the Sinc function, $s_n = n\pi$ for integers $n \ge 1$.
+Note that $\sin(n\pi) = 0$ and $\cos(n\pi) = (-1)^n$. Equation (\ref{eq:master}) becomes:
+$$ F(n\pi) = \frac{(-1)^n}{(n\pi)^2} \left[ g'(1) - (-1)^n \int_0^1 g''(t) \cos(n\pi t) \, dt \right] $$
+By the Fundamental Theorem of Calculus, $g'(1) = \int_0^1 g''(t) \, dt$. Since $g''(t) > 0$, we have the strict inequality:
+$$ \left| \int_0^1 g''(t) \cos(n\pi t) \, dt \right| < \int_0^1 g''(t) \, dt = g'(1) $$
+Consequently, the term in the square brackets is strictly positive. The sign of $F(n\pi)$ is determined solely by the pre-factor:
+\begin{equation}
+\text{sgn}(F(n\pi)) = (-1)^n
+\end{equation}
+
+\noindent \textbf{3. Sign Analysis at the Midpoints $s = n\pi - \pi/2$} \\
+Let $s^* = n\pi - \frac{\pi}{2}$. At this point, $\cos(s^*) = 0$ and $\sin(s^*) = (-1)^{n+1}$.
+Using the first-order expansion of $F(s)$:
+$$ F(s^*) = \frac{(-1)^{n+1}}{s^*} \left[ g(1) - (-1)^{n+1} \int_0^1 g'(t) \sin(s^* t) \, dt \right] $$
+By a similar domination argument, $\left| \int g'(t) \sin(s^* t) \right| < g(1)$, making the bracket term strictly positive. Thus:
+\begin{equation}
+\text{sgn}\left(F\left(n\pi - \frac{\pi}{2}\right)\right) = (-1)^{n+1} = -(-1)^n
+\end{equation}
+
+\noindent \textbf{4. Conclusion} \\
+Comparing the signs at the endpoints of the interval $I_n = (n\pi - \frac{\pi}{2}, n\pi)$:
+\begin{itemize}
+    \item At the left endpoint, the sign is $-(-1)^n$.
+    \item At the right endpoint, the sign is $(-1)^n$.
+\end{itemize}
+Since $F(s)$ is continuous, by the Intermediate Value Theorem, there must exist at least one real zero $\rho_n \in I_n$.
+This establishes that the zeros of $F(s)$ are real and strictly interlace with the zeros of the canonical Sinc function.
+\end{proof}
+
+\section{More generally Log concavity produces real distinct zeros}
+\begin{theorem}
+For functions of the form $e^{-f(t^2)}$ where $f(t)$ is convex 
+\begin{equation}
+\mathcal{C}_{a} e^{-f(t^2)} \in \mathcal{P}_{\mathrm{pos}}
+\end{equation}
+
+\end{theorem}
+\begin{proof}
+We have that
+\begin{equation}
+\mathcal{C}_{1} (1-f(t^2)) \in \mathcal{P}_{\mathrm{pos}} 
+\end{equation}
+Provided that $1-f(t^2) > 0 \in [-1,1]$ 
+
+We then take the limit of $(1-f(t^2)/n)^n$ as $n \to \infty$ and extend the range.
+
+\end{proof}
+
+\section{The CMST Window}
 
 We consider the specific kernel defined by the infinite product of exponential monomials, which corresponds to the following compact-support function on $[-1, 1]$:
 
