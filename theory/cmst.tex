@@ -1214,7 +1214,7 @@ The kernel $e^{-t^{2k}}$  serves as a critical benchmark for the stability of th
 is basically compact support so we can see some of the differences between compact support and infinite support.Compact support means that we can have infinite size families and often do.  Infinite support means finite size families, and indeed in order to converge we need an "Assassin" term that limits the size of the family.
 \end{remark}
 
-\section*{Hotel California}
+\section*{Closure Properties (The Hotel California Effect)}
 We get that if
 \[
 \mathcal{C}_{a} f(t^2) \in CMST
@@ -1479,6 +1479,10 @@ We have that
 
 We then take the limit of $(1-f(t^2)/n)^n$ as $n \to \infty$ and extend the range.
 
+While Log-Concavity is preserved in the limit, the existence of zeros requires the kernel to be
+ "stiffer" than a Gaussian. The strict convexity condition $f''(t) \ge 0$ ensures the kernel decays like
+  $e^{-t^{(2+\epsilon)}}$  (or faster), which satisfies the Newman condition for infinite real zeros \cite{Newman1976}
+
 \end{proof}
 
 \section{The CMST Window}
@@ -1512,6 +1516,12 @@ The $e^{t^{2n}}$ operators are benign and in $LP$ so we can flatten this functio
 e^{t^{2 k}+\frac{1}{t^{2 k}-1}}
 \]
 and produce a tunable window suitable for signal processing with compact support and good zero preserving properties.
+
+The kernel CMST window exhibits a distinct advantage over classical window functions (e.g., Kaiser-Bessel, Blackman-Harris). 
+Standard windows typically possess only finite regularity ($C^n$ continuity) at the boundaries, leading to spectral sidelobes that decay polynomially ($\mathcal{O}(\omega^{-(n+1)})$).
+In contrast, the CMST kernel is $C_c^\infty$ (smooth with compact support). 
+This smoothness guarantees \textbf{super-algebraic decay} of the Fourier transform side-lobes.
+As a result, while the main-lobe width (resolution) is comparable to a Kaiser window, the dynamic range (sidelobe suppression) is vastly superior, avoiding the "spectral floor" caused by boundary discontinuities.
 \end{remark}
 
 
@@ -1580,6 +1590,10 @@ D.~K. Dimitrov and P.~K. Rusev,
 \textit{Zeros of entire Fourier transforms},
 East J. Approx. \textbf{17} (2011), no.~1, 1--108.
 
+\bibitem{Newman1976}
+C.~M.~Newman,
+\emph{Fourier transforms with only real zeros},
+Proceedings of the American Mathematical Society, Vol.~61, No.~2, 1976, pp.~245--251.
 \bibitem{riemann1859}
 B. Riemann, 
 \textit{Ueber die Anzahl der Primzahlen unter einer gegebenen Gr\"osse}, 
