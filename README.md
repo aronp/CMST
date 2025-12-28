@@ -26,8 +26,10 @@ This window is an implementation of **CMST (Cosh Moment Sturm Transform)**. Unli
 We utilize a compensated log-concave mollifier that cancels low-order curvature to achieve Flatness:
 
 $$
-w(t) = \exp\left(t^n - \frac{1}{1-t^n}\right)
+w(t) = \exp\left(t^n - \frac{1}{1-t^n}\right), 
 $$
+
+where n is even.
 
 * **Compensating Term $t^n$:** Cancels the Gaussian curvature at the origin, extending the "Table-Top" flatness to order $2n$.
 * **Mollifier Term $(-1/(1-t^n))$ :** Enforces strict compact support with essential singularities at the boundaries, ensuring all derivatives decay to zero smoothly.
