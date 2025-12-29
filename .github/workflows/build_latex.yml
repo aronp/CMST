@@ -1,4 +1,16 @@
-steps:
+name: Build LaTeX Paper
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build_latex:
+    runs-on: ubuntu-latest
+    
+    steps:
       - name: Check out repo
         uses: actions/checkout@v4
 
