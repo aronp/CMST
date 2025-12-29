@@ -48,4 +48,16 @@ jobs:
           name: CMST_Paper
           path: theory/ieee_cmst.pdf
           
+        - name: Commit PDF
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          # Limit the commit to just the PDF files
+          file_pattern: '*.pdf'
           
+          # [skip ci] prevents the infinite loop
+          commit_message: "Auto-compile PDF: Updated paper [skip ci]"
+          
+          # Optional: author info
+          commit_user_name: "GitHub Actions Bot"
+          commit_user_email: "actions@github.com"
+                    
