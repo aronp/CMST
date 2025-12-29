@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: write
+
 jobs:
   build_latex:
     runs-on: ubuntu-latest
@@ -47,17 +50,15 @@ jobs:
         with:
           name: IEEE_Paper
           path: theory/ieee_cmst.pdf
-          
-        - name: Commit PDF
+      
+      # FIX: This hyphen must align exactly with the one above it
+      - name: Commit PDF
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          # Limit the commit to just the PDF files
-          file_pattern: '*.pdf'
+          file_pattern: '*.pdf theory/*.pdf'
           
-          # [skip ci] prevents the infinite loop
           commit_message: "Auto-compile PDF: Updated paper [skip ci]"
           
           # Optional: author info
           commit_user_name: "GitHub Actions Bot"
           commit_user_email: "actions@github.com"
-                    
