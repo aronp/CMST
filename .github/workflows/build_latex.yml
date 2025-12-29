@@ -6,7 +6,11 @@ on:
     paths:                 # <--- Must align directly under 'branches'
       - '**.py'
       - '**.tex'
-            
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+              
 permissions:
   contents: write
 
@@ -66,12 +70,14 @@ jobs:
         with:
           name: IEEE_Paper
           path: theory/ieee_cmst.pdf
+          
+      - name: Pull latest changes from remote
+        run: git pull origin main --rebase
       
-      # FIX: This hyphen must align exactly with the one above it
       - name: Commit PDF
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          file_pattern: '*.pdf theory/*.pdf'
+          file_pattern: '*.pdf'
           
           commit_message: "Auto-compile PDF: Updated paper [skip ci]"
           
