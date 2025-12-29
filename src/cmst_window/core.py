@@ -59,12 +59,10 @@ def cmst_window(t, width=1.0, power=6):
     # The exponent has two terms:
     # Term A: +x^p (The Compensator) -> Cancels curvature at origin
     # Term B: -1/(1-x^p) (The Mollifier) -> Enforces zero at boundary
-    exponent = x_p - (1.0 / (1.0 - x_p))
+    # 1.0 Normalises the function.
+    exponent = 1.0 + x_p - (1.0 / (1.0 - x_p))
     
-    # 6. Apply & Normalize
-    # The peak occurs at x=0.
-    # At x=0: exponent = 0 - 1/1 = -1.
-    # So max raw value is exp(-1). We divide by this to normalize to 1.0.
-    y[mask] = np.exp(exponent) / np.exp(-1.0)
+    # 6. Apply
+    y[mask] = np.exp(exponent) 
     
     return y
