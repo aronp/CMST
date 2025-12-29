@@ -36,6 +36,15 @@ jobs:
           name: VsOthers
           path: proofs/VsOtherFilters.pdf
 
+      - name: Generate Figure2
+        run: python proofs/04_interlacing.py
+
+      - name: Upload PDF4
+        uses: actions/upload-artifact@v4
+        with:
+          name: Interlacing
+          path: proofs/interlacing_chart.pdf
+
       - name: Compile LaTeX1
         uses: xu-cheng/latex-action@v3
         with:
