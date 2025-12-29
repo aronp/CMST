@@ -31,7 +31,7 @@ Window functions, compact support, spectral leakage, granular synthesis, Planck-
 
 \section{Introduction}
 \IEEEPARstart{W}{indow} functions are the gatekeepers of spectral analysis. 
-In high-dynamic-range applications—such as gravitational wave detection \cite{LIGO} or 32-bit audio synthesis—the limiting factor is often not the main-lobe width (resolution), but the side-lobe decay rate (spectral leakage).
+In high-dynamic-range applications—such as gravitational wave detection \cite{McKechan2010} or 32-bit audio synthesis—the limiting factor is often not the main-lobe width (resolution), but the side-lobe decay rate (spectral leakage).
 Standard solutions force a compromise: the Kaiser-Bessel window offers optimal energy concentration but suffers from polynomial spectral decay ($O(\omega^{-1})$) due to boundary discontinuities.
 Piecewise alternatives, like the Planck-taper, attempt to mitigate this but introduce high-order derivative singularities (``jerk'') that create spectral re-growth floors.
 
@@ -138,7 +138,7 @@ This 100 dB advantage establishes the CMST class as a robust, high-fidelity alte
 
 \begin{figure}[t!]
     \centering
-    \includegraphics[width=\columnwidth]{proofs/VsOtherFilters.pdf}
+    \includegraphics[width=\columnwidth]{VsOtherFilters.pdf}
 \caption{\textbf{Super-Algebraic Spectral Decay.} Comparison of the CMST kernel ($p=2$) against standard windows...}
     \label{fig:vs_others}
 \end{figure}
@@ -153,6 +153,11 @@ V. McKechan, C. Messenger, and B. S. Sathyaprakash, ``A guide to spectral taperi
 
 \bibitem{Dimitrov}
 V. S. Dimitrov, T. V. Cooklev, and B. D. Donevsky, "On the design of smooth window functions," \textit{IEEE Transactions on Signal Processing}, vol. 46, no. 2, pp. 523-526, 1998.
+
+\bibitem{McKechan2010}
+D.~J.~A.~McKechan, C.~Robinson, and B.~S.~Sathyaprakash, 
+``A tapering window for time-domain templates and simulated signals in the detection of gravitational waves from coalescing compact binaries,'' 
+\emph{Class. Quantum Grav.}, vol. 27, no. 8, p. 084020, Apr. 2010.
 
 \end{thebibliography}
 
