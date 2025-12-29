@@ -134,7 +134,7 @@ ax.plot(f_std[mask], spec_kaiser[mask], 'r--', label='Kaiser', linewidth=1.0)
 ax.plot(f_cmst, spec_cmst, color='#0072BD', label=f'CMST (p={p})', linewidth=1.5)
 
 # Styling
-ax.set_ylim(-500, 10) # The deep drop
+ax.set_ylim(-600, 10) # The deep drop
 ax.set_xlim(0, 0.5)
 ax.set_xlabel('Normalized Frequency')
 ax.set_ylabel('Magnitude (dB)')
