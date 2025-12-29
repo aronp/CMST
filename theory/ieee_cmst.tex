@@ -36,7 +36,7 @@ Standard solutions force a compromise: the Kaiser-Bessel window offers optimal e
 Piecewise alternatives, like the Planck-taper, attempt to mitigate this but introduce high-order derivative singularities (``jerk'') that create spectral re-growth floors.
 
 In this letter, we introduce the CMST window. 
-Unlike piecewise approximations, the CMST kernel is defined by a single analytic expression derived from the theory of Laguerre-Pólya and recent work I have been doing on CMST (Cosh Moment Sturm Transform).
+Unlike piecewise approximations, the CMST kernel is defined by a single analytic expression derived from the theory of Laguerre-Pólya and recent work I have been doing on the CMST (Cosh Moment Sturm Transform).
 By employing a compensated mollifier with exact Taylor series cancellation, we achieve a ``Super-Flat'' passband that transitions to zero with infinite smoothness ($C_c^\infty$).
 We show that this structure breaks the polynomial decay limit of classical windows. 
 Specifically, the CMST window ($p=2$) exhibits super-algebraic decay, achieving leakage suppression levels 100 dB lower than equivalent Kaiser windows at high frequencies, effectively eliminating the spectral noise floor for finite-precision computations.
@@ -49,7 +49,7 @@ The CMST window $w(t; p)$ is defined on the normalized temporal domain $t \in [-
 \begin{equation}
     w(t; p) = 
     \begin{cases} 
-        \exp\left( t^p - \frac{1}{1 - t^p} \right) & \text{if } |t| < 1 \\
+        \exp\left(1 + t^p - \frac{1}{1 - t^p} \right) & \text{if } |t| < 1 \\
         0 & \text{if } |t| \ge 1 
     \end{cases}
     \label{eq:cmst_definition}
@@ -93,10 +93,9 @@ This $C^\infty$ property guarantees that the spectral magnitude decays faster th
 
 \subsection{Spectral Purity Comparison}
 The spectral leakage characteristics are illustrated in Fig. \ref{tab:sll_comparison}.
-While the Kaiser window provides excellent suppression near the main lobe, it eventually hits a decay floor governed by its boundary properties (and numerical precision limits).
+While the Planck window provides excellent suppression near the main lobe, it eventually hits a decay floor governed by its boundary properties (and numerical precision limits).
 The CMST window ($p=2$), however, demonstrates monotonic super-algebraic decay.
-At a normalized frequency of $\nu = 0.25$, the Kaiser window leakage plateaus, whereas the CMST window continues to drop, achieving a suppression of -140 dB.
-As shown in Table \ref{tab:sll_comparison}, this represents a $>$90 dB improvement over the Gaussian window and a substantial advantage over the Kaiser window in high-frequency bands, making it uniquely distinct from existing solutions.
+As shown in Table \ref{tab:sll_comparison}, this represents a $>$90 dB improvement over the Gaussian window and a substantial advantage over other windows in high-frequency bands, making it uniquely distinct from existing solutions.
 
 \subsection{Super-Polynomial Decay}
 In contrast, the CMST kernel $\Phi_p(t) = \exp(t^p+1/(t^{p}-1))$ possesses no characteristic side lobe level. Because $\Phi_p(t)$ is $C^\infty$ and vanishes to all orders at the analytic wall $\Re[t]=1$, the side lobes do not exhibit the standard $O(s^{-n})$ decay. Instead, the spectral envelope follows a super-polynomial trajectory:
@@ -123,18 +122,12 @@ Gaussian (Trunc) & -32 dB           & -48 dB                & $1/s$     \\
 
 
 \section{Conclusion}
-In this letter, we introduced the CMST window, an analytically smooth, compactly supported window function derived from the theory of Laguerre-Pólya operators.
+In this letter, we introduced the CMST window, an analytically smooth, compactly supported window function derived from current research on the CMST framework.
 By employing a compensated mollifier with a super-flat exponent, we achieved a window that combines the passband accuracy of a boxcar with the spectral decay of a Schwartz function.
 Our analysis confirms that the CMST window eliminates the derivative singularities inherent in piecewise functions like the Planck-taper, preventing the spectral re-growth associated with "jerk" discontinuities.
 Most significantly, numerical experiments demonstrate an order-of-magnitude improvement in spectral purity: the CMST window achieves leakage suppression exceeding -140 dB where comparable Gaussian and Kaiser windows plateau at -48 dB.
 This 100 dB advantage establishes the CMST class as a robust, high-fidelity alternative for applications requiring extreme dynamic range within a strictly finite temporal support.
 
-%\begin{figure}[t!]
-%    \centering
-%    \includegraphics[width=\columnwidth]{Figure_1_Composite.pdf}
-%    \caption{\textbf{Spectral Performance Comparison.} The CMST window ($p=2$) demonstrates a %monotonic side-lobe decay.  At the normalized frequency of $0.1$, the CMST offers a $~50$ dB %improvement in suppression.}
-%    \label{fig:spectral_comparison}
-%\end{figure}
 
 \begin{figure}[t!]
     \centering
