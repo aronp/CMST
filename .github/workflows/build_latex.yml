@@ -66,11 +66,6 @@ jobs:
         with:
           name: IEEE_Paper
           path: theory/ieee_cmst.pdf
-          
-      - name: Pull latest changes from remote
-        run: |
-          git checkout main
-          git pull origin main --rebase
       
       - name: Commit PDF
         uses: stefanzweifel/git-auto-commit-action@v5
