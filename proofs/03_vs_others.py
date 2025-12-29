@@ -135,14 +135,16 @@ ax.plot(f_cmst, spec_cmst, color='#0072BD', label=f'CMST (p={p})', linewidth=1.5
 
 # Styling
 ax.set_ylim(-600, 10) # The deep drop
-ax.set_xlim(0, 0.2)
+ax.set_xlim(0, 0.21)
 ax.set_xlabel('Normalized Frequency')
 ax.set_ylabel('Magnitude (dB)')
 ax.grid(True, which='major', linestyle='-', alpha=0.2)
 ax.legend(loc='upper right', frameon=False, prop={'size': 6})
 
+# too many x axis ticks.
+ax.set_xticks(ax.get_xticks()[::2])
 # Annotations
-ax.annotate('Double Precision Floor\n(-320 dB)', xy=(0.2, -320), xytext=(0.15, -250),
+ax.annotate('Double Precision Floor\n(-320 dB)', xy=(0.2, -320), xytext=(0.11, -300),
             fontsize=7, arrowprops=dict(facecolor='red', arrowstyle='->', lw=0.5))
 
 ax.annotate('Super-Algebraic\nDecay', xy=(0.08, -480), xytext=(0.02, -400),
