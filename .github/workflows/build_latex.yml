@@ -30,6 +30,12 @@ jobs:
       - name: Generate Figure
         run: python proofs/03_vs_others.py
 
+      - name: Upload PDF3
+        uses: actions/upload-artifact@v4
+        with:
+          name: VsOthers
+          path: proofs/VsOtherFilters.pdf
+
       - name: Compile LaTeX1
         uses: xu-cheng/latex-action@v3
         with:
