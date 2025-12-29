@@ -61,16 +61,20 @@
 
 
 \begin{document}
-\title{The Laplace Transform of Even Log-concave functions having zeros on the Imaginary axis}
+\title{The bilateral Laplace Transform of Even Log-concave functions having zeros on the Imaginary axis}
 \author{Aron Palmer\\ \small \texttt{palmer.aron+cmst@gmail.com}}
 \date{\today}
 \maketitle
 \thispagestyle{preprint} 
 
 \begin{abstract}
-In this paper we show that a broad class of bilateral Laplace transforms arising from 
-even, positive, exponentially decaying kernels have all their zeros located on the 
-imaginary axis and the zeros are distinct.
+We introduce the Cosh-Moment Sturm Transform (CMST) framework for constructing 
+globally interlacing families of real-rooted functions. We prove that bilateral 
+Laplace transforms $F(s) = \int_{-\infty}^{\infty} e^{-f(t^2)} e^{st} dt$ 
+with convex $f(t)$ have all distinct zeros on the imaginary axis. The CMST 
+construction produces infinite families maintaining global interlacing.
+Applications include a $C_c^{\infty}$ window function for signal processing 
+with super-algebraic sidelobe suppression.
 \end{abstract}
 
 \section{Introduction}
@@ -487,7 +491,7 @@ Take the second derivative of this.
 and map $s^2$ back to $s$ giving us the operator
 
 \[
-4 s F''(s)+2 F'(s) \text{ or }  D(4sD + 2) = \mathcal{T}_{\text{rad}}
+4 s F''(s)+2 F'(s) \text{ or }  D(4sD + 2) \coloneqq  \mathcal{T}_{\text{rad}}
 \]
 
 Both $D$ and $(4sD + 2)$ preserve interlacing in $\mathcal{P}_{\mathrm{pos}}$ and map $\mathcal{P}_{\mathrm{pos}}$ to $\mathcal{P}_{\mathrm{pos}}$
@@ -1298,7 +1302,7 @@ Asymptoticically we should expect the function to behave like $\cos(s z(s))$
 This approximation should get better and better for higher values of s as the function becomes more Dirac delta  like
 \end{remark}
 \begin{remark}
-We wont be proving this, but the second derivative looks very like a term that would interlace with the original function.  We almost get the Wronskian and I think the Laplace transform preserves the Wronskian, but thats for another day.
+We wont be proving this, but the second derivative looks very like a term that would interlace with the original function.  We almost get the Wronskian and I think the bilateral Laplace transform preserves the Wronskian, but thats for another day.
 \[
 \left( z'(s)+z(s)\right)^2 \cos (s z(s))+\sin (s z(s)) \left(s z''(s)+2 z'(s)\right)
 \]
@@ -1521,7 +1525,7 @@ $\mathcal{P}_{\mathrm{pos}}$
 \begin{proof}
 First, we observe the power series expansion of the exponent for $t \in (-1, 1)$:
 \begin{equation}
-    \frac{1}{t^{2k}-1} = -\sum_{n=0}^{\infty} t^{2nk} = -(1 + t^{2k} + t^{k4} + \dots)
+    \frac{1}{t^{2k}-1} = -\sum_{n=0}^{\infty} t^{2nk} = -(1 + t^{2k} + t^{4 k} + \dots)
 \end{equation}
 The kernel can be expressed as $e^{-f(t^2)}$ where $f(t) = \sum_{n=0}^{\infty} a_n t^n$ with $a_n = 1$ for all $n$. 
 \end{proof}
