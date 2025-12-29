@@ -1,12 +1,14 @@
 name: Build LaTeX Paper
 
 on:
+  workflow_dispatch: 
   push:
     branches: [ "main" ]
-    paths:                 # <--- Must align directly under 'branches'
+    paths:                
       - '**.py'
       - '**.tex'
-
+      - '.github/workflows/**' 
+      
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
