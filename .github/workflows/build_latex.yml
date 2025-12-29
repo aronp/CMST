@@ -3,9 +3,10 @@ name: Build LaTeX Paper
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
+    paths:                 # <--- Must align directly under 'branches'
+      - '**.py'
+      - '**.tex'
+            
 permissions:
   contents: write
 
