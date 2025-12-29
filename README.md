@@ -26,7 +26,7 @@ This window is an implementation of **CMST (Cosh Moment Sturm Transform)**. Unli
 We utilize a compensated log-concave mollifier that cancels low-order curvature to achieve Flatness:
 
 $$
-w(t) = \exp\left(t^n - \frac{1}{1-t^n}\right), 
+w(t) = \exp\left(1+t^n - \frac{1}{1-t^n}\right), 
 $$
 
 where n is even.
@@ -57,6 +57,7 @@ Why does analytic smoothness matter? In control systems (e.g., drones, robotics)
 
 ![Spectral Purity](theory/Figure_1_Composite.png)
 
+![Comparison](VsOtherFilters.png)
 ### 📦 Installation
 
 ```bash
