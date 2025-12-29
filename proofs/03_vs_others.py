@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import mpmath
 from mpmath import mp
 from scipy.signal.windows import kaiser, blackmanharris, hann
-filename = "VsOtherFilters.pdf"
+filename = "VsOtherFilters"
 
 # --- 1. IEEE Plot Style Configuration ---
 plt.rcParams.update({
@@ -148,9 +148,9 @@ ax.annotate('Double Precision Floor\n(-320 dB)', xy=(0.2, -320), xytext=(0.15, -
 ax.annotate('Super-Algebraic\nDecay', xy=(0.08, -480), xytext=(0.02, -400),
             color='#0072BD', fontsize=7, 
             arrowprops=dict(color='#0072BD', arrowstyle='->', lw=0.5))
-plt.savefig(filename, bbox_inches='tight', pad_inches=0.02)            
+plt.savefig(filename+".pdf", bbox_inches='tight', pad_inches=0.02)    
+plt.savefig(filename+".png", bbox_inches='tight', pad_inches=0.02, dpi=300)        
 print("Success! " + filename + " Saved")
-plt.show()
 
 
 
