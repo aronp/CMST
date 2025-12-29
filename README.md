@@ -55,7 +55,7 @@ Unlike traditional windows which are locked to a single profile (e.g., Hann, Bla
 Why does analytic smoothness matter? In control systems (e.g., drones, robotics), the 3rd derivative (Jerk) corresponds to mechanical stress.
 
 
-![Spectral Purity](theory/Figure_1_Composite.png)
+![Tunable shape](tunable_flatness_time_only.png)
 
 ![Comparison](VsOtherFilters.png)
 ### 📦 Installation
