@@ -26,26 +26,26 @@ jobs:
       - name: Generate Figure
         run: python proofs/03_vs_others.py
 
-      - name: Compile LaTeX
+      - name: Compile LaTeX1
         uses: xu-cheng/latex-action@v3
         with:
           root_file: ./theory/cmst.tex
 
-      - name: Upload PDF
+      - name: Upload PDF1
         uses: actions/upload-artifact@v4
         with:
           name: CMST_Paper
           path: theory/cmst.pdf
 
-      - name: Compile LaTeX
+      - name: Compile LaTeX2
         uses: xu-cheng/latex-action@v3
         with:
           root_file: ./theory/ieee_cmst.tex
 
-      - name: Upload PDF
+      - name: Upload PDF2
         uses: actions/upload-artifact@v4
         with:
-          name: CMST_Paper
+          name: IEEE_Paper
           path: theory/ieee_cmst.pdf
           
         - name: Commit PDF
