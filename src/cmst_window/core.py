@@ -1,5 +1,19 @@
 import numpy as np
 
+def cmst(N, p=2, sym=True):
+    """
+    Matches scipy.signal.get_window conventions.
+    """
+    # Generate the time grid [-1, 1]
+    if sym:
+        # Symmetric window (for filter design)
+        t = np.linspace(-1, 1, N)
+    else:
+        # Periodic window (for spectral analysis/FFT)
+        t = np.linspace(-1, 1, N, endpoint=False)
+    
+    return cmst_window(t, width=1.0, power=p)
+
 def cmst_window(t, width=1.0, power=2):
     """
     Generates the Hyper-CMST (Compensated Mollifier) window function.
