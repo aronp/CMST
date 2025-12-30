@@ -17,7 +17,7 @@ This window is an implementation of **CMST (Cosh Moment Sturm Transform)**. Unli
     The function is infinitely differentiable with no discontinuities in any derivative. This eliminates the "spectral ringing" and mechanical jerk caused by piecewise functions like the Planck-taper or Tukey window.
 
 2.  **Zero-Preserving :**
-    Derived from CMST theorey, the kernel guarantees the preservation of realness in the signal chain. It does not introduce artificial complex roots (phantom oscillations) into the passband.
+    Derived from CMST theory, the kernel guarantees the preservation of realness in the signal chain. It does not introduce artificial complex roots (phantom oscillations) into the passband.
 
 3.  **Interlace-Preserving Transform:**
     For all derivatives, the window acts as a variation-diminishing operator. It preserves the root-interlacing structure of the underlying signal, ensuring that derivative noise is bounded and geometric topology is maintained even at the boundaries.
@@ -47,7 +47,7 @@ Unlike traditional windows which are locked to a single profile (e.g., Hann, Bla
     Mode B: The "Silencer" (p=2)
         Goal: Maximal Spectral Purity.
 
-        Behavior: The window converges to an analytically smooth Gaussian-like profile. This sacrifices the "flat top" to achieve significantly faster side-lobe decay, diving into the noise floor deeper than standard piecewise functions like the Planck-taper.
+        Behavior: The window converges to an analytically smooth Gaussian-like profile. This sacrifices the "flat top" to achieve significantly faster side-lobe decay, often over 100dB improvement, diving into the noise floor deeper than standard piecewise functions like the Planck-taper.
 
 ### 📉 Tunable Flatness
 ![Tunable shape](tunable_flatness_time_only.png)
