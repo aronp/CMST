@@ -1,6 +1,6 @@
 import numpy as np
 
-def cmst_window(t, width=1.0, power=6):
+def cmst_window(t, width=1.0, power=2):
     """
     Generates the Hyper-CMST (Compensated Mollifier) window function.
     
