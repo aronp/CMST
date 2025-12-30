@@ -10,14 +10,8 @@
 
 \IEEEoverridecommandlockouts
 
-
-
-% Apply the style to the first page only
 \begin{document}
 \title{CMST: A Tunable, Analytically Smooth Window Function with Compact Support}
-\author{Aron Palmer \thanks{e-mail: palmer.aron+cmst@gmail.com.}
-\thanks{Code available at: github.com/aronp/CMST}
-\thanks{\copyright\ 2025 Aron Palmer}}
 
 \markboth{IEEE Signal Processing Letters,Vol.XX, No.X, December 2025}
 {Shell \MakeLowercase{\textit{et al.}}: CMST Window}
@@ -28,7 +22,7 @@ Window functions with compact support are critical for finite-duration signal pr
 Classical windows (e.g., Kaiser-Bessel) exhibit polynomial decay in their spectral side-lobes due to boundary discontinuities, while piecewise approximations (e.g., Planck-taper) introduce high-order derivative singularities.
 We propose the CMST window, a parametric family of $C^{\infty}_{c}$ bump functions defined by a closed-form analytic expression which is subject of ongoing research.
 The kernel achieves a "Super-Flat" passband without sacrificing infinite differentiability at the boundaries.
-Comparative analysis demonstrates that the CMST window exhibits super-algebraic spectral decay, effectively eliminating the spectral noise floor inherent in classical windows and offering leakage suppression limited only by machine precision in high-dynamic-range applications.
+Comparative analysis demonstrates that the CMST window exhibits super-algebraic spectral decay, effectively eliminating the spectral noise floor inherent in classical windows and offering leakage suppression in high-dynamic-range applications.
 \end{abstract}
 
 
@@ -44,7 +38,7 @@ Standard solutions force a compromise: the Kaiser-Bessel window offers optimal e
 Piecewise alternatives, like the Planck-taper, attempt to mitigate this but introduce high-order derivative singularities (``jerk'') that create spectral re-growth floors.
 
 In this letter, we introduce the CMST window. 
-Unlike piecewise approximations, the CMST kernel is defined by a single analytic expression derived from the theory of Laguerre-Pólya and recent work I have been doing on the CMST (Cosh Moment Sturm Transform).
+Unlike piecewise approximations, the CMST kernel is defined by a single analytic expression derived  from the theory of Laguerre-Pólya and the proposed Cosh Moment Sturm Transform (CMST) framework.
 By employing a compensated mollifier with exact Taylor series cancellation, we achieve a ``Super-Flat'' passband that transitions to zero with infinite smoothness ($C_c^\infty$).
 We show that this structure breaks the polynomial decay limit of classical windows. 
 Specifically, the CMST window ($p=2$) exhibits super-algebraic decay, achieving leakage suppression levels 100 dB lower than equivalent Kaiser windows at high frequencies, effectively eliminating the spectral noise floor for finite-precision computations.
@@ -106,7 +100,7 @@ The CMST window ($p=2$), however, demonstrates monotonic super-algebraic decay.
 As shown in Table \ref{tab:sll_comparison}, this represents a $>$90 dB improvement over the Gaussian window and a substantial advantage over other windows in high-frequency bands, making it uniquely distinct from existing solutions.
 
 \subsection{Super-Polynomial Decay}
-In contrast, the CMST kernel $\Phi_p(t) = \exp(1+t^p+1/(t^{p}-1))$ possesses no characteristic side lobe level. Because $\Phi_p(t)$ is $C^\infty$ and vanishes to all orders at the analytic wall $\Re[t]=1$, the side lobes do not exhibit the standard $O(s^{-n})$ decay. Instead, the spectral envelope follows a super-polynomial trajectory:
+In contrast, the CMST kernel $\Phi_p(t) = \exp(1+t^p-1/(1-t^{p}))$ possesses no characteristic side lobe level. Because $\Phi_p(t)$ is $C^\infty$ and vanishes to all orders at the analytic wall $\Re[t]=1$, the side lobes do not exhibit the standard $O(s^{-n})$ decay. Instead, the spectral envelope follows a super-polynomial trajectory:
 \begin{equation}
     |F(s)| \sim \exp(-s^\alpha), \quad \alpha > 0
 \end{equation}
@@ -133,11 +127,18 @@ Gaussian (Trunc) & -32 dB           & -48 dB                & $1/s$     \\
 In this letter, we introduced the CMST window, an analytically smooth, compactly supported window function derived from current research on the CMST framework.
 By employing a compensated mollifier with a super-flat exponent, we achieved a window that combines the passband accuracy of a boxcar with the spectral decay of a Schwartz function.
 Our analysis confirms that the CMST window eliminates the derivative singularities inherent in piecewise functions like the Planck-taper, preventing the spectral re-growth associated with "jerk" discontinuities.
-Most significantly, numerical experiments demonstrate an order-of-magnitude improvement in spectral purity: the CMST window achieves leakage suppression exceeding -140 dB where comparable Gaussian and Kaiser windows plateau at -48 dB.
+Most significantly, numerical experiments demonstrate an order-of-magnitude improvement in spectral purity: the CMST window achieves leakage suppression exceeding -100 dB where comparable Gaussian and Kaiser windows plateau at -48 dB.
 This 100 dB advantage establishes the CMST class as a robust, high-fidelity alternative for applications requiring extreme dynamic range within a strictly finite temporal support.
 
 
 \begin{figure}[t!]
+    \centering
+    \includegraphics[width=\columnwidth]{tunable_flatness_time_only.pdf}
+\caption{\textbf{Time-domain comparison}  The CMST window shows a broad 'Super-Flat' passband while maintaining analytic continuity at the boundaries, eliminating derivative discontinuities.}
+    \label{fig:vs_others}
+
+\vspace{0.2cm} 
+    
     \centering
     \includegraphics[width=\columnwidth]{VsOtherFilters.pdf}
 \caption{\textbf{Super-Algebraic Spectral Decay.} Comparison of the CMST kernel ($p=2$) against standard windows...}
@@ -161,9 +162,7 @@ D.~J.~A.~McKechan, C.~Robinson, and B.~S.~Sathyaprakash,
 \emph{Class. Quantum Grav.}, vol. 27, no. 8, p. 084020, Apr. 2010.
 
 \bibitem{CMST Theory}
-Aron Palmer, ``CMST: Analytically stable, compactly supported flat-top window,'' 
-v0.1.1, Zenodo, Dec. 2025. [Software]. 
-Available: https://github.com/aronp/CMST. doi: 10.5281/zenodo.18039911
+Anonymized for Peer Review, "CMST Code Repository," 2025. [Online]. Available upon publication.
 \end{thebibliography}
 
 \end{document}
