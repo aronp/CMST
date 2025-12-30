@@ -48,17 +48,13 @@ Unlike traditional windows which are locked to a single profile (e.g., Hann, Bla
         Goal: Maximal Spectral Purity.
 
         Behavior: The window converges to an analytically smooth Gaussian-like profile. This sacrifices the "flat top" to achieve significantly faster side-lobe decay, diving into the noise floor deeper than standard piecewise functions like the Planck-taper.
-        
-        
-
-### 📉 Spectral Purity
-Why does analytic smoothness matter? In control systems (e.g., drones, robotics), the 3rd derivative (Jerk) corresponds to mechanical stress.
 
 ### 📉 Tunable Flatness
 ![Tunable shape](tunable_flatness_time_only.png)
 
-### 📉 Comparison
+### 📉 Spectral Leakage Comparison
 ![Comparison](VsOtherFilters.png)
+
 ### 📦 Installation
 
 ```bash

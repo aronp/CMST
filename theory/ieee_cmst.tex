@@ -106,7 +106,7 @@ The CMST window ($p=2$), however, demonstrates monotonic super-algebraic decay.
 As shown in Table \ref{tab:sll_comparison}, this represents a $>$90 dB improvement over the Gaussian window and a substantial advantage over other windows in high-frequency bands, making it uniquely distinct from existing solutions.
 
 \subsection{Super-Polynomial Decay}
-In contrast, the CMST kernel $\Phi_p(t) = \exp(t^p+1/(t^{p}-1))$ possesses no characteristic side lobe level. Because $\Phi_p(t)$ is $C^\infty$ and vanishes to all orders at the analytic wall $\Re[t]=1$, the side lobes do not exhibit the standard $O(s^{-n})$ decay. Instead, the spectral envelope follows a super-polynomial trajectory:
+In contrast, the CMST kernel $\Phi_p(t) = \exp(1+t^p+1/(t^{p}-1))$ possesses no characteristic side lobe level. Because $\Phi_p(t)$ is $C^\infty$ and vanishes to all orders at the analytic wall $\Re[t]=1$, the side lobes do not exhibit the standard $O(s^{-n})$ decay. Instead, the spectral envelope follows a super-polynomial trajectory:
 \begin{equation}
     |F(s)| \sim \exp(-s^\alpha), \quad \alpha > 0
 \end{equation}

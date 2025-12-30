@@ -71,7 +71,7 @@
 We introduce the Cosh-Moment Sturm Transform (CMST) framework for constructing 
 globally interlacing families of real-rooted functions. We prove that bilateral 
 Laplace transforms $F(s) = \int_{-\infty}^{\infty} e^{-f(t^2)} e^{st} dt$ 
-with convex $f(t)$ have all distinct zeros on the imaginary axis. The CMST 
+with convex $f(t)$ have all distinct zeros on the imaginary axis for a class of $f(t)$. The CMST 
 construction produces infinite families maintaining global interlacing.
 Applications include a $C_c^{\infty}$ window function for signal processing 
 with super-algebraic sidelobe suppression.
@@ -1218,20 +1218,13 @@ The kernel $e^{-t^{2k}}$  serves as a critical benchmark for the stability of th
 is basically compact support so we can see some of the differences between compact support and infinite support.Compact support means that we can have infinite size families and often do.  Infinite support means finite size families, and indeed in order to converge we need an "Assassin" term that limits the size of the family.
 \end{remark}
 
-\section*{Closure Properties (The Hotel California Effect)}
-We get that if
-\[
-\mathcal{C}_{a} f(t^2) \in CMST
-\]
-then so is
-\[
-\mathcal{C}_{a} \mathcal{C}_{a} f(t^2) 
-\]
-So we have a closed family. 
-\newline
-\begin{quote}
-\textit{"Such a lovely place... you can check out any time you like, but you can never leave."}
-\end{quote}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\linewidth]{interlacing_chart.pdf}
+    \caption{\textbf{Visualisation of the family root-interlacing property.} 
+    The zeros of the Fourier transform of the moments $t^{k} e^{-4}$ (Order 2 and 4) strictly interlace with the zeros of the base function (Order 0).}
+    \label{fig:interlacing}
+\end{figure}
 
 \section{The Gaussian Limit}
 
@@ -1282,18 +1275,19 @@ where $f(t)$ is very log-concave then if we normalise the integral we get a shar
 \begin{equation}
 F(s) = \int_{-\infty }^{\infty } 
 f(t) e^{s t} \, dt \sim  
-\int_{-\infty }^{\infty } 
-\delta(t-z(s))f(z) e^{s t} \, = e^{s z(s)}
+\lambda \int_{-\infty }^{\infty } 
+\delta(t-z(s))f(z) e^{s t} \, = \lambda e^{s z(s)}
 \end{equation}
-So
+Where $\lambda$ is just a normalisation constant.
 
+So
 \begin{equation}
-F(s)+F(-s) \sim  \cosh(s z)
+F(s)+F(-s) \sim \lambda \cosh(s z)
 \end{equation}
 
 By performing the substitution $s \to is$, we move to the cosine series:
 \begin{equation}
-    F(is) + F(-is) = \int_{-\infty }^{\infty } f(t) \cos{s t} \, dt \sim  \cos(s z(s))
+    F(is) + F(-is) = \int_{-\infty }^{\infty } f(t) \cos{s t} \, dt \sim  \lambda \cos(s z(s))
 \end{equation}
 
 
@@ -1531,9 +1525,9 @@ The kernel can be expressed as $e^{-f(t^2)}$ where $f(t) = \sum_{n=0}^{\infty} a
 \end{proof}
 
 \begin{remark}
-The $e^{t^{2n}}$ operators are benign and in $LP$ so we can flatten this function with 
+The $e^{t^{2n}}$ operators are benign so we can flatten this function with 
 \[
-e^{t^{2 k}+\frac{1}{t^{2 k}-1}}
+e^{1+t^{2 k}+\frac{1}{t^{2 k}-1}}
 \]
 and produce a tunable window suitable for signal processing with compact support and good zero preserving properties.
 
@@ -1543,6 +1537,14 @@ In contrast, the CMST kernel is $C_c^\infty$ (smooth with compact support).
 This smoothness guarantees \textbf{super-algebraic decay} of the Fourier transform side-lobes.
 As a result, while the main-lobe width (resolution) is comparable to a Kaiser window, the dynamic range (sidelobe suppression) is vastly superior, avoiding the "spectral floor" caused by boundary discontinuities.
 \end{remark}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\linewidth]{VsOtherFilters.pdf}
+    \caption{\textbf{Visualisation spectral leakage vs other filters.}} 
+    \label{fig:vsOthers}
+\end{figure}
+
 
 
 \section*{Acknowledgments}
