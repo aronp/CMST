@@ -55,6 +55,11 @@ Unlike traditional windows which are locked to a single profile (e.g., Hann, Bla
 ### 📉 Spectral Leakage Comparison
 ![Comparison](VsOtherFilters.png)
 
+### 📉 Performance Analysis: 
+Detection of a -100 dB weak signal (1.3 kHz) next to a strong carrier (1.0 kHz). The standard Planck-taper (Red) buries the target in spectral leakage. The CMST window (Blue) resolves it clearly with >30 dB of headroom
+![Discrimination](weak_signal_comparison.png)
+
+
 ### 📦 Installation
 
 ```bash
