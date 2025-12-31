@@ -80,7 +80,7 @@ The parameter $p$ governs the trade-off between the time-domain width of the pas
 \end{itemize}
 
 \subsection{Zero-Preservation and Interlacing}
-From the perspective of mollifier theory, CMST-class functions are known to preserve the topological properties of the signals they window. Specifically, when used as a kernel for filtering, the CMST window preserves the interlacing properties of zeros in the transform domain. This is a critical advantage for the design of linear-phase filters; whereas piecewise windows can introduce "spurious zeros" due to the high-frequency discontinuities (the Gibbs-like artifacts of the jerk-singularity), the analytic nature of the CMST window ensures that the zero-structure of the underlying signal remains unperturbed. This characteristic makes it an ideal candidate for bank-of-filters analysis and high-order IIR pre-processing.
+From the perspective of mollifier theory, CMST-class functions are claimed to preserve the topological properties of the signals they window. Specifically, when used as a kernel for filtering, the CMST window preserves the interlacing properties of zeros in the transform domain. This is a critical advantage for the design of linear-phase filters; whereas piecewise windows can introduce "spurious zeros" due to the high-frequency discontinuities (the Gibbs-like artifacts of the jerk-singularity), the analytic nature of the CMST window ensures that the zero-structure of the underlying signal remains unperturbed. 
 
 \section{Performance Analysis}
 To evaluate the efficacy of the CMST window, we conduct a comparative study against the industry-standard Kaiser window ($\beta=16$) and the Planck-taper.
@@ -141,7 +141,7 @@ This 100 dB advantage establishes the CMST class as a robust, high-fidelity alte
     
     \centering
     \includegraphics[width=\columnwidth]{VsOtherFilters.pdf}
-\caption{\textbf{Super-Algebraic Spectral Decay.} Comparison of the CMST kernel ($p=2$) against standard windows...}
+\caption{\textbf{Super-Algebraic Spectral Decay.} Comparison of the CMST kernel ($p=2$) against standard windows.}
     \label{fig:vs_others}
 \end{figure}
 
