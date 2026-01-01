@@ -48,6 +48,7 @@ Unlike traditional windows which are locked to a single profile (e.g., Hann, Bla
         Goal: Maximal Spectral Purity.
 
         Behavior: The window converges to an analytically smooth Gaussian-like profile. This sacrifices the "flat top" to achieve significantly faster side-lobe decay, often over 100dB improvement, diving into the noise floor deeper than standard piecewise functions like the Planck-taper.
+        Generally I have found p=2 gives the best results.
 
 ### 📉 Tunable Flatness
 ![Tunable shape](tunable_flatness_time_only.png)
