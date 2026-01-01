@@ -64,7 +64,7 @@ Detection of a -100 dB weak signal (1.3 kHz) next to a strong carrier (1.0 kHz).
 ### 📦 Installation
 
 ```bash
-git clone [https://github.com/aronp/CMST.git](https://github.com/aronp/CMST.git)
+git clone https://github.com/aronp/CMST.git
 
 cd CMST
 
