@@ -34,16 +34,16 @@ jobs:
           pip install numpy scipy matplotlib mpmath
 
       - name: Generate Figure
-        run: python proofs/03_vs_others.py
+        run: python examples/03_vs_others.py
 
       - name: Upload PDF3
         uses: actions/upload-artifact@v4
         with:
           name: VsOthers
-          path: proofs/VsOtherFilters.pdf
+          path: examples/VsOtherFilters.pdf
 
       - name: Generate Figure2
-        run: python proofs/04_interlacing.py
+        run: python examples/04_interlacing.py
 
       - name: Compile LaTeX1
         uses: xu-cheng/latex-action@v3
