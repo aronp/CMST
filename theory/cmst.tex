@@ -542,7 +542,7 @@ with a distinguished total order $<$ $A$ on the index set $A$, such that:
 We say that $(\mathcal{C}_a)$ is a CMST structure if it
 satisfies (i)--(iii).
 We also say that $f(t) \in CMST$ if it preserves CMST.
-We will refer to $f(t)$ even if its an even function and $f(t)$ not even if $f(t) \ne f(-t)$
+We will refer to $f(t)$ as even if its an even function and $f(t)$ not even if $f(t) \ne f(-t)$
 \end{definition}
 
 \begin{theorem}[Interlacing Direction by Reciprocal Roots]\label{def:Roots}
@@ -789,7 +789,7 @@ $\theta_{\infty}$ is when
 \[
 \mathcal{C}_{1}(\Rot({f},{f t^2}))(s) 
 \]
-has any positve zeros.
+has any positive zeros.
 
 Looking at
 \[
@@ -1351,7 +1351,7 @@ which is
 \[
 \frac{a^2+2 a s+b^2+s^2}{a^2+b^2}
 \]
-with the only odd term being $2 a s$. So any product of these terms will have all positive coeffients.
+with the only odd term being $2 a s$. So any product of these terms will have all positive coefficients.
 
 \end{remark}
 
@@ -1489,10 +1489,10 @@ For functions of the form $e^{-f(t^2)}$ where $f(t)$ is convex
 \end{equation}
 \end{theorem}
 \begin{proof}
-That is simply the result of applying $sD$ to the transform, and moving the $t^2$ terms outside to their $\mathcal{T}_{\text{rad}}$ equivalents.
+That is simply the result of applying $sD$ , the Euler operator, to the transform, and moving the $t^2$ terms outside to their $\mathcal{T}_{\text{rad}}$ equivalents.
 \end{proof}
 \begin{remark}
-Note that the the terms of  $f'(\mathcal{T}_{\text{rad}})$ are positive.  This shifts the zeros to the left which means that these functions may not be $\in CMST$
+Note that the the terms of  $f'(\mathcal{T}_{\text{rad}})$ are positive.  This shifts the zeros to the left which means that these functions may not be $\in CMST$ 
 \end{remark}
 
 \begin{remark}
@@ -1511,7 +1511,7 @@ and $\Phi(t) = 0$ for $|t| \ge 1$. This function is $C^\infty$ and vanishes with
 
 \begin{theorem}[CMST Membership of the Geometric Kernel]
 The function $\Phi(t) = \exp\left( \frac{1}{t^{2k}-1} \right)$ belongs to the CMST class on the interval $[-1, 1]$. Consequently, its CMST 
-$F_n(s) = \mathcal{C}_1[t^{2n}\Phi(t)](s)$ is a globally interlacing family in 
+$F_n(s) = \mathcal{C}_1[t^{2n}\Phi(t)](s)$ is a interlacing family in 
 $\mathcal{P}_{\mathrm{pos}}$ 
 
 \end{theorem}
@@ -1535,7 +1535,7 @@ The kernel CMST window exhibits a distinct advantage over classical window funct
 Standard windows typically possess only finite regularity ($C^n$ continuity) at the boundaries, leading to spectral sidelobes that decay polynomially ($\mathcal{O}(\omega^{-(n+1)})$).
 In contrast, the CMST kernel is $C_c^\infty$ (smooth with compact support). 
 This smoothness guarantees \textbf{super-algebraic decay} of the Fourier transform side-lobes.
-As a result, while the main-lobe width (resolution) is comparable to a Kaiser window, the dynamic range (sidelobe suppression) is vastly superior, avoiding the "spectral floor" caused by boundary discontinuities.
+As a result, while the main-lobe width (resolution) is comparable to a Kaiser window, the dynamic range (sidelobe suppression) is vastly superior, avoiding the "spectral floor" caused by boundary discontinuities.  Windows like the Planck window while smooth at $t = 1$ introduce discontinuities elsewhere.
 \end{remark}
 
 
