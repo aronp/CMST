@@ -10,7 +10,17 @@
 
 \IEEEoverridecommandlockouts
 
+\title{CMST: A Tunable, Analytically Smooth Window Function with Compact Support}
+
+\author{Aron Palmer  \thanks{E-mail: palmer.aron+cmst@gmail.com}
+}
+
+
+
 \begin{document}
+\maketitle
+
+
 \title{CMST: A Tunable, Analytically Smooth Window Function with Compact Support}
 
 \markboth{IEEE Signal Processing Letters,Vol.XX, No.X, December 2025}
@@ -104,24 +114,6 @@ In contrast, the CMST kernel $\Phi_p(t) = \exp(1+t^p-1/(1-t^{p}))$ possesses no 
 \begin{equation}
     |F(s)| \sim \exp(-s^\alpha), \quad \alpha > 0
 \end{equation}
-
-\subsection{Numerical Performance}
-As shown in Table \ref{tab:sll_comparison}, while a $p=2$ window may exhibit a nominal "first side lobe" at -65 dB, the subsequent lobes drop off at an accelerating rate. 
-
-\begin{table}[h]
-\centering
-\caption{Side Lobe Suppression at Frequency Offsets}
-\begin{tabular}{@{}lccc@{}}
-Window Type & Offset $\Delta s = 10$ & Offset $\Delta s = 50$ & Decay Law \\ 
-Hamming     & -43 dB                & -55 dB                & $1/s$     \\
-Gaussian (Trunc) & -32 dB           & -48 dB                & $1/s$     \\
-\textbf{CMST $p=2$} & \textbf{-68 dB} & \textbf{-142 dB}      & $\exp(-\sqrt{s})$ \\
-\textbf{CMST $p=4$} & \textbf{-92 dB} & \textbf{-210 dB}      & $\exp(-s^\beta)$ \\ 
-\end{tabular}
-\label{tab:sll_comparison}
-\end{table}
-
-
 
 \section{Conclusion}
 In this letter, we introduced the CMST window, an analytically smooth, compactly supported window function derived from current research on the CMST framework.
