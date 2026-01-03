@@ -84,7 +84,7 @@ N = 4096*2
 p = 2 
 
 print(f"Running Ultimate Comparison (N={N}, p={p})...")
-print("This may take 1-2 minutes due to high precision calculations.")
+print("This may take minutes due to high precision calculations.")
 
 # --- Generate Windows ---
 
