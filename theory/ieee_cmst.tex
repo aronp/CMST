@@ -87,6 +87,10 @@ The parameter $p$ governs the trade-off between the time-domain width of the pas
 \begin{itemize}
     \item \textbf{Flat-Top Mode ($p \ge 6$):} Higher values of $p$ suppress the $t^p$ term near the origin, causing the window to remain near unity for the majority of the interval. This maximizes amplitude accuracy for steady-state signals.
     \item \textbf{Spectral Purity Mode ($p=2$):} Lowering $p$ toward its limit of 2 creates a smoother, more bell-shaped profile. This minimizes the "sharpness" of the transition into the decay region, resulting in maximal suppression of high-frequency spectral side-lobes.
+   
+   
+   
+    This version tends to outperform most others in the testing I have done.
 \end{itemize}
 
 \subsection{Zero-Preservation and Interlacing}
@@ -104,13 +108,11 @@ In contrast, the CMST window is strictly analytic on $(-1, 1)$ and vanishes with
 This $C^\infty$ property guarantees that the spectral magnitude decays faster than any polynomial power of frequency.
 
 \subsection{Spectral Purity Comparison}
-The spectral leakage characteristics are illustrated in Fig. \ref{tab:sll_comparison}.
 While the Planck window provides excellent suppression near the main lobe, it eventually hits a decay floor governed by its boundary properties (and numerical precision limits).
 The CMST window ($p=2$), however, demonstrates monotonic super-algebraic decay.
-As shown in Table \ref{tab:sll_comparison}, this represents a $>$90 dB improvement over the Gaussian window and a substantial advantage over other windows in high-frequency bands, making it uniquely distinct from existing solutions.
 
 \subsection{Super-Polynomial Decay}
-In contrast, the CMST kernel $\Phi_p(t) = \exp(1+t^p-1/(1-t^{p}))$ possesses no characteristic side lobe level. Because $\Phi_p(t)$ is $C^\infty$ and vanishes to all orders at the analytic wall $\Re[t]=1$, the side lobes do not exhibit the standard $O(s^{-n})$ decay. Instead, the spectral envelope follows a super-polynomial trajectory:
+In contrast, the CMST kernel $\Phi_p(t) = \exp(1+t^p-1/(1-t^{p}))$ possesses no characteristic side lobe level. Because $\Phi_p(t)$ is $C^\infty$ and vanishes to all orders at the analytic wall $|t|=1$, the side lobes do not exhibit the standard $O(s^{-n})$ decay. Instead, the spectral envelope follows a super-polynomial trajectory:
 \begin{equation}
     |F(s)| \sim \exp(-s^\alpha), \quad \alpha > 0
 \end{equation}
