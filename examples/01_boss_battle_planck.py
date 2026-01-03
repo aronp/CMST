@@ -29,9 +29,9 @@ def planck_taper(t, epsilon=0.1):
         
     return y
 
-def hyper_cmst(t, width=1.0, p=6):
+def cmst(t, width=1.0, p=6):
     """
-    Your Hyper-Flat CMST Window.
+    Your Flat CMST Window.
     Defined analytically: exp( t^p - 1/(1-t^p) )
     """
     t = np.abs(t) / width
@@ -60,8 +60,8 @@ def run_battle():
     # 1. Generate Windows
     # Planck with 20% transition zone (standard)
     w_planck = planck_taper(t, epsilon=0.2)
-    # Hyper-CMST with p=6
-    w_hyper = hyper_cmst(t, width=1.0, p=6)
+    # CMST with p=2
+    w_cmst = cmst(t, width=1.0, p=2)
 
     # 2. Compute "Jerk" (3rd Derivative)
     # This represents mechanical stress or high-frequency noise injection
@@ -69,7 +69,7 @@ def run_battle():
     d2_p = np.gradient(d1_p, dt)
     d3_p = np.gradient(d2_p, dt) # Jerk
 
-    d1_h = np.gradient(w_hyper, dt)
+    d1_h = np.gradient(w_cmst, dt)
     d2_h = np.gradient(d1_h, dt)
     d3_h = np.gradient(d2_h, dt) # Jerk
 
@@ -80,7 +80,7 @@ def run_battle():
 
     # Plot 1: The Visual Flatness
     ax1.plot(t, w_planck, 'g--', linewidth=2, label='Planck-taper (Piecewise)')
-    ax1.plot(t, w_hyper, 'k-', linewidth=2, label='Hyper-CMST (Analytic)')
+    ax1.plot(t, w_cmst, 'k-', linewidth=2, label='CMST (Analytic)')
     ax1.set_title("1. Flatness Comparison (The 'Table Top')")
     ax1.set_ylabel("Amplitude")
     ax1.set_xlim(0, 1.05)
@@ -94,13 +94,13 @@ def run_battle():
     # Plot 2: The "Jerk" Test (The Kill Shot)
     # We plot absolute jerk on log scale to see the spikes
     ax2.plot(t, np.abs(d3_p), 'g--', alpha=0.7, linewidth=1.5, label='Planck Jerk (Spikes)')
-    ax2.plot(t, np.abs(d3_h), 'k-', linewidth=2.0, label='Hyper-CMST Jerk (Smooth)')
+    ax2.plot(t, np.abs(d3_h), 'k-', linewidth=2.0, label='CMST Jerk (Smooth)')
     
     ax2.set_title("2. The 'Jerk' Test (3rd Derivative Stability)")
     ax2.set_ylabel("|d³y/dt³| (Log Scale)")
     ax2.set_xlabel("Normalized Time")
     ax2.set_yscale('log')
-    ax2.set_xlim(0.7, 1.0) # Zoom in on the transition edge
+    ax2.set_xlim(0.2, 1.0) # Zoom in on the transition edge
     ax2.set_ylim(1e-1, 1e5)
     ax2.legend()
     ax2.grid(True, alpha=0.3, which='both')
