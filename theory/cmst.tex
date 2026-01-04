@@ -1609,7 +1609,7 @@ Noting that the function is even and equating coefficients gives us $c_1 =0$, $c
 
 \end{proof}
 
-\begin{theorem}[$ \int_{-1}^{1} \exp\left( \frac{1}{t^{2k}-1} \right)cos(st), dt  =-\text{Si}(2 s) \sin (s) * \int_{-1}^{1} \exp\left( \frac{1}{t^{2k}-1} \right)cos(st), dt $]
+\begin{theorem}[$ \int_{-1}^{1} \exp\left( \frac{1}{t^{2k}-1} \right)cos(st), dt  =-2\,\text{Si}(2 s) \sin (s) * \int_{-1}^{1} \exp\left( \frac{1}{t^{2k}-1} \right)cos(st), dt $]
 \end{theorem}
 \begin{proof}
 Let
@@ -1626,12 +1626,12 @@ Taking the Fourier transform of both sides give
 \end{equation}
 If we now use $f(t) =  \frac{1}{t^{2k}-1} $ we get
 \begin{equation}
-\imath s W(s) = -\imath \, s \, \text{Si}(2 s) \sin (s) \ast W(s)
+\imath s W(s) = -\imath \, 2 \, s \, \text{Si}(2 s) \sin (s) \ast W(s)
 \end{equation}
 where $\ast$ is convolution 
 or
 \begin{equation}
-W(s) = -\text{Si}(2 s) \sin (s) \ast W(s)
+W(s) = -2 \, \text{Si}(2 s) \sin (s) \ast W(s)
 \end{equation}
 \end{proof}
 
