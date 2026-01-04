@@ -1554,15 +1554,6 @@ The kernel can be expressed as $e^{-f(t^2)}$ where $f(t) = \sum_{n=0}^{\infty} a
 We can then take the limit as $a \to 1$
 \end{proof}
 
-\begin{lemma}[$e^{\frac{1}{t^2-1}} = \frac{1}{e} \left(e^{\frac{1}{t^2-1}}\right)^{t^2} $]
-\end{lemma}
-\begin{proof}
-We can show this by taking logs of both sides giving
-\begin{equation}
-\frac{1}{t^2-1} = \frac{1}{t^2-1}{t^2}-1 \to \frac{1}{t^2-1}
-\end{equation}
-\end{proof}
-
 \begin{theorem} [Analytic form for $\int_{-a}^a \frac{\cos (s t)}{1-t^2} \, dt$ ]
 We show that
 \begin{equation}
@@ -1597,13 +1588,24 @@ we get
 \begin{equation}
 F(s) == -F''(s) + \frac{2 \sin (a s)}{s}
 \end{equation}
-Which he can solve giving us the general solution
+Which we can solve giving us the general solution
 \begin{equation}
-F(s)\to \cos (s) (-\text{Ci}((1-a) s)+\text{Ci}((a+1) s)+c_1)+\sin (s)
+F(s) = \cos (s) (-\text{Ci}((1-a) s)+\text{Ci}((a+1) s)+c_1)+\sin (s)
    (\text{Si}((a-1) s)+\text{Si}((a+1) s)+c_2)
 \end{equation}
-Noting that the function is even and equating coefficients gives us $c_1 =0$, $c_2 =0$ giving us our result
+Noting that the function is even and equating coefficients gives us $c_1 =0$, $c_2 =0$ which gives us our result
 \end{proof}
+
+
+\begin{lemma}[$e^{\frac{1}{t^2-1}} = \frac{1}{e} \left(e^{\frac{1}{t^2-1}}\right)^{t^2} $]
+\end{lemma}
+\begin{proof}
+We can show this by taking logs of both sides giving
+\begin{equation}
+\frac{1}{t^2-1} = \frac{1}{t^2-1}{t^2}-1 \to \frac{1}{t^2-1}
+\end{equation}
+\end{proof}
+
 
 \begin{remark}
 The $e^{t^{2n}}$ operators are benign so we can flatten this function with 
