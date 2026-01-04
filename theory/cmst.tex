@@ -1521,7 +1521,7 @@ For functions of the form $e^{-f(t^2)}$ where $f(t)$ is convex
 \end{equation}
 \end{theorem}
 \begin{proof}
-That is simply the result of applying $sD$ , the Euler operator, to the transform, and moving the $t^2$ terms outside to their $\mathcal{T}_{\text{rad}}$ equivalents.
+That is simply the result of applying $sD$ , the Euler operator, to the transform, and moving the $t^2$ terms outside to the integral to their $\mathcal{T}_{\text{rad}}$ equivalents.
 \end{proof}
 \begin{remark}
 Note that the the terms of  $f'(\mathcal{T}_{\text{rad}})$ are positive.  This shifts the zeros to the left which means that these functions may not be $\in CMST$ 
@@ -1551,7 +1551,7 @@ First, we observe the power series expansion of the exponent for $t \in (-1, 1)$
 \end{equation}
 Which converges on $(-1,1)$ for $0< a < 1$
 The kernel can be expressed as $e^{-f(t^2)}$ where $f(t) = \sum_{n=0}^{\infty} a_n t^n$ with $a_n < 1$ for all $n$. 
-We can then take the limit as $a \to 1$
+We can then take the limit as $a \to 1$ which for $e^{-f(t^2)}$ is finite.
 \end{proof}
 
 \begin{theorem} [Analytic form for $\int_{-a}^a \frac{\cos (s t)}{1-t^2} \, dt$ ]
@@ -1565,7 +1565,7 @@ $\mathrm{Si}(x)$ is the Sine Integral
 \begin{equation}
     \text{Si}(x) = \int_{0}^{x} \frac{\sin(t)}{t} dt
 \end{equation}
-and $\mathrm{Si}(x)$ is the Cosine Integral
+and $\mathrm{Ci}(x)$ is the Cosine Integral
 \begin{equation}
     \text{Ci}(x) = \gamma + \ln(x) + \int_{0}^{x} \frac{\cos(t) - 1}{t} dt
 \end{equation}
@@ -1582,33 +1582,60 @@ giving us
 \end{equation}
 If we let
 \begin{equation}
-F(s) = \int_{-a}^a \frac{\cos (s t)}{1-t^2} \, dt
+\mathcal{F}_a(s) = \int_{-a}^a \frac{\cos (s t)}{1-t^2} \, dt
 \end{equation}
 we get
 \begin{equation}
-F(s) == -F''(s) + \frac{2 \sin (a s)}{s}
+\mathcal{F}_a(s) = -\mathcal{F}''(s) + \frac{2 \sin (a s)}{s}
 \end{equation}
 Which we can solve giving us the general solution
 \begin{equation}
-F(s) = \cos (s) (-\text{Ci}((1-a) s)+\text{Ci}((a+1) s)+c_1)+\sin (s)
+\mathcal{F}_a(s) = \cos (s) (-\text{Ci}((1-a) s)+\text{Ci}((a+1) s)+c_1)+\sin (s)
    (\text{Si}((a-1) s)+\text{Si}((a+1) s)+c_2)
 \end{equation}
-Noting that the function is even and equating coefficients gives us $c_1 =0$, $c_2 =0$ which gives us our result
-\end{proof}
-
-
-\begin{lemma}[$e^{\frac{1}{t^2-1}} = \frac{1}{e} \left(e^{\frac{1}{t^2-1}}\right)^{t^2} $]
-\end{lemma}
-\begin{proof}
-We can show this by taking logs of both sides giving
+Noting that the function is even and equating coefficients gives us $c_1 =0$, $c_2 =0$ which gives us our final result
 \begin{equation}
-\frac{1}{t^2-1} = \frac{1}{t^2-1}{t^2}-1 \to \frac{1}{t^2-1}
+\mathcal{F}_a(s) = \cos (s) (-\text{Ci}((1-a) s)+\text{Ci}((a+1) s))+\sin (s)
+   (\text{Si}((a-1) s)+\text{Si}((a+1) s))
 \end{equation}
 \end{proof}
 
+\begin{theorem}[Moving to 1 as a limit]
+\begin{equation}
+\mathcal{F}_1(s) = \text{Si}(2 s) \sin (s)
+\end{equation}
+\end{theorem}
+\begin{proof}
+
+\end{proof}
+
+\begin{theorem}[$ \int_{-1}^{1} \exp\left( \frac{1}{t^{2k}-1} \right)cos(st), dt  =-\text{Si}(2 s) \sin (s) * \int_{-1}^{1} \exp\left( \frac{1}{t^{2k}-1} \right)cos(st), dt $]
+\end{theorem}
+\begin{proof}
+Let
+\begin{equation}
+w(t) = e^{-f(t)}
+\end{equation}
+then
+\begin{equation}
+w'(t) = -f'(t)e^{-f(t)}
+\end{equation}
+Taking the Fourier transform of both sides give
+\begin{equation}
+\i s W(s) = - F(f'(t)) \ast W(s)
+\end{equation}
+If we now use $f(t) =  \frac{1}{t^{2k}-1} $ we get
+\begin{equation}
+\i s W(s) = -i s \text{Si}(2 s) \sin (s) \ast W(s)
+\end{equation}
+or
+\begin{equation}
+W(s) = -\text{Si}(2 s) \sin (s) \ast W(s)
+\end{equation}
+\end{proof}
 
 \begin{remark}
-The $e^{t^{2n}}$ operators are benign so we can flatten this function with 
+The $e^{t^{2k}}$ operators are benign on families of size $k+1$ so we can flatten this function with 
 \begin{equation}
 e^{1+t^{2 k}+\frac{1}{t^{2 k}-1}}
 \end{equation}
@@ -1617,7 +1644,7 @@ and produce a tunable window suitable for signal processing with compact support
 The kernel CMST window exhibits a distinct advantage over classical window functions (e.g., Kaiser-Bessel, Blackman-Harris). 
 Standard windows typically possess only finite regularity ($C^n$ continuity) at the boundaries, leading to spectral sidelobes that decay polynomially ($\mathcal{O}(\omega^{-(n+1)})$).
 In contrast, the CMST kernel is $C_c^\infty$ (smooth with compact support). 
-This smoothness guarantees \textbf{super-algebraic decay} of the Fourier transform side-lobes.
+This smoothness guarantees super-algebraic decay of the Fourier transform side-lobes.
 As a result, while the main-lobe width (resolution) is comparable to a Kaiser window, the dynamic range (sidelobe suppression) is vastly superior, avoiding the "spectral floor" caused by boundary discontinuities.  Windows like the Planck window while smooth at $t = 1$ introduce discontinuities elsewhere.
 \end{remark}
 
