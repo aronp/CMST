@@ -100,25 +100,27 @@ Under these conditions $F(s)$ extends to an entire function that has distinct ze
 
 
 Thus the bilateral Laplace family
-\[
+\begin{equation}
 F(s)=\int_{-\infty}^{\infty} e^{-f(t^{2})}\,e^{s t}\,dt,
-\]
+\end{equation}
+
 constitutes a real--symmetric, genus--zero or one subclass of entire functions whose zeros are confined to the imaginary axis, are distinct, and the zeros of $F(\sqrt{-s})$ interlace with the zeros of $F''(\sqrt{-s})$
 
 We use a Cosh Transform defined as follows to produce families of functions with all real negative zeros.
 
-\[
+\begin{equation}
 \mathcal{C}_{a}[f](s) := \int_{-a}^{a} f(t)\cosh(\sqrt{s}\,t)\,dt
-\]
+\end{equation}
 
 Using this, we define a "Cosh-Moment Sturm Transform" (CMST) to produce families of functions with all real negative zeros which map to pairs of imaginary zeros in the bilateral Laplace Transform.
 
 \begin{definition}[Real-rooted functions]\label{def:P2}
 Let $\mathcal{P}$ be the class of real entire functions with real, simple,
  zeros and genus at most $1$.  Thus
-\[
+\begin{equation}
 f(t) = c \prod_{k=1}^{N} (t+r_k)
-\]
+\end{equation}
+
 where $N\in\mathbb{N}\cup\{\infty\}$ and 
 $\sum_{k=1}^N \frac{1}{r_k} < \infty$ when $N=\infty$.
 \end{definition}
@@ -484,15 +486,16 @@ $\mathcal{C}_{a}[t^2 g](s)$ and both are in $\mathcal{P}_{\mathrm{pos}}$
 Consider
 $F(s^2) = \mathcal{C}_{a}[f](s^2)$ which will be a function with all imaginary roots.
 Take the second derivative of this.
-\[
+\begin{equation}
 \frac{\partial^2F\left(s^2\right)}{\partial s^2} = 4 s^2 F''\left(s^2\right)+2 F'\left(s^2\right)
-\]
+\end{equation}
 
 and map $s^2$ back to $s$ giving us the operator
 
-\[
+\begin{equation}
 4 s F''(s)+2 F'(s) \text{ or }  D(4sD + 2) \coloneqq  \mathcal{T}_{\text{rad}}
-\]
+\end{equation}
+
 
 Both $D$ and $(4sD + 2)$ preserve interlacing in $\mathcal{P}_{\mathrm{pos}}$ and map $\mathcal{P}_{\mathrm{pos}}$ to $\mathcal{P}_{\mathrm{pos}}$
 
@@ -503,14 +506,16 @@ Both $D$ and $(4sD + 2)$ preserve interlacing in $\mathcal{P}_{\mathrm{pos}}$ an
 \section{Cosh--Moment Sturm Family (CMST) and Global Interlacing}
 \begin{definition}[Cosh--moment family]\label{def:CMST}
 For $n \in \mathbb{N}_0$ and $s\ge0$ define
-\[
+\begin{equation}
 F_n(s):=(2n+1)\int_{-1}^1 t^{2n}\cosh(\sqrt{s}\,t)\,dt
-\]
+\end{equation}
+
 \end{definition}
 \begin{lemma}[$F_n(s) \in P_{\mathrm{pos}}$]
-\[
+\begin{equation}
 F_0(s) = 2\frac{\sinh \left(\sqrt{s}\right)}{\sqrt{s}}
-\]  which only has zeros on the negative real axis and noting that $ t^2$ maps $P_{\mathrm{pos}} \to P_{\mathrm{pos}} $
+\end{equation}
+which only has zeros on the negative real axis and noting that $ t^2$ maps $P_{\mathrm{pos}} \to P_{\mathrm{pos}} $
 \end{lemma}
 
 \subsection*{Coshine--Moment Sturm Tower (CMST)}
@@ -553,35 +558,39 @@ $$
 where $r_k > 0$ and $s_k > 0$ are the magnitudes of the non-positive roots.
 
 The coefficient of the linear term, $s^1$, is the sum of the reciprocal roots:
-$$
+\begin{equation}
 f(s) = 1 + a_1 s + \dots \implies a_1 = \sum_{k=1}^n \frac{1}{r_k}
-$$
-$$
+\end{equation}
+\begin{equation}
 g(s) = 1 + b_1 s + \dots \implies b_1 = \sum_{k=1}^n \frac{1}{s_k}
-$$
+\end{equation}
+
 
 The direction of interlacing is determined by comparing these sums:
-$$
+\begin{equation}
 a_1 < b_1 \quad \iff \quad  f \to g 
-$$
+\end{equation}
+
 This means that if the sum of the reciprocal roots of $f$ is smaller than that of $g$, then the roots of $f$ are more negative than the roots of $g$.
 \end{theorem}
 
 
 \begin{theorem}[Globally interlacing family]
-\[
+\begin{equation}
 F_n(s):=(2n+1)\int_{-1}^1 t^{2n}\cosh(\sqrt{s}\,t)\,dt,
-\]
+\end{equation}
+
 is a family of mutually interlacing functions with 
 $F_{n} \to F_{n+a} \, \forall \, n \,\in \mathbb{N}_0, a \in \mathbb{N} $
 \end{theorem}
 \begin{proof}
-\[
+\begin{equation}
 F_0(s) = \frac{\sinh \left(\sqrt{s}\right)}{\sqrt{s}}
-\]
-\[
+\end{equation}
+\begin{equation}
 F_1(s) =  3 \left(\frac{(s+2) \sinh \left(\sqrt{s}\right)}{s^{3/2}}-\frac{2 \cosh \left(\sqrt{s}\right)}{s}\right)
-\]
+\end{equation}
+
 We know that $F_1(s) \in \mathcal{P}_{\mathrm{pos}}$ If we look at the zeros of $F_0(s)$ we can see that $F_1(s)$ alternates in sign at each zero.
 Looking at the coefficients of s we get for $F_0(s)$ its $1/6$ and for $F_1(s)$ its  $3/10$ therefore $F_0(s) \to F_1(s)$
 
@@ -594,34 +603,37 @@ $\frac{\sinh \left(\sqrt{s}\right)}{\sqrt{s}}$ and $\cosh \left(\sqrt{s}\right)$
 
 \begin{remark}
 The s coefficient in $F_n(s)$ is $\frac{1}{2} \left(1-\frac{2}{2 n+3}\right)$ which can be seen to be increasing with n. As $ n \to \infty$ the first term converges to $1/2$ which is the sum of the reciprocals of the roots of $\cosh \left(\sqrt{s}\right)$
-\[
+\begin{equation}
 \sum _{n=1}^{\infty } \frac{4}{\pi ^2 (1-2 n)^2} = 1/2
-\]
+\end{equation}
 
 \end{remark}
 
 \begin{theorem}[An Application of Cauchy--Schwarz inequality]\label{def:Cauchy}
 Let $f(t)$ be a non-negative, continuous function on the interval $[-1, 1]$. The following inequality holds:
-$$
+\begin{equation}
 \frac{\int_{-1}^1 t^4 f(t) \, dt}{\int_{-1}^1 t^2 f(t) \, dt} > \frac{\int_{-1}^1 t^2 f(t) \, dt}{\int_{-1}^1 f(t) \, dt}
-$$
+\end{equation}
+
 
 \begin{proof}
 We define the $2k$-th moment of $f(t)$ over the interval $[-1, 1]$ as:
-$$
+\begin{equation}
 \mu_{2k} = \int_{-1}^1 t^{2k} f(t) \, dt
-$$
+\end{equation}
+
 Assuming $f(t) \ge 0$ and $f(t)$ is not identically zero, we have $\mu_0 > 0$, $\mu_2 > 0$, and $\mu_4 > 0$.
 
 The inequality is equivalent to proving the log-concavity of the moment sequence:
-$$
+\begin{equation}
 \mu_4 \mu_0 > (\mu_2)^2
-$$
+\end{equation}
 
 The Cauchy--Schwarz inequality for the weighted inner product $\langle g, h \rangle_f = \int_{-1}^1 g(t) h(t) f(t) \, dt$ states that:
-$$
+\begin{equation}
 \left( \int_{-1}^1 g(t) h(t) f(t) \, dt \right)^2 \le \left( \int_{-1}^1 g(t)^2 f(t) \, dt \right) \left( \int_{-1}^1 h(t)^2 f(t) \, dt \right)
-$$
+\end{equation}
+
 We choose the functions $g(t)$ and $h(t)$ as follows:
 \begin{enumerate}
     \item Let $\mathbf{g(t) = 1}$
@@ -631,33 +643,38 @@ We choose the functions $g(t)$ and $h(t)$ as follows:
 Substituting these into the Cauchy--Schwarz inequality:
 \begin{itemize}
     \item The Left-Hand Side (LHS) of the inequality becomes:
-    $$
+\begin{equation}
     \left( \int_{-1}^1 1 \cdot t^2 f(t) \, dt \right)^2 = \left( \int_{-1}^1 t^2 f(t) \, dt \right)^2 = (\mu_2)^2
-    $$
+\end{equation}
+
     \item The Right-Hand Side (RHS) of the inequality becomes:
-    $$
+\begin{equation}
     \left( \int_{-1}^1 1^2 f(t) \, dt \right) \left( \int_{-1}^1 (t^2)^2 f(t) \, dt \right) = \left( \int_{-1}^1 f(t) \, dt \right) \left( \int_{-1}^1 t^4 f(t) \, dt \right) = \mu_0 \mu_4
-    $$
+\end{equation}
+
 \end{itemize}
 Applying the Cauchy--Schwarz inequality yields:
-$$
+\begin{equation}
 (\mu_2)^2 \le \mu_0 \mu_4
-$$
+\end{equation}
+
 Dividing both sides by the positive quantity $\mu_0 \mu_2$:
-$$
+\begin{equation}
 \frac{\mu_2^2}{\mu_0 \mu_2} \le \frac{\mu_0 \mu_4}{\mu_0 \mu_2} \quad \implies \quad \frac{\mu_2}{\mu_0} \le \frac{\mu_4}{\mu_2}
-$$
+\end{equation}
 
 The equality $(\mu_2)^2 = \mu_0 \mu_4$ holds if and only if the functions $g(t)=1$ and $h(t)=t^2$ are linearly dependent, i.e., $t^2 = c \cdot 1$ for some constant $c$. This is impossible on the interval $[-1, 1]$ since $t^2$ is not a constant function. \newline
 
 Therefore, the inequality is strict:
-$$
+\begin{equation}
 \mu_4 \mu_0 > (\mu_2)^2
-$$
+\end{equation}
+
 which proves the original statement:
-$$
+\begin{equation}
 \frac{\int_{-1}^1 t^4 f(t) \, dt}{\int_{-1}^1 t^2 f(t) \, dt} > \frac{\int_{-1}^1 t^2 f(t) \, dt}{\int_{-1}^1 f(t) \, dt}
-$$
+\end{equation}
+
 
 
 \end{proof}
@@ -665,9 +682,10 @@ $$
 
 \begin{theorem}
 For $f(t) \in CMST_1$ 
-\[
+\begin{equation}
 \mathcal{C}_{1}(f)(s) \to \mathcal{C}_{1}(t^2 f)(s)
-\]
+\end{equation}
+
 
 \begin{proof}
 If we look at the normalised $\mathcal{C}_{1}(f)(s)$ and $\mathcal{C}_{1}(t^2 f)(s)$
@@ -691,9 +709,9 @@ if: (i) $T(F) \in \mathcal{P}_{\mathrm{pos}}$  whenever $F$ is CMST; and (ii) $F
 
 \begin{proposition}[Simple even kernel]\label{def:k-simple-even}
 Let
-\[
+\begin{equation}
 k(t^2)=(1+a t^2) \qquad a > 0.
-\]
+\end{equation}
 \end{proposition}
 
 
@@ -718,9 +736,9 @@ Note that this is a little too strict, since we can have repeated zeros and this
 
 \begin{proposition}[Positive even kernel]\label{def:k-positive-even}
 Let
-\[
+\begin{equation}
 k(t^2)=\sum_{i\ge1} a_i\,t^{2i},\qquad a_i \ge 0.
-\]
+\end{equation}
 
 We can see that at zeros of $F_0(s)$, $F_{n>}(s)$ are all the same sign alternating in signs at each zero of $F_0(s)$  Therefore $F_0(s) \to F_0 k(t^2) (s)$ and since $t^2$ preserves interlacing our whole family is preserved.
 
@@ -752,33 +770,35 @@ In the case of
 $\mathcal{C}_{1}(\Rot({f},{f t^2}))(s)$
 
 $\theta_0$ is when 
-\[
+\begin{equation}
 \mathcal{C}_{1}(\Rot({f(0)},{t^2 f}(0)) = 0
-\]
+\end{equation}
 or more simply.
-\[
+\begin{equation}
 \int_{-1}^1 \Rot({f},{f t^2}) \, dt = 0 
-\]
+\end{equation}
 In terms of the whole family, this doesnt help us much though, since 
-\[
+\begin{equation}
 \int_{-1}^1 \Rot({f},{f t^2}) \, dt \to \int_{-1}^1 t^2 \Rot({f},{f t^2}) \, dt 
-\]
+\end{equation}
+
 so therefore, $\int_{-1}^1 t^2 \Rot({f},{f t^2}) \, dt \not \in \mathcal{P}_{\mathrm{pos}}$ 
 So to preserve the whole family in $\mathcal{P}_{\mathrm{pos}}$ we need
-\[
+\begin{equation}
 \Rot\left(\cosh \left(\sqrt{s}\right),\cosh \left(\sqrt{s}\right)\right) \in \mathcal{P}_{\mathrm{pos}}
-\]
+\end{equation}
 
 This is true for $\theta \in [\pi/2, -\pi/4)$ and then, because $f \in CMST$ 
 then 
-\[
+\begin{equation}
 \mathcal{C}_{1}(\Rot({f},{f t^2}))(s) \in CMST
-\]
+\end{equation}
+
 
 When $\theta = -\pi/4$ then 
-\[
+\begin{equation}
 \text{Rot}\left(\theta ,\cosh \left(\sqrt{s}\right),\cosh \left(\sqrt{s}\right)\right) = 0 
-\]
+\end{equation}
 
 This corresponds to $(1-t^2) = 0$ at $t = 1$
 
@@ -786,24 +806,25 @@ This corresponds to $(1-t^2) = 0$ at $t = 1$
 We will call this function the Assassin \Assassin
 
 $\theta_{\infty}$ is when 
-\[
+\begin{equation}
 \mathcal{C}_{1}(\Rot({f},{f t^2}))(s) 
-\]
+\end{equation}
 has any positive zeros.
 
 Looking at
-\[
+\begin{equation}
 \int_{-1}^1 \left(1-a t^2\right) \cosh \left(\sqrt{s} t\right) \, dt
-\]
+\end{equation}
+
 we can see that for $a \le 1$ we will have no positive zeros since $\left(1-a t^2\right) \cosh \left(\sqrt{s} t\right) \ge 0$ for $s>0$ and $t \in [0,1]$ and for $3 > a \ge 1$ we will have a positive zero since at $s = 0$ ,$\int_0^1 \left(1-a t^2\right) \, dt >0 $ and limit $\underset{s\to \infty }{\text{lim}}\int_0^1 \left(1-a t^2\right) \cosh \left(\sqrt{s} t\right) \, dt$ is negative.  We don't have to worry about $a \ge 3$ since even though $(1-a t^2)$ will have no positive zeros, $t^2(1-a t^2)$ will or some power of $t^2$ will.
 
 Thus $\theta_{\infty} = -\pi/4$ 
 
 
 In summary
-\[
+\begin{equation}
 \mathcal{C}_{1}(\Rot({f},{f t^2}))(s) 
-\]
+\end{equation}
 preserves CMST in  $\theta \in [\pi/2, -\pi/4)$
 
 We will consider the case of $\theta = -\pi/4$ next
@@ -811,34 +832,34 @@ We will consider the case of $\theta = -\pi/4$ next
 \end{corollary}
 \begin{remark}[Behaviour at $\theta = -\pi/4$]
 At $\theta = -\pi/4$ we have
-\[
+\begin{equation}
 \int_{-1}^1 \left(1-t^2\right) \cosh \left(\sqrt{s} t\right) \, dt
-\]
+\end{equation}
 since $\theta = -\pi/4$ is $\theta =\theta_{\infty}$ we have 
-\[
+\begin{equation}
 \int_{-1}^1 \cosh \left(\sqrt{s} t\right) \, dt \bowtie \int_{-1}^1 \left(1-t^2\right) \cosh \left(\sqrt{s} t\right) \, dt
-\]
+\end{equation}
 which preserves the family however applying it again gives
-\[
+\begin{equation}
 \int_{-1}^1 \left(1-t^2\right) \cosh \left(\sqrt{s} t\right) \, dt \bowtie \int_{-1}^1 \left(1-t^2\right)^2 \cosh \left(\sqrt{s} t\right) \, dt
-\]
+\end{equation}
 which means that 
-\[
+\begin{equation}
  \int_{-1}^1 \left(1-t^2\right)^2 \cosh \left(\sqrt{s} t\right) \, dt
-\]
+\end{equation}
 has two less zeros than
-\[
+\begin{equation}
 \int_{-1}^1 \cosh \left(\sqrt{s} t\right) \, dt
-\]
+\end{equation}
 so interlacing is impossible.  The zeros we have lost are the largest roots, so we have one defect in the interlacing.
 
 \end{remark}
 
 \begin{remark}[The Assassin \Assassin]
 In summary $\Assassin$ removes a zero, kills our $\cosh \left(\sqrt{s}\right)$ function the tail of our interlacing and applied twice breaks our tower of mutually interlacing functions.  We still have 
-\[
+\begin{equation}
 \mathcal{C}_{1}({f}))(s) \to \mathcal{C}_{1}({t^2 f}))(s)
-\]
+\end{equation}
 all the way up the tower, but we have lost the final interlacing which guaranteed that they were all mutually interlacing.
 Note that the Assassin appears in terms like $(1-t^4) = (1-t^2)(1+t^2)$ and in general in terms like $(1-t^{2n})$
 \end{remark}
@@ -850,9 +871,9 @@ CMST vs. General Laguerre-Pólya Operators: It is crucial to distinguish the sta
 \section*{P\'olya--Levin Background (for reference)}
 \begin{theorem}[P\'olya; see Levin]\label{thm:Polya}
 If $w:[0,1]\to[0,\infty)$ is nondecreasing and not almost everywhere zero, then
-\[
+\begin{equation}
 G(a):=\int_0^1 w(t)\cos(a t)\,dt
-\]
+\end{equation}
 extends to an entire function of exponential type whose real zeros are simple and appear once in each interval $(k\pi,(k+1)\pi)$; nonreal zeros lie on the imaginary axis.
 \end{theorem}
 
@@ -881,17 +902,17 @@ is not real-rooted).
 \begin{proof}[Proof sketch]
 We first treat the generic case: $p$ and $q$ have simple zeros and no common zeros.
 Set the Wronskian
-\[
+\begin{equation}
 W(x):=p(x)q'(x)-p'(x)q(x).
-\]
+\end{equation}
 A standard equivalent form of Obreschkoff’s theorem states that
 $p$ and $q$ interlace if and only if $W$ has constant sign on $\mathbb{R}$.
 Thus, if $p$ and $q$ do not interlace, $W$ changes sign, so there exists $x_0\in\mathbb{R}$ with $W(x_0)=0$.
 
 At such an $x_0$, the linear system
-\[
+\begin{equation}
 p(x_0)+\lambda q(x_0)=0,\qquad p'(x_0)+\lambda q'(x_0)=0
-\]
+\end{equation}
 has a real solution $\lambda_0$ (the determinant is $W(x_0)=0$).
 Hence $r_{\lambda_0}(x):=p(x)+\lambda_0 q(x)$ has a multiple real root at $x_0$.
 As $\lambda$ varies across $\lambda_0$, a standard root‐continuity argument shows that this
@@ -907,9 +928,9 @@ argument) to reduce to the simple-root case and pass to the limit.
 Let $T\in\mathrm{SMT}_\sigma$ and suppose all iterates $T^i$ act on $\mathcal{F}$ and satisfy the same
 interlacing clause as in the definition. For any finite family of nonnegative coefficients $a_i\ge 0$ (not all zero),
 define
-\[
+\begin{equation}
 S \;=\; \sum_{i=0}^m a_i\, T^i .
-\]
+\end{equation}
 Then $S$ preserves the corresponding interlacing relation:
 \begin{itemize}
 \item If $\sigma=0$ and $f\to g$, then $Sf\to Sg$.
@@ -920,18 +941,18 @@ Then $S$ preserves the corresponding interlacing relation:
 
 \begin{theorem}[Pólya, 1918–1927]\label{thm:polya-cosine}
 For an even integer exponent $2q$ with $q\ge1$,
-\[
+\begin{equation}
 U_q(s)\;=\;\int_{0}^{\infty} e^{-t^{2q}}\cos(st)\,dt
-\]
+\end{equation}
 extends to an entire even function of $s$ whose zeros are all real. 
 \end{theorem}
 
 \begin{proof}[Proof sketch]
 Pólya’s method places these cosine/Fourier transforms in the Laguerre–Pólya class by constructing them from kernels that are totally positive (``universal factors''). For $e^{-t^{2q}}$ (even, rapidly decaying, log-convex tails), one obtains an entire function of order $2q/(2q-1)\in(1,2)$ with only real zeros. See the survey of Dimitrov–Rusev for a modern consolidation $\cite{dimitrov2011}$, especially the discussion of Pólya’s 1918 and 1927 papers and the explicit statement that
-\[
+\begin{equation}
 \int_{0}^{\infty}\!e^{-t^{2q}}\cos(zt)\,dt
 \quad\text{has only real zeros.}
-\]
+\end{equation}
 \end{proof}
 
 \begin{remark}
@@ -942,10 +963,10 @@ is still an entire even function of Genus 1 with an infinity of zeros
 
 \begin{definition}[Entire functions of genus one]\label{def:genus1}
 An entire function $f$ is said to be of \emph{genus~1} if it admits a canonical Weierstrass factorization
-\[
+\begin{equation}
 f(z)=e^{a z + b}\,z^{m}\!\prod_{k=1}^{\infty}
 \Big(1-\frac{z}{z_k}\Big)\exp\!\!\Big(\frac{z}{z_k}\Big),
-\]
+\end{equation}
 and the zero sequence $\{z_k\}$ satisfies
 $\sum_k |z_k|^{-2}<\infty$ but $\sum_k |z_k|^{-1}=\infty$.
 Equivalently, $f$ is of finite order $1<\rho\le2$.
@@ -954,11 +975,11 @@ Typical examples include $\sin(\pi z)$, $\cos z$, and $\int_{0}^{\infty} e^{-t^{
 
 \begin{definition}[Entire functions of genus zero]\label{def:genus0}
 An entire function $f$ is of \emph{genus~0} if it admits the Weierstrass product
-\[
+\begin{equation}
 f(z)=e^{a z + b}\,z^{m}\!\!\prod_{k=1}^{\infty}\Bigl(1-\frac{z}{z_k}\Bigr),
 \qquad
 \sum_{k}\frac{1}{|z_k|}<\infty.
-\]
+\end{equation}
 Equivalently, the canonical product converges without any exponential
 correction factors and $f$ has finite order $\rho\le1$.
 Typical examples include exponential functions and products with
@@ -967,30 +988,33 @@ $\displaystyle \prod_{n=1}^{\infty}\!\!\bigl(1-\frac{z}{n^2}\bigr)$.
 \end{definition}
 \begin{theorem}[Pólya]\label{thm:polya-genus1}
 Fix $\varepsilon>0$ and set $m=2+\varepsilon$. Define
-\[
+\begin{equation}
 F_\varepsilon(s)\;=\;\int_{0}^{\infty} e^{-t^{m}}\cos(st)\,dt
 \qquad (s\in\mathbb{R}).
-\]
+\end{equation}
 Then $F_\varepsilon$ extends to an even entire function on $\mathbb{C}$ of order
-\[
+\begin{equation}
 \rho=\frac{m}{\,m-1\,}=\frac{2+\varepsilon}{1+\varepsilon}\in(1,2),
-\]
+\end{equation}
 and hence of \emph{genus} $1$ (since $1<\rho<2$).
 \end{theorem}
 
 \begin{proof}[Proof sketch]
 \emph{Entirety.} For $s\in\mathbb{C}$ one has
-\[
+\begin{equation}
 \bigl|e^{-t^{m}}\cos(st)\bigr|\;\le\;e^{-t^{m}}\,e^{|\Im s|\,t},
-\]
-and $\int_{0}^{\infty} e^{-t^{m}+|\Im s|\,t}\,dt<\infty$ for every $s$ because $t^{m}$ ($m>1$) dominates linearly as $t\to\infty$. Thus the integral converges absolutely and defines an entire function by dominated convergence (differentiate under the integral).
+\end{equation}
+
+and $\int_{0}^{\infty} e^{-t^{m}+|\Im s|\,t}\,dt<\infty$ for every $s$ because $t^{m}$ ($m>1$)
+dominates linearly as $t\to\infty$. Thus the integral converges absolutely and defines an entire function by dominated convergence (differentiate under the integral).
 
 \emph{Order.} By the Laplace/Legendre-transform asymptotics,
-\[
+\begin{equation}
 \log |F_\varepsilon(s)| \;=\; O\!\bigl(|s|^{\rho}\bigr)
 \quad\text{with}\quad
 \rho=\frac{m}{m-1},
-\]
+\end{equation}
+
 and this bound is sharp (saddle-point/steepest-descent at $t\sim c\,|s|^{1/(m-1)}$). Hence $F_\varepsilon$ has order $\rho\in(1,2)$. For entire functions with noninteger order $\rho$, the \emph{genus} equals $\lfloor \rho\rfloor$; therefore $F_\varepsilon$ has genus $1$.
 \end{proof}
 
@@ -1000,13 +1024,15 @@ The importance of this result for the paper is that functions of order $m=2+\var
 
 \begin{remark}[Genus and reciprocal-sum criterion]
 If an entire function admits the canonical product
-\[
+\begin{equation}
 f(s)=e^{a s+b}\prod_{k=1}^{\infty}\Bigl(1-\frac{s}{s_k}\Bigr),
-\]
+\end{equation}
+
 then the product converges (and $f$ is of genus $0$) precisely when
-\[
+\begin{equation}
 \sum_{k}\frac{1}{|s_k|}<\infty.
-\]
+\end{equation}
+
 If instead $\sum|s_k|^{-1}$ diverges but $\sum|s_k|^{-2}<\infty$, one must include the exponential correction
 $e^{s/s_k}$, yielding a genus-$1$ product.
 Thus, informally, \emph{a finite sum of reciprocals of zeros corresponds to genus~0.}
@@ -1018,22 +1044,23 @@ Hence the exponent of convergence of $\{s_k\}$ is $\lambda=1$, and
 the minimal integer $p$ with $p+1>\lambda$ is $p=1$; thus
 $\cos s$ is an entire function of genus~1.  Its canonical product can
 be paired symmetrically as
-\[
+\begin{equation}
 \cos s
   = \prod_{k=0}^{\infty}
     \left(1-\frac{s^{2}}{\bigl((k+\tfrac12)\pi\bigr)^{2}}\right),
-\]
+\end{equation}
+
 an even product that converges absolutely without exponential factors.
 
 For $\cos\!\sqrt{s}$, the zeros are
 $s_k=((k+\tfrac12)\pi)^{2}$, which grow quadratically.
 Then $\lambda=\tfrac12$, so the genus is $p=0$.
 Its Weierstrass product is
-\[
+\begin{equation}
 \cos\!\sqrt{s}
   = \prod_{k=0}^{\infty}
     \left(1-\frac{s}{\bigl((k+\tfrac12)\pi\bigr)^{2}}\right),
-\]
+\end{equation}
 showing explicitly that $\cos\!\sqrt{s}$ is entire of genus~0
 while $\cos s$ is entire of genus~1.
 \end{remark}
@@ -1061,16 +1088,18 @@ Let $\mathcal{F} = \{F_0, F_1, \dots, F_n\}$ be a family of mutually interlacing
 \subsection{Positive Coefficients: Absolute Stability}
 \begin{proposition}[Convex Combinations Preserve Family]
 Any linear combination of the family members with strictly positive coefficients:
-\[
+\begin{equation}
 H(s) = \sum_{k=0}^n c_k F_k(s), \quad c_k \ge 0
-\]
+\end{equation}
+
 remains in $\mathcal{P}_{\mathrm{pos}}$ and preserves the global interlacing structure.
 \end{proposition}
 \begin{proof}
 At the least negative root of the largest $F_k(s)$ all the terms are positive.  At the next zero down they are all negative, so there is a zero between $F_0(s)$ and $F_k(s)$.  This repeats all the way down the zeros.  This means that $F_0(s) \to H(s) \to F_k(s)$.  Since $T$ maps $\mathcal{P}_{\mathrm{pos}}$ and preserves interlacing this means that $T F_0(s) \to T H(s) \to T F_k(s)$ and a new family of mutually interlacing functions is produced.  If we let the transform
-\[
+\begin{equation}
 T_{+} = \sum_{k=0}^n c_k F_k(s) \quad c_k \ge 0
-\]
+\end{equation}
+
 We get $T_{+} F_0(s) \to T_{+} F_1(s) \cdots \to T_{+} F_k(s)$
 and  $T_{+} F_0(s) \to T_{+} F_k(s)$
 
@@ -1091,9 +1120,9 @@ As $\epsilon$ increases, the largest root of $H_\epsilon$ moves towards the orig
 \begin{proposition}[Creation of Surrounding Relation]
 There exists a critical value $\epsilon^*$ for the negative coefficient such that the largest zero is removed (pushed to infinity or the boundary). 
 At this value, the new function $H_{\epsilon^*}$ has one fewer root than the base family. Consequently, the original family members now \emph{surround} the new function:
-\[
+\begin{equation}
 F_k \bowtie H_{\epsilon^*}
-\]
+\end{equation}
 This state represents a "Finite Defect."
 \end{proposition}
 
@@ -1101,9 +1130,9 @@ This state represents a "Finite Defect."
 \begin{proposition}[Lowest Negative Term Principle]
 If the negative coefficients are confined to high-order terms (e.g., terms corresponding to $F_k$ for large $k$), there exists a value that removes a zero and produces the surrounding relation.
 Specifically, if 
-\[
+\begin{equation}
 H(s) = F_0(s) - \lambda F_m(s)
-\]
+\end{equation}
 the negative tail acts as a single block. The dominant negative term at infinity cancels the positive behavior of lower terms, executing the "Assassin" mechanism and reducing the effective degree of the function.
 \end{proposition}
 
@@ -1129,9 +1158,9 @@ Thus, the "Assassin" creates a ceiling: the global mutual interlacing of the tow
 Let $f(t) = a_1 t + a_2 t^2 + a_3 t^3 + \cdots$ be a power series with  $a_i > 0$
 and $\sum_{i=1}
 ^{\infty} a_i < \infty$. Then the bilateral Laplace transform
-\[
+\begin{equation}
 F(s) = \int_{-1}^{1} e^{-f(t^2)} e^{st}\,dt
-\]
+\end{equation}
 has all its zeros on the imaginary axis.
 \end{theorem}
 
@@ -1140,28 +1169,29 @@ has all its zeros on the imaginary axis.
 Let $a = \sum_{i=1}^{\infty} a_i$ which is finite by assumption.
 
 Then
-\[
+\begin{equation}
 (1-(a_1 t^2 + a_2 t^4 + a_3 t^6 \cdots)/a) \ge 0 \in [-1,1]
-\]
+\end{equation}
+
 Therefore
-\[
+\begin{equation}
 \mathcal{C}_{1}  (1-(a_1 t^2 + a_2 t^4 + a_3 t^6 \cdots)/n)(s) \in \mathcal{P}_{\mathrm{pos}} \, \text{if} \, n \ge a
-\]
+\end{equation}
 and this is true for any n larger than a.
 
 So taking the limit
-\[
+\begin{equation}
 (1-(a_1 t^2 + a_2 t^4 + a_3 t^6 \cdots)/n)^n = e^{-f(t^2)} \,\text{as} \, n \to\infty
-\]
+\end{equation}
 
 we get 
-\[
+\begin{equation}
 F(s) =\mathcal{C}_{1} e^{-f(t^2)} (s) \in \mathcal{P}_{\mathrm{pos}}
-\]
+\end{equation}
 and in fact
-\[
+\begin{equation}
 \mathcal{C}_{1} e^{-f(t^2)} (s) \to  \mathcal{C}_{1}t^2 e^{-f(t^2)}(s)
-\]
+\end{equation}
 
 So provided that any terms of the series expansion of $e^{-f(t^2)}$ of $1- t^{2n}$ don't fall in $[-1,1]$ the full family is preserved.
 
@@ -1182,26 +1212,26 @@ $\mathcal{C}_{\infty} e^{-t^{2k}}(s)$ has a family size of $k+1$.
 
 \begin{proof}
 Moving back to the bilateral Laplace, lets consider
-\[
+\begin{equation}
 \frac{\partial}{\partial s}  \int_{-\infty }^{\infty } \exp (-s t) \frac{\partial }{\partial t}\exp \left(-t^{2 k}\right) \, dt
-\]
+\end{equation}
 which we can express as
-\[
+\begin{equation}
 -2 k \int_{-\infty }^{\infty }  e^{-t^{2 k}} t^{2 k} e^{-s t} \, dt
-\]
+\end{equation}
 
 The operator we have applied is $Ds$ so this clearly preserves interlacing so back in CMST we have
-\[
+\begin{equation}
 \mathcal{C}_{\infty}[e^{-t^{2 k}}](s) \to \mathcal{C}_{\infty}[t^{2 k} e^{-t^{2 k}}](s)
-\]
+\end{equation}
 and since we know that
-\[
+\begin{equation}
 \mathcal{C}_{\infty}[e^{-t^{2 k}}](s) \to \mathcal{C}_{\infty}[t^{2} e^{-t^{2 k}}](s)
-\]
+\end{equation}
 and that $t^2$ preserves interlacing we have a family back of mutually interlacing functions.
-\[
+\begin{equation}
 \mathcal{C}_{\infty}[e^{-t^{2 k}}](s) \to \mathcal{C}_{\infty}[t^{2} e^{-t^{2 k}}](s) \to \cdots \to \mathcal{C}_{\infty}[ t^{2 k} e^{-t^{2 k}}](s)
-\]
+\end{equation}
 which is of size $k+1$
 \end{proof}
 
@@ -1212,9 +1242,9 @@ The kernel $e^{-t^{2k}}$  serves as a critical benchmark for the stability of th
 
 
 \begin{remark}
-\[
+\begin{equation}
 \lim_{n \to \infty}e^{-t^{2n}}
-\]
+\end{equation}
 is basically compact support so we can see some of the differences between compact support and infinite support.Compact support means that we can have infinite size families and often do.  Infinite support means finite size families, and indeed in order to converge we need an "Assassin" term that limits the size of the family.
 \end{remark}
 
@@ -1242,18 +1272,18 @@ The Gaussian is on the limit of zero destruction.  As we increase the range of t
 
 The Gaussian is an entire function of order 2 that has no zeros. It can pull out a set of functions for which $ f(n+1) \bowtie f(n)$.  This is also the only place in this paper where you can actually see the $\bowtie$ working.
 
-\[
+\begin{equation}
 f(n) = \mathcal{C}_{\infty} t^{2n} e^{-t^2} (s) \in \mathcal{P}_{\mathrm{pos}}
-\]
+\end{equation}
 
 which is a modified form of the even Hermite polynomials.
 
 
 \begin{remark}
 Note we can do this with other exponential terms and get families of mutually interlacing polynomials.
-\[
+\begin{equation}
 \mathcal{C}_{\infty} t^{2n} e^{-t^{2k}} (s) \in \mathcal{P}_{\mathrm{pos}}
-\]
+\end{equation}
 resulting in functions with infinite numbers of zeros with $f(n) \to f(n+1)$ and a family of rolling mutually interlacing functions of size $k+1$
 \end{remark}
 
@@ -1297,16 +1327,16 @@ This approximation should get better and better for higher values of s as the fu
 \end{remark}
 \begin{remark}
 We wont be proving this, but the second derivative looks very like a term that would interlace with the original function.  We almost get the Wronskian and I think the bilateral Laplace transform preserves the Wronskian, but thats for another day.
-\[
+\begin{equation}
 \left( z'(s)+z(s)\right)^2 \cos (s z(s))+\sin (s z(s)) \left(s z''(s)+2 z'(s)\right)
-\]
+\end{equation}
 
 \end{remark}
 \begin{remark}
 It becomes very clear if you try to numerically integrate functions like
-\[
+\begin{equation}
 \int_0^{\infty } e^{s t-\cosh (t)} \, dt
-\]
+\end{equation}
 near say $s=100$ where the normalisation term is of the order of $\sim 10^{274}$ and the function becomes really sharp.  And since its Dirac delta like, we get that the terms in $s$ have the ratio of roughly the saddle point and since the shape is skewed to the high side each term will increase in ratio over the previous terms.  This results in the terms having a strict Log Concavity. This is not meant to be rigourous, just an insight into whats going on with large exponential type functions.
 \end{remark}
 
@@ -1344,13 +1374,13 @@ This condition links directly to the \textbf{Hermite-Biehler Theorem}. If a poly
 
 \begin{remark}
 This can be seen in the expansion of
-\[
+\begin{equation}
 \left(1+\frac{s}{a-i b}\right) \left(1+\frac{s}{a+i b}\right)
-\]
+\end{equation}
 which is 
-\[
+\begin{equation}
 \frac{a^2+2 a s+b^2+s^2}{a^2+b^2}
-\]
+\end{equation}
 with the only odd term being $2 a s$. So any product of these terms will have all positive coefficients.
 
 \end{remark}
@@ -1387,13 +1417,13 @@ By extension, the following bounded forms are also interlacing preserving:
 \begin{lemma} [CMST Property of the Operator]
 If $f(t) \in CMST$ then so is $\lambda^2 f ''(t) - f(t)$ provided its  $ \ge 0$
 We note that
-\[
+\begin{equation}
 \frac{\int_{-\infty}^{\infty} f(t) (\lambda  s+1) \cosh \left(\sqrt{s} t\right) \, dt}{\lambda  s+1} = \int_{-\infty}^{\infty} f(t) \cosh \left(\sqrt{s} t\right) \, dt
-\]
+\end{equation}
 so we havent really done anything.  But another expression of this via the bilateral Laplace transform is
-\[
+\begin{equation}
 \frac{\int_{-\infty}^\infty \cosh \left(\sqrt{s} t\right) \left(\lambda^2  f''(t)-f(t)\right) \, dt}{\lambda  s+1}
-\]
+\end{equation}
 provided that $\left(\lambda^2  f''(t)-f(t)\right) > 0$
 if needed we can multiply by $(1 + \lambda s)$ to get a function in $\mathcal{P}_{\mathrm{pos}}$
 \end{lemma}
@@ -1420,7 +1450,9 @@ We analyze the asymptotic behavior of $F(s)$ by performing integration by parts 
 
 \noindent \textbf{1. Expansion via Integration by Parts} \\
 Applying integration by parts to $F(s)$:
-$$ F(s) = \left[ g(t) \frac{\sin(st)}{s} \right]_0^1 - \frac{1}{s} \int_0^1 g'(t) \sin(st) \, dt $$
+\begin{equation}
+F(s) = \left[ g(t) \frac{\sin(st)}{s} \right]_0^1 - \frac{1}{s} \int_0^1 g'(t) \sin(st) \, dt 
+\end{equation}
 Using the condition $g(0)=0$:
 $$ F(s) = g(1)\frac{\sin(s)}{s} - \frac{1}{s} \int_0^1 g'(t) \sin(st) \, dt $$
 Applying integration by parts a second time to the integral term:
@@ -1495,10 +1527,6 @@ That is simply the result of applying $sD$ , the Euler operator, to the transfor
 Note that the the terms of  $f'(\mathcal{T}_{\text{rad}})$ are positive.  This shifts the zeros to the left which means that these functions may not be $\in CMST$ 
 \end{remark}
 
-\begin{remark}
-When $f(t)$ is not a regular power of t, its possible this term may introduce some drift in the interlacing patterns
-\end{remark}
-
 \section{The CMST Window}
 
 We consider the specific kernel defined by the infinite product of exponential monomials, which corresponds to the following compact-support function on $[-1, 1]$:
@@ -1519,16 +1547,69 @@ $\mathcal{P}_{\mathrm{pos}}$
 \begin{proof}
 First, we observe the power series expansion of the exponent for $t \in (-1, 1)$:
 \begin{equation}
-    \frac{1}{t^{2k}-1} = -\sum_{n=0}^{\infty} t^{2nk} = -(1 + t^{2k} + t^{4 k} + \dots)
+    \frac{1}{(a t)^{2k}-1} = -\sum_{n=0}^{\infty} (a t)^{2nk} = -(1 + (a t)^{2k} + (a t)^{4 k} + \dots)
 \end{equation}
-The kernel can be expressed as $e^{-f(t^2)}$ where $f(t) = \sum_{n=0}^{\infty} a_n t^n$ with $a_n = 1$ for all $n$. 
+Which converges on $(-1,1)$ for $0< a < 1$
+The kernel can be expressed as $e^{-f(t^2)}$ where $f(t) = \sum_{n=0}^{\infty} a_n t^n$ with $a_n < 1$ for all $n$. 
+We can then take the limit as $a \to 1$
+\end{proof}
+
+\begin{lemma}[$e^{\frac{1}{t^2-1}} = \frac{1}{e} \left(e^{\frac{1}{t^2-1}}\right)^{t^2} $]
+\end{lemma}
+\begin{proof}
+We can show this by taking logs of both sides giving
+\begin{equation}
+\frac{1}{t^2-1} = \frac{1}{t^2-1}{t^2}-1 \to \frac{1}{t^2-1}
+\end{equation}
+\end{proof}
+
+\begin{theorem} [Analytic form for $\int_{-a}^a \frac{\cos (s t)}{1-t^2} \, dt$ ]
+We show that
+\begin{equation}
+\int_{-a}^a \frac{\cos (s t)}{1-t^2} \, dt=\cos (s) (\mathrm{Ci}((a+1) s) - \mathrm{Ci}((1-a) s))+\sin (s) ( \mathrm{Si}((a-1) s)+ \mathrm{Si}((a+1))
+   s)
+\end{equation}
+Where
+$\mathrm{Si}(x)$ is the Sine Integral
+\begin{equation}
+    \text{Si}(x) = \int_{0}^{x} \frac{\sin(t)}{t} dt
+\end{equation}
+and $\mathrm{Si}(x)$ is the Cosine Integral
+\begin{equation}
+    \text{Ci}(x) = \gamma + \ln(x) + \int_{0}^{x} \frac{\cos(t) - 1}{t} dt
+\end{equation}
+\end{theorem}
+\begin{proof}
+We note that
+\begin{equation}
+\frac{1}{1-t^2}=\frac{t^2}{1-t^2}+1
+\end{equation}
+giving us
+\begin{equation}
+\int_{-a}^a \frac{\cos (s t)}{1-t^2} \, dt=\int_{-a}^a
+   \left(\frac{t^2}{1-t^2}+1\right) \cos (s t) \, dt
+\end{equation}
+If we let
+\begin{equation}
+F(s) = \int_{-a}^a \frac{\cos (s t)}{1-t^2} \, dt
+\end{equation}
+we get
+\begin{equation}
+F(s) == -F''(s) + \frac{2 \sin (a s)}{s}
+\end{equation}
+Which he can solve giving us the general solution
+\begin{equation}
+F(s)\to \cos (s) (-\text{Ci}((1-a) s)+\text{Ci}((a+1) s)+c_1)+\sin (s)
+   (\text{Si}((a-1) s)+\text{Si}((a+1) s)+c_2)
+\end{equation}
+Noting that the function is even and equating coefficients gives us $c_1 =0$, $c_2 =0$ giving us our result
 \end{proof}
 
 \begin{remark}
 The $e^{t^{2n}}$ operators are benign so we can flatten this function with 
-\[
+\begin{equation}
 e^{1+t^{2 k}+\frac{1}{t^{2 k}-1}}
-\]
+\end{equation}
 and produce a tunable window suitable for signal processing with compact support and good zero preserving properties.
 
 The kernel CMST window exhibits a distinct advantage over classical window functions (e.g., Kaiser-Bessel, Blackman-Harris). 
