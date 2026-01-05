@@ -1554,6 +1554,24 @@ The kernel can be expressed as $e^{-f(t^2)}$ where $f(t) = \sum_{n=0}^{\infty} a
 We can then take the limit as $a \to 1$ which for $e^{-f(t^2)}$ is finite.
 \end{proof}
 
+\begin{remark}[The Infinite Product of Hyper-Gaussians]
+The factorization
+\begin{equation}
+\Phi(t) = \prod_{n=0}^{\infty} e^{-t^{2nk}}  = \exp\left( \frac{1}{t^{2k}-1} \right) 
+= e^{\sum _{n=0}^{\infty } t^{2 n k} }
+\end{equation}
+reveals a fundamental structural property of the CMST window. Each factor $e^{-t^{2nk}}$ represents a ``Hyper-Gaussian'' of order $2nk$. 
+This implies that the window $\Phi(t)$ can be interpreted as the infinite intersection of all Hyper-Gaussian stability classes. 
+
+This product structure is analogous to the Euler product of the Zeta function, where the additive structure of the singularity (the geometric series sum in the exponent) generates the multiplicative structure of the function.
+\begin{equation}
+\zeta(s) = \prod_{p} \left(1 - p^{-s}\right)^{-1} = \exp\left( \sum_{k=1}^{\infty} \frac{P(ks)}{k} \right) = \sum_{i=1}^{\infty} i^{-s}
+\end{equation}
+
+\end{remark}
+
+
+
 \begin{theorem} [Analytic form for $\int_{-a}^a \frac{\cos (s t)}{1-t^2} \, dt$ ]
 We show that
 \begin{equation}
