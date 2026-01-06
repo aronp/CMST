@@ -1716,9 +1716,9 @@ For $k \ge 1$:
 a_{k+1} = - \frac{8k(k+1) a_k + a_{k-1}}{4k(k+1)(2k+1)(2k+3)}
 \end{equation}
 
-Since the ratio $a_1/a_0$ define the whole series, it would be nice to get an expression for them.
+Since the ratio $a_1/a_0 \coloneq \psi$ define the whole series, it would be nice to get an expression for this ratio.
 
-\section*{Derivation of the CMST Moment Ratio Continued Fraction}
+\section*{Derivation of $\psi$}
 
 We define the two components of the recurrence denominator to distinguish the scaling logic from the geometric kernel:
 \begin{itemize}
@@ -1763,11 +1763,13 @@ Taking the reciprocal yields the fundamental step for the continued fraction:
 By iterating this step for $k=1, 2, 3, \dots$, we obtain the continued fraction for the first moment ratio $\frac{a_1}{a_0}$:
 
 \begin{equation}
-    \frac{a_1}{a_0} = \cfrac{-1}{\Lambda_1 \left[ 2 + \Omega_1 \cfrac{-1}{\Lambda_2 \left[ 2 + \Omega_2 \cfrac{-1}{\Lambda_3 \left[ 2 + \dots \right]} \right]} \right]}
+   \psi = \frac{a_1}{a_0} = \cfrac{-1}{\Lambda_1 \left[ 2 + \Omega_1 \cfrac{-1}{\Lambda_2 \left[ 2 + \Omega_2 \cfrac{-1}{\Lambda_3 \left[ 2 + \dots \right]} \right]} \right]}
 \end{equation}
+\newline
 
 
-For a continued fraction, this converges really slowly to a value $\approx -0.0790568$.  I cant find any other relationships with this number, but it generates our whole FIR.
+For a continued fraction, this converges really slowly to a value $\psi \approx -0.0790568$.  I cant find any other relationships with this number, but it generates our whole FIR and so is important here.
+
 
 \begin{theorem}[Super-Algebraic Decay]
 Let $\Phi(t) = \exp\left(\frac{1}{t^2-1}\right)$ for $|t| < 1$ and $0$ otherwise. The Fourier transform $\hat{\Phi}(\omega)$ satisfies:
