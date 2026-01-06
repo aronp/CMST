@@ -61,7 +61,7 @@
 
 
 \begin{document}
-\title{The bilateral Laplace Transform of Even Log-concave functions having zeros on the Imaginary axis}
+\title{On a Class of Zero-Preserving Bilateral Transforms and their Application to Precision Windowing}
 \author{Aron Palmer\\ \small \texttt{palmer.aron+cmst@gmail.com}}
 \date{\today}
 \maketitle
@@ -97,8 +97,6 @@ Equivalently, this means $f(1) < \infty$. \newline
 
 Under these conditions $F(s)$ extends to an entire function that has distinct zeros that lie purely on the imaginary axis. \newline
 
-
-
 Thus the bilateral Laplace family
 \begin{equation}
 F(s)=\int_{-\infty}^{\infty} e^{-f(t^{2})}\,e^{s t}\,dt,
@@ -106,13 +104,19 @@ F(s)=\int_{-\infty}^{\infty} e^{-f(t^{2})}\,e^{s t}\,dt,
 
 constitutes a real--symmetric, genus--zero or one subclass of entire functions whose zeros are confined to the imaginary axis, are distinct, and the zeros of $F(\sqrt{-s})$ interlace with the zeros of $F''(\sqrt{-s})$
 
+
+
 We use a Cosh Transform defined as follows to produce families of functions with all real negative zeros.
 
 \begin{equation}
 \mathcal{C}_{a}[f](s) := \int_{-a}^{a} f(t)\cosh(\sqrt{s}\,t)\,dt
 \end{equation}
 
-Using this, we define a "Cosh-Moment Sturm Transform" (CMST) to produce families of functions with all real negative zeros which map to pairs of imaginary zeros in the bilateral Laplace Transform.
+Using this, we define a "Cosh Moment Sturm Transform" (CMST) to produce families of functions with all real negative zeros which map to pairs of imaginary zeros in the bilateral Laplace Transform.
+
+We finish by using these functions to produce a $C_\infty$ window function with compact support and super-algebraic sidelobe suppression.
+
+
 
 \begin{definition}[Real-rooted functions]\label{def:P2}
 Let $\mathcal{P}$ be the class of real entire functions with real, simple,
@@ -1672,11 +1676,155 @@ This smoothness guarantees super-algebraic decay of the Fourier transform side-l
 As a result, while the main-lobe width (resolution) is comparable to a Kaiser window, the dynamic range (sidelobe suppression) is vastly superior, avoiding the "spectral floor" caused by boundary discontinuities.  Windows like the Planck window while smooth at $t = 1$ introduce discontinuities elsewhere.
 \end{remark}
 
+\section{Differential Structure and Efficient Computation of the CMST Window}
+
+While the integral definition of the CMST window $\Phi(t) = \exp\left( \frac{1}{t^2-1} \right)$ ensures its theoretical properties in $C_c^\infty$, its practical application in digital signal processing (such as FIR filter design) benefits from a differential formulation. 
+This section derives the governing differential equations in both the time and spectral domains, yielding a stable recurrence relation for high-precision generation of the window's transform.
+
+\subsection{The Time-Domain Governing Equation}
+Differentiating the kernel $\Phi(t)$ with respect to $t$ reveals a distinct non-linear relationship.
+\begin{equation}
+\Phi'(t) = \frac{d}{dt} \exp\left( \frac{1}{t^2-1} \right) = \frac{-2t}{(t^2-1)^2} \Phi(t)
+\end{equation}
+Rearranging terms eliminates the singularity in the denominator and linearizes the expression, yielding the defining Ordinary Differential Equation (ODE) for the window:
+\begin{equation}
+\label{eq:time_ode}
+(1 - t^2)^2 \Phi'(t) + 2t \Phi(t) = 0
+\end{equation}
+This equation encodes the boundary behavior: the term $(1-t^2)^2$ enforces a "soft landing" at $t=\pm 1$, ensuring that the derivative vanishes faster than the function itself, a necessary condition for the preservation of smoothness.
+
+\subsection{The Spectral Differential Equation}
+To determine the behavior of the Fourier transform $F(s) = \mathcal{C}[\Phi](s)$, we map the time-domain operators of \cref{eq:time_ode} to the frequency domain using the standard correspondences $\Phi'(t) \leftrightarrow s F(s)$ and $t^n (\cdot) \leftrightarrow i^n D^n (\cdot)$.
+Expanding the polynomial term $(1-t^2)^2 = 1 - 2t^2 + t^4$, the transformed operator acts on the product $sF(s)$:
+\begin{equation}
+\left( 1 + \frac{d^2}{ds^2} \right)^2 [s F(s)] + 2 F'(s) = 0
+\end{equation}
+Expanding the differential operator yields a fourth-order linear differential equation with polynomial coefficients:
+\begin{equation}
+\label{eq:spectral_ode}
+s F''''(s) + 4 F'''(s) + 2s F''(s) + 6 F'(s) + s F(s) = 0
+\end{equation}
+
+\subsection{Power Series Solution and Recurrence Relation}
+Since $\Phi(t)$ is an even function, $F(s)$ admits a power series expansion of the form:
+\begin{equation}
+F(s) = \sum_{k=0}^{\infty} a_k s^{2k}
+\end{equation}
+Substituting this series into \cref{eq:spectral_ode} and matching coefficients of powers of $s$ yields a recurrence relation that allows for the precise computation of the transform without numerical integration.
+For $k \ge 1$:
+\begin{equation}
+a_{k+1} = - \frac{8k(k+1) a_k + a_{k-1}}{4k(k+1)(2k+1)(2k+3)}
+\end{equation}
+
+Since the ratio $a_1/a_0$ define the whole series, it would be nice to get an expression for them.
+
+\section*{Derivation of the CMST Moment Ratio Continued Fraction}
+
+We define the two components of the recurrence denominator to distinguish the scaling logic from the geometric kernel:
+\begin{itemize}
+    \item \textbf{Scaling Factor:} $\Lambda_k = 4k(k+1)$
+    \item \textbf{Geometric Factor:} $\Omega_k = (2k+1)(2k+3)$
+\end{itemize}
+
+\subsection*{1. The Recurrence Relation}
+The recurrence relation for the coefficients $a_k$ of the Cosine transform is given by:
+\begin{equation}
+    a_{k+1} = - \frac{2\Lambda_k a_k + a_{k-1}}{\Lambda_k \Omega_k}
+\end{equation}
+
+\subsection*{2. Rearranging for the Ratio}
+To find the ratio of successive moments $r_k = \frac{a_k}{a_{k-1}}$, we multiply by the denominator $\Lambda_k \Omega_k$ and isolate the terms:
+\begin{equation}
+    \Lambda_k \Omega_k a_{k+1} = -2\Lambda_k a_k - a_{k-1}
+\end{equation}
+
+Dividing the entire equation by $a_k$:
+\begin{equation}
+    \Lambda_k \Omega_k \left( \frac{a_{k+1}}{a_k} \right) = -2\Lambda_k - \frac{a_{k-1}}{a_k}
+\end{equation}
+
+Substituting $r_{k+1} = \frac{a_{k+1}}{a_k}$ and noting that $\frac{a_{k-1}}{a_k} = \frac{1}{r_k}$:
+\begin{equation}
+    \Lambda_k \Omega_k r_{k+1} = -2\Lambda_k - \frac{1}{r_k}
+\end{equation}
+
+\subsection*{3. The Recursive Step}
+Isolating the reciprocal ratio $\frac{1}{r_k}$ and factoring out the common scaling term $\Lambda_k$:
+\begin{equation}
+    \frac{1}{r_k} = -\Lambda_k \left[ 2 + \Omega_k r_{k+1} \right]
+\end{equation}
+
+Taking the reciprocal yields the fundamental step for the continued fraction:
+\begin{equation}
+    r_k = \frac{-1}{\Lambda_k \left[ 2 + \Omega_k r_{k+1} \right]}
+\end{equation}
+
+\subsection*{4. Final Continued Fraction Expansion}
+By iterating this step for $k=1, 2, 3, \dots$, we obtain the continued fraction for the first moment ratio $\frac{a_1}{a_0}$:
+
+\begin{equation}
+    \frac{a_1}{a_0} = \cfrac{-1}{\Lambda_1 \left[ 2 + \Omega_1 \cfrac{-1}{\Lambda_2 \left[ 2 + \Omega_2 \cfrac{-1}{\Lambda_3 \left[ 2 + \dots \right]} \right]} \right]}
+\end{equation}
+
+
+For a continued fraction, this converges really slowly to a value $\approx -0.0790568$.  I cant find any other relationships with this number, but it generates our whole FIR.
+
+\begin{theorem}[Super-Algebraic Decay]
+Let $\Phi(t) = \exp\left(\frac{1}{t^2-1}\right)$ for $|t| < 1$ and $0$ otherwise. The Fourier transform $\hat{\Phi}(\omega)$ satisfies:
+\begin{equation}
+\lim_{\omega \to \infty} |\omega|^N \hat{\Phi}(\omega) = 0 \quad \forall N \in \mathbb{N}
+\end{equation}
+implying decay faster than any polynomial order (super-algebraic).
+\end{theorem}
+
+\begin{proof}
+Consider the Fourier integral definition:
+\begin{equation}
+\hat{\Phi}(\omega) = \int_{-1}^{1} \Phi(t) e^{-i\omega t} dt
+\end{equation}
+Integrating by parts once, let $u = \Phi(t)$ and $dv = e^{-i\omega t}dt$:
+\begin{equation}
+\hat{\Phi}(\omega) = \left[ \frac{\Phi(t) e^{-i\omega t}}{-i\omega} \right]_{-1}^{1} + \frac{1}{i\omega} \int_{-1}^{1} \Phi'(t) e^{-i\omega t} dt
+\end{equation}
+The boundary term vanishes because $\Phi(\pm 1) = 0$. Repeating this process $k$ times yields:
+\begin{equation}
+\hat{\Phi}(\omega) = \frac{1}{(i\omega)^k} \int_{-1}^{1} \Phi^{(k)}(t) e^{-i\omega t} dt
+\end{equation}
+Since $\Phi(t) \in C_c^\infty(-1, 1)$, all derivatives $\Phi^{(k)}(t)$ vanish at the boundaries $t=\pm 1$. The remaining integral is bounded by the maximum of the $k$-th derivative $||\Phi^{(k)}||_\infty$. Thus:
+\begin{equation}
+|\hat{\Phi}(\omega)| \leq \frac{2 ||\Phi^{(k)}||_\infty}{|\omega|^k}
+\end{equation}
+Since this holds for any arbitrarily large integer $k$, the decay is super-algebraic.
+\end{proof}
+
+\subsection{Asymptotic Decay Analysis}
+While the super-algebraic property guarantees decay faster than any polynomial $O(\omega^{-N})$, it is useful to derive the precise asymptotic envelope. The window function $\Phi(t) = \exp((t^2-1)^{-1})$ belongs to the Gevrey class $\mathcal{G}^s$ with index $s=2$. The bounds on its derivatives satisfy the Gevrey condition:
+\begin{equation}
+\max_{t \in [-1, 1]} |\Phi^{(k)}(t)| \leq C^{k+1} (2k)!
+\end{equation}
+for some constant $C > 0$. Using the standard bound for the Fourier transform derived via repeated integration by parts:
+\begin{equation}
+|\hat{\Phi}(\omega)| \leq \frac{2 \max |\Phi^{(k)}(t)|}{|\omega|^k} \approx \frac{2 C^{k+1} (2k)!}{|\omega|^k}
+\end{equation}
+To find the tightest bound, we minimize the right-hand side with respect to $k$. Using Stirling's approximation $(2k)! \approx \sqrt{4\pi k} (2k/e)^{2k}$, the term behaves approximately as $(4k^2/\omega)^k$. The minimum occurs when $k \sim \sqrt{\omega}$. Substituting this optimal order back into the bound yields a root-exponential decay envelope:
+\begin{equation}
+|\hat{\Phi}(\omega)| \leq A \exp\left( -B \sqrt{|\omega|} \right)
+\end{equation}
+where $A$ and $B$ are positive constants. This confirms that the spectral leakage decays significantly faster than the polynomial rates of standard cosine-sum windows (e.g., Blackman-Harris), approaching the ideal band-limited behavior.
+
+\begin{theorem}[Asymptotic Decay Rate]
+For the window function $\Phi(t) = \exp((t^2-1)^{-1})$, the Fourier transform magnitude behaves asymptotically as:
+\begin{equation}
+|\hat{\Phi}(\omega)| \sim \mathcal{O}\left( |\omega|^{-3/4} \exp\left(-\sqrt{|\omega|}\right) \right) \quad \text{as } |\omega| \to \infty
+\end{equation}
+This establishes the Gevrey index $s=2$, corresponding to a root-exponential decay rate with coefficient $B=1$.
+\end{theorem}
+
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.8\linewidth]{VsOtherFilters.pdf}
     \caption{\textbf{Visualisation spectral leakage vs other filters.}} 
+    \includegraphics[width=0.8\linewidth]{VsOtherFilters.pdf}
     \label{fig:vsOthers}
 \end{figure}
 
