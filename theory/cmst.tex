@@ -508,7 +508,7 @@ Both $D$ and $(4sD + 2)$ preserve interlacing in $\mathcal{P}_{\mathrm{pos}}$ an
 
 
 \section{Cosh--Moment Sturm Family (CMST) and Global Interlacing}
-\begin{definition}[Cosh--moment family]\label{def:CMST}
+\begin{definition}[Cosh moment Sturm family]\label{def:CMST}
 For $n \in \mathbb{N}_0$ and $s\ge0$ define
 \begin{equation}
 F_n(s):=(2n+1)\int_{-1}^1 t^{2n}\cosh(\sqrt{s}\,t)\,dt
@@ -522,7 +522,7 @@ F_0(s) = 2\frac{\sinh \left(\sqrt{s}\right)}{\sqrt{s}}
 which only has zeros on the negative real axis and noting that $ t^2$ maps $P_{\mathrm{pos}} \to P_{\mathrm{pos}} $
 \end{lemma}
 
-\subsection*{Cosh--Moment Sturm Tower (CMST)}
+\subsection*{Cosh Moment Sturm Tower (CMST)}
 
 \begin{definition}[CMST family]
 A \emph{Cosine--Moment Sturm Tower} (CMST) is a collection
@@ -1768,8 +1768,22 @@ By iterating this step for $k=1, 2, 3, \dots$, we obtain the continued fraction 
 \newline
 
 
-For a continued fraction, this converges really slowly to a value $\psi \approx -0.0790568$.  I cant find any other relationships with this number, but it generates our whole FIR and so is important here.
+For a continued fraction, this converges really slowly to a value $\psi \approx -0.0790568$.  I cant find any other relationships with this number, but it generates our whole FIR and so it is important here.
 
+\subsection*{5. First few terms}
+So if we normalise the first two terms to be 1 and $\phi$ we get the following.
+\begin{equation}
+\begin{aligned}
+a_0 &= 1 \\
+a_1 &= \phi \\
+a_2 &= \frac{-1 - 16\phi}{120} \\
+a_3 &= \frac{2 + 27\phi}{4200} \\
+a_4 &= \frac{-157 - 2032\phi}{12,700,800} \\
+a_5 &= \frac{10,360 + 133,735\phi}{44,008,272,000}
+\end{aligned}
+\end{equation}
+
+\section{Spectral Decay Analysis}
 
 \begin{theorem}[Super-Algebraic Decay]
 Let $\Phi(t) = \exp\left(\frac{1}{t^2-1}\right)$ for $|t| < 1$ and $0$ otherwise. The Fourier transform $\hat{\Phi}(\omega)$ satisfies:
@@ -1798,6 +1812,7 @@ Since $\Phi(t) \in C_c^\infty(-1, 1)$, all derivatives $\Phi^{(k)}(t)$ vanish at
 \end{equation}
 Since this holds for any arbitrarily large integer $k$, the decay is super-algebraic.
 \end{proof}
+
 
 \subsection{Asymptotic Decay Analysis}
 While the super-algebraic property guarantees decay faster than any polynomial $O(\omega^{-N})$, it is useful to derive the precise asymptotic envelope. The window function $\Phi(t) = \exp((t^2-1)^{-1})$ belongs to the Gevrey class $\mathcal{G}^s$ with index $s=2$. The bounds on its derivatives satisfy the Gevrey condition:
