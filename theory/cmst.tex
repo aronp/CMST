@@ -1759,7 +1759,7 @@ Taking the reciprocal yields the fundamental step for the continued fraction:
     r_k = \frac{-1}{\Lambda_k \left[ 2 + \Omega_k r_{k+1} \right]}
 \end{equation}
 
-\subsection*{4. Final Continued Fraction Expansion}
+\subsection*{4. Continued Fraction Expansion}
 By iterating this step for $k=1, 2, 3, \dots$, we obtain the continued fraction for the first moment ratio $\frac{a_1}{a_0}$:
 
 \begin{equation}
@@ -1782,6 +1782,18 @@ a_4 &= \frac{-157 - 2032\phi}{12,700,800} \\
 a_5 &= \frac{10,360 + 133,735\phi}{44,008,272,000}
 \end{aligned}
 \end{equation}
+
+\begin{remark}[From the moments of the transform to moments of the function]
+\begin{equation}
+    a_n = \frac{(-1)^n}{(2n)!} \frac{\mu_{2n}}{\mu_{0}}
+\end{equation}
+Rearranging for the moment $\mu_{2n}$ 
+
+\begin{equation}
+    \mu_{2n} = (-1)^n (2n)! \, a_n \ \mu_{0}
+\end{equation}
+Noting that $\mu_{0}$ has been normalised
+\end{remark}
 
 \section{Spectral Decay Analysis}
 
