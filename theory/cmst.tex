@@ -1638,6 +1638,11 @@ does not coverge as $a \to 1$ however if we use the substitution $u = i t$ the i
     I(s) = i \cosh(s) \left[ \operatorname{Shi}\big(s(1-i)\big) - \operatorname{Shi}\big(s(1+i)\big) \right] 
     - \sinh(s) \left[ \operatorname{Chi}\big(s(1-i)\big) - \operatorname{Chi}\big(s(1+i)\big) \right]
 \end{equation}
+Which with some rearranging gives
+
+\begin{equation}
+    I(b) = \frac{\pi}{2} \cosh(b) - 2b \int_{0}^{1} \sinh(bt) \arctan(t) \, dt
+\end{equation}
 
 \end{proof}
 
@@ -1805,11 +1810,36 @@ Rearranging for the moment $\mu_{2n}$
 Noting that $\mu_{0}$ has been normalised
 \end{remark}
 
-\begin{remark}[$\mu_{0}$ is still a mystery]
-Well we know its value, $\sim 0.443994$ and given that we have found a relationship between all the subsequent moments, it would be nice to have an expression for $\mu_{0}$
-\end{remark}
+\begin{theorem}[Analytic Representation of the Normalization Constant]
+The area $M_0$ of the standard bump function $\psi(t) = \exp\left(\frac{-1}{1-t^2}\right)$ is determined analytically by its peak value $1/e$ and the spectral shape factors:
 
+\begin{equation}
+    M_0 = \frac{1}{e} \cdot \left[ \sum_{k=0}^{\infty} (-1)^k \frac{4k+1}{2} P_{2k}(0) \sum_{j=0}^{k} d_{k,j} \frac{M_{2j}}{M_0} \right]^{-1}
+\end{equation}
+where
+\begin{equation}
+    d_{k,j} = \frac{(-1)^{k-j} (2k+2j)!}{2^{2k} (k-j)! (k+j)! (2j)!}
+\end{equation}
 
+and $P_{2k}(0)$ are the Legendre polynomials at the origin, and the moment ratios $\mu_{2j} = M_{2j}/M_0$ are rational numbers derived from the recurrence relation induced by the differential equation $(1-t^2)^2 \psi' + 2t\psi = 0$:
+
+\begin{equation}
+    (n+4) M_{n+3} - (2n+6) M_{n+1} + n M_{n-1} = 0
+\end{equation}
+
+When we plug in 
+\begin{equation}
+    \mu_{2n} = (-1)^n (2n)! \, a_n \ \mu_{0}
+\end{equation}
+we get 
+\begin{equation}
+    M_0 = \frac{1}{e} \cdot \left[ \sum_{k=0}^{\infty} \frac{4k+1}{2^{4k+1}} \binom{2k}{k} \sum_{j=0}^{k} \frac{(2k+2j)!}{(k-j)! (k+j)!} \, a_j \right]^{-1}
+\end{equation}
+or 
+\begin{equation}
+\int_{-1}^{1}  \exp\left(\frac{-1}{1-t^2}\right)\, dt = \frac{1}{e} \cdot \left[ \sum_{k=0}^{\infty} \frac{4k+1}{2} \sum_{j=0}^{k} \left[ \frac{\binom{2k}{k}}{2^{2k}} \cdot \frac{\binom{2k}{k-j}}{2^{2k}} \right] \binom{2k+2j}{2k} (2j)! \, a_j \right]^{-1}
+\end{equation}
+\end{theorem}
 
 \section{Spectral Decay Analysis}
 
