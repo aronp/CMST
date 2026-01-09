@@ -1837,8 +1837,9 @@ we get
 \end{equation}
 or 
 \begin{equation}
-\int_{-1}^{1}  \exp\left(\frac{-1}{1-t^2}\right)\, dt = \frac{1}{e} \cdot \left[ \sum_{k=0}^{\infty} \frac{4k+1}{2} \sum_{j=0}^{k} \left[ \frac{\binom{2k}{k}}{2^{2k}} \cdot \frac{\binom{2k}{k-j}}{2^{2k}} \right] \binom{2k+2j}{2k} (2j)! \, a_j \right]^{-1}
+\int_{-1}^{1}  \exp\left(\frac{1}{t^2 -1}\right)\, dt = \frac{1}{e} \cdot \left[ \sum_{k=0}^{\infty} \frac{4k+1}{2} \sum_{j=0}^{k} \left[ \frac{\binom{2k}{k}}{2^{2k}} \cdot \frac{\binom{2k}{k-j}}{2^{2k}} \right] \binom{2k+2j}{2k} (2j)! \, a_j \right]^{-1}
 \end{equation}
+which is the intergral of the Schwartz function. $\cite{schwartz1950}$
 \begin{remark}
 Note that numeric convergence of the above series is hugely dependant on the accuracy of $\phi$.  A 7 decimal place accurate value for $\phi$ blows up around the 5th term for instance.
 \end{remark}
@@ -1986,6 +1987,8 @@ Monatsber. K\"onigl. Preuss. Akad. Wiss. Berlin, 1859, pp. 671--680.
 \bibitem{Boyd2001}
 J. P. Boyd, \emph{Chebyshev and Fourier Spectral Methods}, 2nd ed. Mineola, NY: Dover Publications, 2001.
 
+\bibitem{schwartz1950}
+L. Schwartz, \textit{Théorie des distributions}, Hermann, Paris, 1950.
 \end{thebibliography}
 
 \end{document}
