@@ -80,13 +80,15 @@ def compute_spectrum_mpmath(signal):
     return freqs, spectrum
 
 # --- 3. Main Execution ---
-N = 4096*2
+N = 4096
 p = 2 
 
-print(f"Running Ultimate Comparison (N={N}, p={p})...")
+print(f"Running Comparison (N={N}, p={p})...")
 print("This may take minutes due to high precision calculations.")
 
 # --- Generate Windows ---
+# Add a floor to prevent log10(0)
+EPS = 1e-100 # A floor well below your plot range but above 0
 
 # CMST (High Precision)
 print("  1/5: Computing CMST (p=2)...")
@@ -97,7 +99,8 @@ spec_cmst = np.array(spec_cmst_raw) - max(spec_cmst_raw)
 # Kaiser (Beta 16 to match p=2 width)
 print("  2/5: Computing Kaiser...")
 w_kaiser = kaiser(N, 16.0)
-spec_kaiser = 20*np.log10(np.abs(np.fft.fftshift(np.fft.fft(w_kaiser, 8192))))
+mag_kaiser = np.abs(np.fft.fftshift(np.fft.fft(w_kaiser, 8192)))
+spec_kaiser = 20*np.log10(np.clip(mag_kaiser, EPS, None)) # Added clip
 spec_kaiser -= np.max(spec_kaiser)
 f_std = np.linspace(-0.5, 0.5, 8192)
 mask = (f_std >= 0) & (f_std <= 0.5)
@@ -105,21 +108,22 @@ mask = (f_std >= 0) & (f_std <= 0.5)
 # Blackman-Harris (4-term)
 print("  3/5: Computing Blackman-Harris...")
 w_bh = blackmanharris(N)
-spec_bh = 20*np.log10(np.abs(np.fft.fftshift(np.fft.fft(w_bh, 8192))))
-spec_bh -= np.max(spec_bh)
+mag_bh = np.abs(np.fft.fftshift(np.fft.fft(w_bh, 8192)))
+spec_bh = 20*np.log10(np.clip(mag_bh, EPS, None)) # Added clip
 
 # Hann
 print("  4/5: Computing Hann...")
 w_hann = hann(N)
-spec_hann = 20*np.log10(np.abs(np.fft.fftshift(np.fft.fft(w_hann, 8192))))
+mag_hann = np.abs(np.fft.fftshift(np.fft.fft(w_hann, 8192)))
+spec_hann = 20*np.log10(np.clip(mag_hann, EPS, None)) # Added clip
 spec_hann -= np.max(spec_hann)
 
 # Planck-taper
 print("  5/5: Computing Planck...")
 w_planck = generate_planck(N)
-spec_planck = 20*np.log10(np.abs(np.fft.fftshift(np.fft.fft(w_planck, 8192))))
+mag_planck = np.abs(np.fft.fftshift(np.fft.fft(w_planck, 8192)))
+spec_planck = 20*np.log10(np.clip(mag_planck, EPS, None)) # Added clip
 spec_planck -= np.max(spec_planck)
-
 
 # --- 4. Plotting ---
 fig, ax = plt.subplots()
@@ -128,7 +132,7 @@ fig, ax = plt.subplots()
 ax.plot(f_std[mask], spec_hann[mask], 'k:', label='Hann', alpha=0.4, linewidth=0.8)
 ax.plot(f_std[mask], spec_bh[mask], 'g-.', label='Blackman-Harris', linewidth=0.8, alpha=0.6)
 ax.plot(f_std[mask], spec_planck[mask], 'm-.', label='Planck', linewidth=0.8, alpha=0.6)
-ax.plot(f_std[mask], spec_kaiser[mask], 'r--', label='Kaiser', linewidth=1.0)
+ax.plot(f_std[mask], spec_kaiser[mask], 'r--', label=r'Kaiser ($\beta=16$)', linewidth=1.0)
 
 # Plot CMST (Thick, Distinct)
 ax.plot(f_cmst, spec_cmst, color='#0072BD', label=f'CMST (p={p})', linewidth=1.5)
