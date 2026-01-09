@@ -38,12 +38,14 @@ w_cmst = cmst_p2(len(t))
 #  Analysis
 fft_kaiser = np.abs(np.fft.rfft(data * w_kaiser))
 fft_cmst = np.abs(np.fft.rfft(data * w_cmst))
+fft_pure = np.abs(np.fft.rfft(signal))
 freqs = np.fft.rfftfreq(len(t), 1/fs)
 
 #  Visualization
 plt.figure(figsize=(12, 6))
 plt.semilogy(freqs, fft_kaiser, label='Kaiser 14', color='gray', alpha=0.7)
 plt.semilogy(freqs, fft_cmst, label='CMST (p=2)', color='red', linewidth=1.5)
+plt.semilogy(freqs, fft_pure, label='Pure', color='blue', linewidth=1.5)
 
 plt.axvspan(30, 250, color='green', alpha=0.1, label='Target Chirp Band')
 plt.title("Chirp Recovery in High-Noise Environment (Seismic + Line Interference)")
