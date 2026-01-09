@@ -1841,7 +1841,12 @@ or
 \end{equation}
 which is the intergral of the Schwartz function. $\cite{schwartz1950}$
 \begin{remark}
-Note that numeric convergence of the above series is hugely dependant on the accuracy of $\phi$.  A 7 decimal place accurate value for $\phi$ blows up around the 5th term for instance.
+Note that numeric convergence of the above series is hugely dependant on the accuracy of $\phi$.  A 7 decimal place accurate value for $\phi$ blows up around the 5th term for instance.  However if we work out the terms they do telescope giving for instance the first ten terms
+\begin{equation}
+\int_{-1}^{1}  \exp\left(\frac{1}{t^2 -1}\right)\, dt \approx -\frac{676457349120}{17 e (741069365504297 \phi +58553612934767)}
+\end{equation}
+Which is accurate to about $0.01\%$
+
 \end{remark}
 \end{theorem}
 
