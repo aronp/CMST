@@ -69,7 +69,7 @@ plt.figure(figsize=(12, 7))
 
 plt.plot(freqs, spec_p, label='Planck-Taper (LIGO)', alpha=0.6, color='green')
 plt.plot(freqs, spec_7bh, label='7-term Blackman-Harris', alpha=0.8, color='orange')
-plt.plot(freqs, spec_cmst, label='CMST ($C^\infty$ Window)', color='blue', linewidth=2)
+plt.plot(freqs, spec_cmst, label='CMST (p=2)', color='blue', linewidth=2)
 
 
 # Annotate Machine Precision Floor
@@ -79,7 +79,7 @@ plt.text(0.01, machine_floor + 5, 'Double Precision Limit', color='red', fontwei
 
 plt.ylim(-350, 10)
 plt.xlim(0, 0.07)
-plt.title("Spectral Leakage of Sinc(t) (LIGO vs BH vs CMST)")
+plt.title("Spectral Leakage of Sinc(t) (LIGO vs BH vs CMST)\nIdeally these should all be a box")
 plt.xlabel("Normalized Frequency (Nyquist = 0.5)")
 plt.ylabel("Magnitude (dB)")
 plt.grid(True, alpha=0.3)
