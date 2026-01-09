@@ -29,7 +29,7 @@ def cmst_window(N):
     w = np.zeros(N)
     # Avoid division by zero at boundaries
     mask = (t > -1) & (t < 1)
-    w[mask] = np.exp(1.0 / (t[mask]**2 - 1.0))
+    w[mask] = np.exp(t[mask]**4/ (t[mask]**2 - 1.0))
     w /= np.max(w)
     return w
 
@@ -66,9 +66,11 @@ spec_cmst = get_spec_db(f_cmst, nfft)
 
 # Plot
 plt.figure(figsize=(12, 7))
+
 plt.plot(freqs, spec_p, label='Planck-Taper (LIGO)', alpha=0.6, color='green')
 plt.plot(freqs, spec_7bh, label='7-term Blackman-Harris', alpha=0.8, color='orange')
 plt.plot(freqs, spec_cmst, label='CMST ($C^\infty$ Window)', color='blue', linewidth=2)
+
 
 # Annotate Machine Precision Floor
 machine_floor = -308 # Standard double precision limit approx
@@ -81,7 +83,7 @@ plt.title("Spectral Leakage of Sinc(t) (LIGO vs BH vs CMST)")
 plt.xlabel("Normalized Frequency (Nyquist = 0.5)")
 plt.ylabel("Magnitude (dB)")
 plt.grid(True, alpha=0.3)
-plt.legend(loc='upper right')
 
+plt.legend(loc='upper left')
 plt.savefig('spectral_comparison_db.png')
 print("Plot saved as spectral_comparison_db.png")
