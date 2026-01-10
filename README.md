@@ -67,6 +67,8 @@ Detection of a -100 dB weak signal (1.3 kHz) next to a strong carrier (1.0 kHz).
 Transform of a Sinc function
 ![Sinc Transform](spectral_comparison_db.png)
 
+Lets remember that when I say these should be a box, we are using a log scale, visually they are all boxes.
+
 Total Integrated Leakage (0.05 - 0.07 Hz):
 
 Planck Taper:  -20.86 dB
