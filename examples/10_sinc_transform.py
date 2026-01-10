@@ -102,8 +102,12 @@ plt.ylabel("Magnitude (dB)")
 plt.grid(True, alpha=0.3)
 
 plt.legend(loc='upper left')
-plt.show()
-
-
 plt.savefig('spectral_comparison_db.png')
 print("Plot saved as spectral_comparison_db.png")
+
+# Only show if NOT running on CI
+if not os.environ.get('CI'):
+    plt.show()
+
+
+
