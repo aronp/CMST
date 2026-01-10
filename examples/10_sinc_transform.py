@@ -75,10 +75,10 @@ plt.plot(freqs, spec_cmst, label='CMST (p=2)', color='blue', linewidth=2)
 # Annotate Machine Precision Floor
 machine_floor = -308 # Standard double precision limit approx
 plt.axhline(machine_floor, color='red', linestyle='--', linewidth=1, label=f'Machine Precision Floor ({machine_floor} dB)')
-plt.text(0.01, machine_floor + 5, 'Double Precision Limit', color='red', fontweight='bold')
+plt.text(0.04, machine_floor + 5, 'Double Precision Limit', color='red', fontweight='bold')
 
 plt.ylim(-350, 10)
-plt.xlim(0, 0.07)
+plt.xlim(0.03, 0.07)
 plt.title("Spectral Leakage of Sinc(t) (LIGO vs BH vs CMST)\nIdeally these should all be a box")
 plt.xlabel("Normalized Frequency (Nyquist = 0.5)")
 plt.ylabel("Magnitude (dB)")
