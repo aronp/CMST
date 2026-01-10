@@ -115,7 +115,7 @@ We use a Cosh Transform defined as follows to produce families of functions with
 
 Using this, we define a "Cosh Moment Sturm Transform" (CMST) to produce families of functions with all real negative zeros which map to pairs of imaginary zeros in the bilateral Laplace Transform.
 
-We finish by using these functions to produce a $C^\infty$ window function with compact support and super-algebraic sidelobe suppression and belongs to the Gevrey 
+We finish by using these functions to produce a $C^\infty$ window function with compact support and super-algebraic sidelobe suppression which belongs to the Gevrey 
 class $\mathcal{G}^2$, the maximal smoothness compatible with 
 compact support.
 
@@ -1849,7 +1849,7 @@ which is the intergral of the Schwartz function. $\cite{schwartz1950}$
 Note that numeric convergence of the above series is hugely dependant on the accuracy of $\phi$.  A 7 decimal place accurate value for $\phi$ blows up around the 5th term for instance.  However if we work out the terms they do telescope giving for instance the first ten terms as
 \begin{equation}
 \int_{-1}^{1}  \exp\left(\frac{1}{t^2 -1}\right)\, dt 
-\approx -\frac{676457349120}{17\, e \, (741069365504297 \phi +58553612934767)}
+\approx -\frac{676457349120}{17\, e \, (741069365504297 \phi +58553612934767)} \approx 0.4439530
 \end{equation}
 which is accurate to about $0.01\%$
 
@@ -1888,6 +1888,7 @@ Since this holds for any arbitrarily large integer $k$, the decay is super-algeb
 \end{proof}
 
 
+
 \subsection{Asymptotic Decay Analysis}
 While the super-algebraic property guarantees decay faster than any polynomial $O(\omega^{-N})$, it is useful to derive the precise asymptotic envelope. The window function $\Phi(t) = \exp((t^2-1)^{-1})$ belongs to the Gevrey class $\mathcal{G}^s$ with index $s=2$. The bounds on its derivatives satisfy the Gevrey condition:
 \begin{equation}
@@ -1908,7 +1909,12 @@ For the window function $\Phi(t) = \exp((t^2-1)^{-1})$, the Fourier transform ma
 \begin{equation}
 |\hat{\Phi}(\omega)| \sim \mathcal{O}\left( |\omega|^{-3/4} \exp\left(-\sqrt{|\omega|}\right) \right) \quad \text{as } |\omega| \to \infty
 \end{equation}
-This establishes the Gevrey index $s=2$, corresponding to a root-exponential decay rate with coefficient $B=1$.
+This establishes the Gevrey $\cite{Gevrey1918}$ index $s=2$, corresponding to a root-exponential decay rate.
+
+This decay rate is optimal among all compactly supported 
+$C^\infty$ functions in the sense that no faster-than-root-exponential 
+decay is achievable without sacrificing compact support.
+
 \end{theorem}
 
 
@@ -1999,7 +2005,15 @@ J. P. Boyd, \emph{Chebyshev and Fourier Spectral Methods}, 2nd ed. Mineola, NY: 
 
 \bibitem{schwartz1950}
 L. Schwartz, \textit{Théorie des distributions}, Hermann, Paris, 1950.
+
+\bibitem{Gevrey1918}
+M.~Gevrey,
+\emph{Sur la nature analytique des solutions des \'equations aux d\'eriv\'ees partielles. Premier m\'emoire},
+Ann. Sci. \'Ecole Norm. Sup. (3), vol.~35, 1918, pp.~129--190.
+
+
 \end{thebibliography}
+
 
 \end{document}
 
