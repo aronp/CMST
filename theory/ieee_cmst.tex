@@ -18,13 +18,11 @@
 
 
 \begin{document}
-\maketitle
-
 
 \title{CMST: A Tunable, Analytically Smooth Window Function with Compact Support}
 
 \markboth{IEEE Signal Processing Letters,Vol.XX, No.X, December 2025}
-{Shell \MakeLowercase{\textit{et al.}}: CMST Window}
+{Aron Palmer : CMST Window}
 \maketitle
 
 \begin{abstract}
@@ -89,8 +87,7 @@ The parameter $p$ governs the trade-off between the time-domain width of the pas
     \item \textbf{Spectral Purity Mode ($p=2$):} Lowering $p$ toward its limit of 2 creates a smoother, more bell-shaped profile. This minimizes the "sharpness" of the transition into the decay region, resulting in maximal suppression of high-frequency spectral side-lobes.
    
    
-   
-    This version tends to outperform most others in the testing I have done.
+Numerical experiments confirm that $p=2$ yields optimal sidelobe suppression.
 \end{itemize}
 
 \subsection{Zero-Preservation and Interlacing}
@@ -114,7 +111,7 @@ The CMST window ($p=2$), however, demonstrates monotonic super-algebraic decay.
 \subsection{Super-Polynomial Decay}
 In contrast, the CMST kernel $\Phi_p(t) = \exp(1+t^p-1/(1-t^{p}))$ possesses no characteristic side lobe level. Because $\Phi_p(t)$ is $C^\infty$ and vanishes to all orders at the analytic wall $|t|=1$, the side lobes do not exhibit the standard $O(s^{-n})$ decay. Instead, the spectral envelope follows a super-polynomial trajectory:
 \begin{equation}
-    |F(s)| \sim \exp(-s^\alpha), \quad \alpha > 0
+|F(s)| \sim O\left(|s|^{-3/4} \exp(-\sqrt{|s|})\right) 
 \end{equation}
 
 \section{Conclusion}
@@ -144,16 +141,13 @@ This 100 dB advantage establishes the CMST class as a robust, high-fidelity alte
 \bibitem{Harris}
 F. J. Harris, "On the use of windows for harmonic analysis with the discrete Fourier transform," \textit{Proceedings of the IEEE}, vol. 66, no. 1, pp. 51-83, 1978.
 
-\bibitem{LIGO}
-V. McKechan, C. Messenger, and B. S. Sathyaprakash, ``A guide to spectral tapering,'' \textit{Classical and Quantum Gravity}, vol. 27, no. 8, p. 084020, Apr. 2010.
-
-\bibitem{Dimitrov}
-V. S. Dimitrov, T. V. Cooklev, and B. D. Donevsky, "On the design of smooth window functions," \textit{IEEE Transactions on Signal Processing}, vol. 46, no. 2, pp. 523-526, 1998.
-
 \bibitem{McKechan2010}
 D.~J.~A.~McKechan, C.~Robinson, and B.~S.~Sathyaprakash, 
 ``A tapering window for time-domain templates and simulated signals in the detection of gravitational waves from coalescing compact binaries,'' 
 \emph{Class. Quantum Grav.}, vol. 27, no. 8, p. 084020, Apr. 2010.
+
+\bibitem{Dimitrov}
+V. S. Dimitrov, T. V. Cooklev, and B. D. Donevsky, "On the design of smooth window functions," \textit{IEEE Transactions on Signal Processing}, vol. 46, no. 2, pp. 523-526, 1998.
 
 \bibitem{CMST Theory}
 Anonymized for Peer Review, "CMST Code Repository," 2025. [Online]. Available upon publication.
