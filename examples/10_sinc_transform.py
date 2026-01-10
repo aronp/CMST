@@ -29,7 +29,7 @@ def cmst_window(N):
     w = np.zeros(N)
     # Avoid division by zero at boundaries
     mask = (t > -1) & (t < 1)
-    w[mask] = np.exp(t[mask]**4/ (t[mask]**2 - 1.0))
+    w[mask] = np.exp(1/ (t[mask]**2 - 1.0))
     w /= np.max(w)
     return w
 
@@ -77,13 +77,33 @@ machine_floor = -308 # Standard double precision limit approx
 plt.axhline(machine_floor, color='red', linestyle='--', linewidth=1, label=f'Machine Precision Floor ({machine_floor} dB)')
 plt.text(0.04, machine_floor + 5, 'Double Precision Limit', color='red', fontweight='bold')
 
+# Add Annotation for "Perfect Flatness"
+# We define the region we measured (0 to 0.045)
+x_start, x_end = 0.03, 0.07
+y_level = -100 # Place text in the middle of the empty space
+
+# 1. Draw a double-headed arrow to show the range
+plt.annotate('', xy=((3*x_start+x_end)/4, y_level), xytext=((3*x_start+x_end)/4, 0),
+             arrowprops=dict(arrowstyle='<-', color='black', lw=1.5))
+
+# 2. Add the text label pointing to the arrow
+plt.text((3*x_start+x_end)/4, y_level, 
+         "All 3 Windows are\nPerfectly Flat\n(Ripple < $10^{-6}$ dB)", 
+         ha='center', va='top', fontsize=11, fontweight='bold', color='black')
+
+# 3. Add a faint shaded region to highlight the passband
+plt.axvspan(0, 0.0499, color='gray', alpha=0.1, label='Passband')
+
 plt.ylim(-350, 10)
-plt.xlim(0.03, 0.07)
+plt.xlim(x_start, x_end)
 plt.title("Spectral Leakage of Sinc(t) (LIGO vs BH vs CMST)\nIdeally these should all be a box")
 plt.xlabel("Normalized Frequency (Nyquist = 0.5)")
 plt.ylabel("Magnitude (dB)")
 plt.grid(True, alpha=0.3)
 
 plt.legend(loc='upper left')
+plt.show()
+
+
 plt.savefig('spectral_comparison_db.png')
 print("Plot saved as spectral_comparison_db.png")
