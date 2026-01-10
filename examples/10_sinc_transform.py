@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 def planck_taper(N, epsilon=0.1):
     """Planck-taper window used in LIGO data analysis."""
@@ -29,7 +30,7 @@ def cmst_window(N):
     w = np.zeros(N)
     # Avoid division by zero at boundaries
     mask = (t > -1) & (t < 1)
-    w[mask] = np.exp(1/ (t[mask]**2 - 1.0))
+    w[mask] = np.exp(t[mask]**4/ (t[mask]**2 - 1.0))
     w /= np.max(w)
     return w
 
