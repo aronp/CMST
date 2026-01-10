@@ -64,9 +64,13 @@ Transform of a Sinc function
 ![Sinc Transform](spectral_comparison_db.png)
 
 Total Integrated Leakage (0.05 - 0.07 Hz):
+
 Planck Taper:  -20.86 dB
+
 7-term BH:     -16.21 dB
+
 CMST (p=2):    -28.44 dB
+
 Improvement:   7.58 dB
 
 
