@@ -89,7 +89,7 @@ plt.annotate('', xy=((3*x_start+x_end)/4, y_level), xytext=((3*x_start+x_end)/4,
 
 # 2. Add the text label pointing to the arrow
 plt.text((3*x_start+x_end)/4, y_level, 
-         "All 3 Windows are\nPerfectly Flat\n(Ripple < $10^{-6}$ dB)", 
+         "All 3 Windows are\Flat\n(Ripple < $10^{-6}$ dB)", 
          ha='center', va='top', fontsize=11, fontweight='bold', color='black')
 
 # 3. Add a faint shaded region to highlight the passband
