@@ -74,7 +74,8 @@ Laplace transforms $F(s) = \int_{-\infty}^{\infty} e^{-f(t^2)} e^{st} dt$
 with convex $f(t)$ have all distinct zeros on the imaginary axis for a class of $f(t)$. The CMST 
 construction produces infinite families maintaining global interlacing.
 Applications include a $C_c^{\infty}$ window function for signal processing 
-with super-algebraic sidelobe suppression.
+which  achieves root-exponential spectral decay and is in Gevrey class $\mathcal{G}^2$.
+
 \end{abstract}
 
 \section{Introduction}
@@ -114,9 +115,9 @@ We use a Cosh Transform defined as follows to produce families of functions with
 
 Using this, we define a "Cosh Moment Sturm Transform" (CMST) to produce families of functions with all real negative zeros which map to pairs of imaginary zeros in the bilateral Laplace Transform.
 
-We finish by using these functions to produce a $C_\infty$ window function with compact support and super-algebraic sidelobe suppression.
-
-
+We finish by using these functions to produce a $C^\infty$ window function with compact support and super-algebraic sidelobe suppression and belongs to the Gevrey 
+class $\mathcal{G}^2$, the maximal smoothness compatible with 
+compact support.
 
 \begin{definition}[Real-rooted functions]\label{def:P2}
 Let $\mathcal{P}$ be the class of real entire functions with real, simple,
@@ -155,7 +156,7 @@ Let $\mathrm{roots}(f)=(a_1 < \cdots < a_n)$ and $\mathrm{roots}(g)=(b_1 < \cdot
 
 \begin{itemize}
 \item Same degree, largest root in $g$: $g\,\interls\,f \iff a_1<b_1<\cdots<a_n<b_n$.
-\item $g$ has one more root: $g\,\bowtie \,f \iff b_1<a_1<\cdots<b_n$.  We say that $g$ surrounds $f$
+\item $g$ has one more root: $g\,\bowtie \,f \iff b_1<a_1<\cdots<b_n$.  We say that $g$ surrounds $f$.
 \item Arrow shorthand: $f\,\interlarrow\,g$ means $f\interls g$ or $f \bowtie g$; the arrow points to the polynomial with the largest root.
 
 \item Arrow shorthand: $f\,\leftrightarrow \,g$ means $f$ and $g$ strictly interlace without specifying which has the largest zero.
@@ -329,7 +330,7 @@ In this case we say the exterior zero is at $\infty$;
  the polynomial has one fewer zero in $\mathbb R$.
 \item (\emph{$b_n/a_n$ and $b_0/a_0$})
 
-Note that in $\theta_{\infty} = arctan{(-b_n/a_n)}$ , $b_n/a_n$ is the $\lim_{t \to \infty}  g(t)/f(t)$ and in $\theta_{0} := \arctan{(-b_0/a_0)}$, $b_0/a_0 = g(0)/f(0)$ 
+Note that in $\theta_{\infty} = \arctan{(-b_n/a_n)}$ , $b_n/a_n$ is the $\lim_{t \to \infty}  g(t)/f(t)$ and in $\theta_{0} := \arctan{(-b_0/a_0)}$, $b_0/a_0 = g(0)/f(0)$ 
 \end{enumerate}
 \end{lemma}
 
@@ -943,7 +944,7 @@ Then $S$ preserves the corresponding interlacing relation:
 \end{itemize}
 \end{proposition}
 
-\begin{theorem}[Pólya, 1918–1927]\label{thm:polya-cosine}
+\begin{theorem}[P\'olya, 1918–1927]\label{thm:polya-cosine}
 For an even integer exponent $2q$ with $q\ge1$,
 \begin{equation}
 U_q(s)\;=\;\int_{0}^{\infty} e^{-t^{2q}}\cos(st)\,dt
@@ -1293,7 +1294,7 @@ resulting in functions with infinite numbers of zeros with $f(n) \to f(n+1)$ and
 
 \section{Asymptotic Distribution of Zeros}
 This section is all known theory based on the works of $E.~C.~Titchmarsh$,
-$G.~P\acute{o}lya$ and 
+G.~P\'olya and 
 $F.~W.~J.~Olver$ \newline
 \newline
 
@@ -1370,7 +1371,7 @@ f(t) = \sum _{n=0}^{\infty } a_n t^n, \quad a_n \ge 0.
 Under the action of $\mathcal{C}_a$, all odd powers vanish, leaving only the sum over even powers with positive coefficients. Thus, strict positivity of the Maclaurin coefficients is a sufficient condition for preserving interlacing. Consequently, if $f(t)$ and $g(t)$ possess non-negative coefficients, their product $f(t)g(t)$ will also possess non-negative coefficients (by Cauchy convolution), preserving the ``safe'' status of the function.
 
 \begin{remark}
-Note that this works for negative odd coefficients as well, we just have to make sure that we don't multiply a function with negative odd coefficents with a function with positive odd coefficients.
+Note that this works for negative odd coefficients as well, we just have to make sure that we don't multiply a function with negative odd coefficients with a function with positive odd coefficients.
 \end{remark}
 
 \subsection*{3. Connection to Stability (Hermite-Biehler)}
@@ -1393,7 +1394,7 @@ with the only odd term being $2 a s$. So any product of these terms will have al
 We begin with the elementary exponential functions:
 \begin{enumerate}
     \item $f(t) = e^t$: All coefficients are strictly positive. Stable.
-    \item $f(t) = e^{-t}$: Even function $\cosh(t)$, odd function $\sinh(t)$ valid class.all zeros on the imaginary axis and interlacing.
+    \item $f(t) = e^{-t}$: Even function $\cosh(t)$, odd function $\sinh(t)$, valid class.  All zeros on the imaginary axis and interlacing.
 \end{enumerate}
 
 \begin{remark}
@@ -1783,7 +1784,9 @@ By iterating this step for $k=1, 2, 3, \dots$, we obtain the continued fraction 
 \newline
 
 
-For a continued fraction, this converges really slowly to a value $\psi \approx -0.0790568$.  I cant find any other relationships with this number, but it generates our whole FIR and so it is important here.
+For a continued fraction, this converges really slowly to a value 
+$\psi \approx -0.0790568$.  I cant find any other relationships with this number, 
+but it generates our whole FIR and so it is important here.
 
 \subsection*{5. First few terms}
 So if we normalise the first two terms to be 1 and $\phi$ we get the following.
@@ -1840,16 +1843,17 @@ or
 \int_{-1}^{1}  \exp\left(\frac{1}{t^2 -1}\right)\, dt = \frac{1}{e} \cdot \left[ \sum_{k=0}^{\infty} \frac{4k+1}{2} \sum_{j=0}^{k} \left[ \frac{\binom{2k}{k}}{2^{2k}} \cdot \frac{\binom{2k}{k-j}}{2^{2k}} \right] \binom{2k+2j}{2k} (2j)! \, a_j \right]^{-1}
 \end{equation}
 which is the intergral of the Schwartz function. $\cite{schwartz1950}$
+\end{theorem}
+
 \begin{remark}
-Note that numeric convergence of the above series is hugely dependant on the accuracy of $\phi$.  A 7 decimal place accurate value for $\phi$ blows up around the 5th term for instance.  However if we work out the terms they do telescope giving for instance the first ten terms
+Note that numeric convergence of the above series is hugely dependant on the accuracy of $\phi$.  A 7 decimal place accurate value for $\phi$ blows up around the 5th term for instance.  However if we work out the terms they do telescope giving for instance the first ten terms as
 \begin{equation}
 \int_{-1}^{1}  \exp\left(\frac{1}{t^2 -1}\right)\, dt 
 \approx -\frac{676457349120}{17\, e \, (741069365504297 \phi +58553612934767)}
 \end{equation}
-Which is accurate to about $0.01\%$
+which is accurate to about $0.01\%$
 
 \end{remark}
-\end{theorem}
 
 \section{Spectral Decay Analysis}
 
@@ -1919,13 +1923,13 @@ This establishes the Gevrey index $s=2$, corresponding to a root-exponential dec
 \section*{Acknowledgments}
 
 I would like to thank my family for their compact support. As this paper demonstrates, keeping families together is important. 
-The two main references are $S.~Fisk,$  and $G.Polya$. While it is true that when it comes to zeros, it is always $Polya$, I wouldn't be here without $Fisk$
+The two main references are S.~Fisk,  and G.P\'olya. While it is true that when it comes to zeros, it is always P\'olya, I wouldn't be here without Fisk
 \begin{thebibliography}{99}
 
 \bibitem{Fisk}
 S.~Fisk,
 \emph{Polynomials, roots, and interlacing},
-arXiv preprint arXiv:0612833, 2008.
+arXiv preprint arXiv:0612833, 2006.
 
 
 \bibitem{polya1918}
@@ -1934,17 +1938,17 @@ G.~P\'olya,
 Mathematische Zeitschrift, Vol.~2, 1918, pp.~352--383.
 
 \bibitem{Polya1923}
-G.~Pólya,
+G.~P\'olya,
 On the zeros of entire functions,
 \emph{Mathematische Zeitschrift}, 1923.
 
 \bibitem{Polya1927}
-G. P\'{o}lya, 
+G. P\'olya, 
 \emph{{\"U}ber die algebraisch-funktionentheoretischen Untersuchungen von J. L. W. V. Jensen} [On the algebraic-functional investigations of J. L. W. V. Jensen], 
 \textit{Kgl. Danske Vid. Selsk. Math.-Fys. Medd.}, vol. 7, no. 17, pp. 1--33, 1927.
 
 \bibitem{PolyaSzego}
-G.~Pólya and G.~Szegő,
+G.~P\'olya and G.~Szegő,
 \emph{Problems and Theorems in Analysis}, Vol.~II.
 Springer.
 
