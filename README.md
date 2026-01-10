@@ -57,7 +57,7 @@ Unlike traditional windows which are locked to a single profile (e.g., Hann, Bla
 ![Comparison](VsOtherFilters.png)
 
 Note on Precision Limits: The CMST response (Blue) was calculated using arbitrary-precision arithmetic to demonstrate the asymptotic behavior beyond standard 64-bit machine limits (~ -320 dB).
-Polynomial Windows (e.g., Blackman-Harris, Planck): Their leakage floors are theoretical. Even with infinite precision, they would not drop further and the graph wouldnt change much
+Polynomial Windows (e.g., Blackman-Harris, Planck): Their leakage floors are theoretical. Even with infinite precision, they would not drop much further and the graph wouldnt change much
 
 
 ### 📉 Performance Analysis: 
