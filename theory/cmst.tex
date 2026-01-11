@@ -1925,6 +1925,76 @@ decay is achievable without sacrificing compact support.
 \end{theorem}
 
 
+\section{The CMST Discrimination Formula}
+
+For a Gevrey-class window of index $s$ (where $s=2$ for the CMST), the asymptotic spectral decay is governed by a stretched exponential. To distinguish a weak signal from a strong interfering source with a dynamic range ratio $R$, the window function $W(\omega)$ must decay sufficiently at the frequency separation $\Delta f$.
+
+\subsection{The Gevrey Decay Law}
+The spectral magnitude of the CMST window decays as:
+\begin{equation}
+    |W(\omega)| \approx C e^{-\sqrt{\omega}}
+\end{equation}
+where $\omega$ is the frequency offset in bins.
+
+\subsection{The Resolution Condition}
+Let $R$ be the required linear dynamic range (e.g., $R = 10^5$ for 100 dB). The leakage at distance $\omega$ must satisfy:
+\begin{equation}
+    e^{ \sqrt{\omega}} \le R
+\end{equation}
+
+Solving for the minimum number of frequency bins $m$ required for separation:
+\begin{align}
+    \sqrt{m} &\le \ln(R) \\
+    m &\ge \left( \ln(R) \right)^2
+\end{align}
+
+\subsection{The Discrimination Formula}
+Relating the bin count $m$ to physical parameters, where $m = \frac{N \cdot \Delta f}{f_s}$:
+\begin{equation}
+    \frac{N \cdot \Delta f}{f_s} \ge \left( \ln(R) \right)^2
+\end{equation}
+
+Solving for the total number of samples $N$:
+\begin{equation}
+    \boxed{ N \ge \frac{f_s}{\Delta f} \cdot \left(\ln(R)\right)^2 }
+\end{equation}
+
+\noindent \textbf{Interpretation:}
+Unlike polynomial windows (where $N \propto R^{1/p}$), the CMST cost scales with the \textit{square of the logarithm} of the dynamic range. This allows for high-contrast detection with significantly shorter integration times than standard smooth windows.
+
+
+\section{The CMST Resolution Law}
+
+To distinguish two signals with an amplitude ratio $R$, separated by a normalized frequency ratio $\rho$, an instrument with sampling rate $f_s$ requires a minimum observation time $T$. These four variables are governed by the inequality:
+
+\begin{equation}
+    \underbrace{T \cdot f_s}_{\text{Total Samples } N} \quad \times \quad \underbrace{\left( \frac{\Delta f}{f_s} \right)}_{\text{Closeness Ratio } \rho} \quad \ge \quad \underbrace{\left[ \ln(R) \right]^2}_{\text{Contrast Cost}}
+\end{equation}
+
+\subsection{Implications}
+
+\textbf{1. Solving for Time ($T$):}
+How long must I observe?
+\begin{equation}
+    T \ge \frac{1}{\Delta f} [\ln(R)]^2
+\end{equation}
+\textit{Note: Sampling rate $f_s$ cancels out. Time is purely a function of absolute frequency separation and contrast.}
+
+\textbf{2. Solving for Closeness ($\rho$):}
+How close can two frequencies be for a fixed $N$?
+\begin{equation}
+    \rho \ge \frac{[\ln(R)]^2}{N}
+\end{equation}
+\textit{The resolvable fraction of the bandwidth improves linearly with the total number of samples.}
+
+\textbf{3. Solving for Contrast ($R$):}
+What dynamic range can I achieve?
+\begin{equation}
+    R \le \exp\left( \sqrt{N \cdot \rho} \right)
+\end{equation}
+\textit{Dynamic range grows exponentially with the square root of the "Resolution Product" ($N \rho$). This is the signature advantage of the Gevrey class.}
+
+
 \begin{figure}[h]
     \centering
     \caption{\textbf{Visualisation spectral leakage vs other filters.}} 
