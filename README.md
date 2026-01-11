@@ -61,7 +61,9 @@ Polynomial Windows (e.g., Blackman-Harris, Planck): Their leakage floors are the
 
 
 ### 📉 Performance Analysis: 
-Detection of a -100 dB weak signal (1.3 kHz) next to a strong carrier (1.0 kHz). The standard Planck-taper (Red) buries the target in spectral leakage. The CMST window (Blue) resolves it clearly with >30 dB of headroom
+**Detection of a -100 dB weak signal (1.3 kHz) next to a strong carrier (1.0 kHz). **
+
+The standard Planck-taper (Red) buries the target in spectral leakage. The CMST window (Blue) resolves it clearly with >30 dB of headroom
 ![Discrimination](weak_signal_comparison.png)
 
 **Transform of a Sinc function**
