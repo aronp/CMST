@@ -221,5 +221,5 @@ planck = process_fft(fft_result_n,w_planck_2d)
 
 cmst = process_fft(fft_result_n,w_cmst_2d)
 
-show_comparison_plots(img_clean_log,planck,cmst,"Image->FFT->+ noise -> * window -> FFT\n Amplitude shown in dB", titles = ["Input","Planck", "CMST (p=2)"])
+show_comparison_plots(img_clean_log,planck,cmst,"Image->FFT->+ noise -> * window -> IFFT\n Amplitude shown in dB", titles = ["Input","Planck", "CMST (p=2)"])
 
