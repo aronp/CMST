@@ -64,7 +64,7 @@ Polynomial Windows (e.g., Blackman-Harris, Planck): Their leakage floors are the
 Detection of a -100 dB weak signal (1.3 kHz) next to a strong carrier (1.0 kHz). The standard Planck-taper (Red) buries the target in spectral leakage. The CMST window (Blue) resolves it clearly with >30 dB of headroom
 ![Discrimination](weak_signal_comparison.png)
 
-Transform of a Sinc function
+**Transform of a Sinc function**
 ![Sinc Transform](spectral_comparison_db.png)
 
 Lets remember that when I say these should be a box, we are using a log scale, visually they are all boxes.
@@ -79,7 +79,7 @@ CMST (p=2):    -28.44 dB
 
 Improvement:   7.58 dB
 
-Planet sim.
+**Planet sim.**
 ![Planet sim](planets.png)
 
 With the planet dB at -80 dB and a noise floor of -90 dB.  Slightly contrived, but the windows I am comparing against are good!
