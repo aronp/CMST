@@ -86,7 +86,7 @@ Improvement:   7.58 dB
 ![Planet sim](planets.png)
 
 With the planet dB at -80 dB and a noise floor of -90 dB.  Slightly contrived, but the windows I am comparing against are good!
-Note that not only has Planck lost 4 planets, but it has also created non existant mountains (side lobes).  We are looking at this in crazy detail, if we were back in the real world, the -80b planets would not show up on your screen, your eyes couldnt see them.  Those "mountains" are invisible as well.
+Note that not only has Planck lost 4 planets, but it has also created non existant mountains (side lobes).  We are looking at this in crazy detail, if we were back in the real world, the -80b planets would not show up on your screen, your eyes couldnt see them.  Those "mountains" are invisible as well. 80dB is the ratio between the Empire State Building and a golf ball.
 
 ### 📉 The Math: 
 Behind all of this there is a CMST theory paper here [CMST](cmst.pdf)
