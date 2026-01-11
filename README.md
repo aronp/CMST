@@ -79,6 +79,11 @@ CMST (p=2):    -28.44 dB
 
 Improvement:   7.58 dB
 
+Planet sim.
+![Planet sim](planets.png)
+
+With the planet dB at -80 dB and a noise floor of -90 dB.  Slightly contrived, but the windows I am comparing against are good!
+
 
 ### 📉 The Math: 
 Behind all of this there is a CMST theory paper here [CMST](cmst.pdf)
