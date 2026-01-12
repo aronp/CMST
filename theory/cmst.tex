@@ -1939,12 +1939,12 @@ where $\omega$ is the frequency offset in bins.
 \subsection{The Resolution Condition}
 Let $R$ be the required linear dynamic range (e.g., $R = 10^5$ for 100 dB). The leakage at distance $\omega$ must satisfy:
 \begin{equation}
-    e^{ \sqrt{\omega}} \le R
+    e^{ -\sqrt{\omega}} \le \frac{1}{R}
 \end{equation}
 
 Solving for the minimum number of frequency bins $m$ required for separation:
 \begin{align}
-    \sqrt{m} &\le \ln(R) \\
+    -\sqrt{m} &\le -\ln(R) \\
     m &\ge \left( \ln(R) \right)^2
 \end{align}
 
