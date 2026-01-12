@@ -1923,6 +1923,20 @@ $C^\infty$ functions in the sense that no faster-than-root-exponential
 decay is achievable without sacrificing compact support.
 
 \end{theorem}
+\begin{theorem}[Asymptotic Decay Rate]
+For the window function $\Phi(t) = \exp((t^2-1)^{-1})$, the Fourier transform magnitude satisfies the Gevrey class condition:
+\begin{equation}
+    |F(i\omega)| \approx C \, |\omega|^{-3/4} \exp\left(-\sqrt{|\omega|}\right) \quad \text{as } |\omega| \to \infty
+\end{equation}
+This establishes that $\Phi(t)$ belongs to the Gevrey class $\mathcal{G}^2$ \cite{Gevrey1918}, corresponding to a root-exponential spectral decay.
+\end{theorem}
+
+\begin{remark}
+In the discrete domain (FFT), the angular frequency relates to the bin index $m$ by $\omega \approx \pi m$. Substituting this yields the effective decay rate for signal processing:
+\begin{equation}
+    |W[m]| \sim m^{-3/4} e^{-\sqrt{\pi m}}
+\end{equation}
+\end{remark}
 
 
 \section{The CMST Discrimination Formula}
@@ -1944,8 +1958,8 @@ Let $R$ be the required linear dynamic range (e.g., $R = 10^5$ for 100 dB). The 
 
 Solving for the minimum number of frequency bins $m$ required for separation:
 \begin{align}
-    -\sqrt{m} &\le -\ln(R) \\
-    m &\ge \left( \ln(R) \right)^2
+    -\sqrt{\pi m} &\le -\ln(R) \\
+    m &\ge \frac{\left( \ln(R) \right)^2}{\pi}
 \end{align}
 
 \subsection{The Discrimination Formula}
@@ -1956,7 +1970,7 @@ Relating the bin count $m$ to physical parameters, where $m = \frac{N \cdot \Del
 
 Solving for the total number of samples $N$:
 \begin{equation}
-    \boxed{ N \ge \frac{f_s}{\Delta f} \cdot \left(\ln(R)\right)^2 }
+    \boxed{ N \ge \frac{f_s}{\Delta f} \cdot \frac{\left(\ln(R)\right)^2 }{\pi}}
 \end{equation}
 
 \noindent \textbf{Interpretation:}
@@ -1968,7 +1982,7 @@ Unlike polynomial windows (where $N \propto R^{1/p}$), the CMST cost scales with
 To distinguish two signals with an amplitude ratio $R$, separated by a normalized frequency ratio $\rho$, an instrument with sampling rate $f_s$ requires a minimum observation time $T$. These four variables are governed by the inequality:
 
 \begin{equation}
-    \underbrace{T \cdot f_s}_{\text{Total Samples } N} \quad \times \quad \underbrace{\left( \frac{\Delta f}{f_s} \right)}_{\text{Closeness Ratio } \rho} \quad \ge \quad \underbrace{\left[ \ln(R) \right]^2}_{\text{Contrast Cost}}
+    \underbrace{T \cdot f_s}_{\text{Total Samples } N} \quad \times \quad \underbrace{\left( \frac{\Delta f}{f_s} \right)}_{\text{Closeness Ratio } \rho} \quad \ge \quad \underbrace{ \frac{\left[ \ln(R) \right]^2}{\pi} }_{\text{Contrast Cost}}
 \end{equation}
 
 \subsection{Implications}
@@ -1976,23 +1990,36 @@ To distinguish two signals with an amplitude ratio $R$, separated by a normalize
 \textbf{1. Solving for Time ($T$):}
 How long must I observe?
 \begin{equation}
-    T \ge \frac{1}{\Delta f} [\ln(R)]^2
+    T \ge \frac{1}{\pi \Delta f} [\ln(R)]^2
 \end{equation}
 \textit{Note: Sampling rate $f_s$ cancels out. Time is purely a function of absolute frequency separation and contrast.}
 
 \textbf{2. Solving for Closeness ($\rho$):}
 How close can two frequencies be for a fixed $N$?
 \begin{equation}
-    \rho \ge \frac{[\ln(R)]^2}{N}
+    \rho \ge \frac{[\ln(R)]^2}{\pi N}
 \end{equation}
 \textit{The resolvable fraction of the bandwidth improves linearly with the total number of samples.}
 
 \textbf{3. Solving for Contrast ($R$):}
 What dynamic range can I achieve?
 \begin{equation}
-    R \le \exp\left( \sqrt{N \cdot \rho} \right)
+    R \le \exp\left( \sqrt{N \cdot \pi \rho} \right)
 \end{equation}
 \textit{Dynamic range grows exponentially with the square root of the "Resolution Product" ($N \rho$). This is the signature advantage of the Gevrey class.}
+
+Since the number of frequency bins separating two signals is defined as $m = T \cdot \Delta f$, the law can be stated simply in terms of FFT bins:
+
+\begin{equation}
+    m \ge \frac{\left[ \ln(R) \right]^2}{\pi}
+\end{equation}
+
+\noindent \textbf{4. Practical Rule:} To resolve a weak signal against a contrast ratio $R$, you must observe long enough that the signal shifts at least $[\ln(R)]^2$ bins away from the interferer.
+\begin{itemize}
+    \item For $60\,\text{dB}$ contrast ($R=10^3$): Separation $\ge \mathbf{15}$ bins.
+    \item For $100\,\text{dB}$ contrast ($R=10^5$): Separation $\ge \mathbf{42}$ bins.
+    \item For $140\,\text{dB}$ contrast ($R=10^7$): Separation $\ge \mathbf{83}$ bins.
+\end{itemize}
 
 
 \begin{figure}[h]
