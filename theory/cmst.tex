@@ -2011,10 +2011,10 @@ What dynamic range can I achieve?
 Since the number of frequency bins separating two signals is defined as $m = T \cdot \Delta f$, the law can be stated simply in terms of FFT bins:
 
 \begin{equation}
-    m \ge \frac{\left[ \ln(R) \right]^2}{\pi}
+    m \ge \frac{ \ln(R)^2}{\pi}
 \end{equation}
 
-\noindent \textbf{4. Practical Rule:} To resolve a weak signal against a contrast ratio $R$, you must observe long enough that the signal shifts at least $[\ln(R)]^2$ bins away from the interferer.
+\noindent \textbf{4. Practical Rule:} To resolve a weak signal against a contrast ratio $R$, you must observe long enough that the signal shifts at least $\frac{1}{\pi} \ln(R)^2$ bins away from the interferer.
 \begin{itemize}
     \item For $80\,\text{dB}$ contrast ($R=10^4$): Separation $\ge \mathbf{27}$ bins.
     \item For $100\,\text{dB}$ contrast ($R=10^5$): Separation $\ge \mathbf{42}$ bins.
