@@ -2022,6 +2022,29 @@ Since the number of frequency bins separating two signals is defined as $m = T \
 \end{itemize}
 
 
+\subsection{Numerical Verification: The "Planet Test"}
+To verify the resolution law in a 2D imaging context, we simulated a high-contrast stellar observation.
+\begin{itemize}
+    \item \textbf{Setup:} A "Sun" (Radius $15\,\text{px}$) and two "Planets" (Radius $50\,\text{px}$) on a $2048 \times 2048$ grid.
+    \item \textbf{Contrast:} The planets were set to $-80\,\text{dB}$ ($10^{-4}$) relative to the Sun.
+    \item \textbf{Separation:} The effective edge-to-edge separation was $\Delta x = 50 - 15 = 35\,\text{px}$.
+\end{itemize}
+
+\begin{figure}[h!]
+    \centering
+    \caption{\textbf{The "Planet Test"}} 
+    \includegraphics[width=0.8\linewidth]{planets.png}
+    \label{fig:Planets}
+\end{figure}
+
+\noindent \textbf{Prediction:} According to the CMST Resolution Law for $R=10^4$ ($80\,\text{dB}$), the required separation is:
+\begin{equation}
+    m \ge \frac{1}{\pi} (\ln 10^4)^2 \approx 27\,\text{bins}
+\end{equation}
+
+\noindent \textbf{Result:} Since the available separation ($35\,\text{px}$) exceeded the required separation ($27\,\text{px}$), the CMST window successfully resolved the planets with a clear noise floor margin. A standard polynomial window would require a larger number of bins for this contrast, rendering the planets invisible.
+
+
 \begin{figure}[h]
     \centering
     \caption{\textbf{Visualisation spectral leakage vs other filters.}} 
