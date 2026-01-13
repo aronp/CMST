@@ -90,7 +90,7 @@ Note that not only has Planck lost 4 planets, but it has also created non exista
 
 
 ### 📉 Resolution Law: 
-As part of this work we produce a resolution law for CMST where for resolution of two signals in terms of bins, namely
+As part of this work we produce a resolution law for CMST for resolution of two signals in terms of bins, namely
 
 $$m = \left\lceil \frac{(\ln R)^2}{\pi} \right\rceil$$
 
