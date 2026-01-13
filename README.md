@@ -88,6 +88,17 @@ Improvement:   7.58 dB
 With the planet dB at -80 dB and a noise floor of -90 dB.  Slightly contrived, but the windows I am comparing against are good!
 Note that not only has Planck lost 4 planets, but it has also created non existant mountains (side lobes).  We are looking at this in crazy detail, if we were back in the real world, the -80dB planets would not show up on your screen, your eyes couldnt see them.  Those "mountains" are invisible as well. 80dB is the ratio between the Empire State Building and a golf ball.
 
+
+### 📉 Resolution Law: 
+As part of this work we produce a resolution law for CMST where for resolution of two signals in terms of bins, namely
+$$m > \left\lceil \frac{(\ln R)^2}{\pi} \right\rceil$$
+Where:
+* **$R$** is the linear ratio of amplitudes (e.g., for -100 dB, $R = 10^5$).
+* **$m$** is the distance between the signals in bins.
+
+![Resolution Law](resolution_law.png)
+
+
 ### 📉 The Math: 
 Behind all of this there is a CMST theory paper here [CMST](cmst.pdf)
 
