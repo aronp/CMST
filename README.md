@@ -92,11 +92,11 @@ Note that not only has Planck lost 4 planets, but it has also created non exista
 ### 📉 Resolution Law: 
 As part of this work we produce a resolution law for CMST where for resolution of two signals in terms of bins, namely
 
-$$m > \left\lceil \frac{(\ln R)^2}{\pi} \right\rceil$$
+$$m = \left\lceil \frac{(\ln R)^2}{\pi} \right\rceil$$
 
 Where:
 * **$R$** is the linear ratio of amplitudes (e.g., for -100 dB, $R = 10^5$).
-* **$m$** is the distance between the signals in bins.
+* **$m$** is the distance required between the signals in bins.
 
 ![Resolution Law](resolution_law.png)
 
