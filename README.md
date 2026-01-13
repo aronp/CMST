@@ -100,6 +100,10 @@ Where:
 
 ![Resolution Law](resolution_law.png)
 
+Theortical law vs practial.
+
+![Theortical law vs practial](cmst_decay_vs_law.png)
+
 
 ### 📉 The Math: 
 Behind all of this there is a CMST theory paper here [CMST](cmst.pdf)
