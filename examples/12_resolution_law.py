@@ -1,6 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fft import fft, fftshift
+import os
+
+
+def get_cmst_window(N):
+    """The Analytical CMST / Gevrey Window."""
+    t = np.linspace(-1, 1, N)
+    t = t[1:-1] # Avoid singularity
+    w = np.exp(t**4 + 1 / (t**2 - 1))
+    w = np.pad(w, (1, 1), 'constant')
+    return w
 
 # 1. Setup
 N = 8192
@@ -49,7 +59,7 @@ plt.xlim(-80, 80)
 plt.ylim(-130, 20)
 plt.xlabel("Frequency Bin Distance (m)", fontsize=12)
 plt.ylabel("Magnitude (dB)", fontsize=12)
-plt.title(f"Verification of the Resolution Law: $m = \\lceil \\pi^{{-1}} (\\ln R)^2 \\rceil$\n"
+plt.title(f"Visualisation of the Resolution Law: $m = \\lceil \\pi^{{-1}} (\\ln R)^2 \\rceil$\n"
           f"Confirmed Bins: {m_80} (at -80dB) and {m_100} (at -100dB)", fontsize=14)
 
 plt.grid(True, which='major', linestyle='--', alpha=0.4)

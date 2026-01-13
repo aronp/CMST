@@ -94,7 +94,7 @@ def get_cmst_window(N):
     """The Analytical CMST / Gevrey Window."""
     t = np.linspace(-1, 1, N)
     t = t[1:-1] # Avoid singularity
-    w = np.exp(t**2 + 1 / (t**2 - 1))
+    w = np.exp(t**4 + 1 / (t**2 - 1))
     w = np.pad(w, (1, 1), 'constant')
     return w
     
