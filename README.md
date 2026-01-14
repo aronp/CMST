@@ -100,7 +100,7 @@ Where:
 
 ![Resolution Law](resolution_law.png)
 
-Theortical law vs practial.
+Theortical law vs practical.
 
 ![Theortical law vs practical](cmst_decay_vs_law.png)
 
