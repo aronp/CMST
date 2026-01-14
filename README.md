@@ -102,7 +102,7 @@ Where:
 
 Theortical law vs practial.
 
-![Theortical law vs practial](cmst_decay_vs_law.png)
+![Theortical law vs pratical](cmst_decay_vs_law.png)
 
 
 ### 📉 The Math: 
