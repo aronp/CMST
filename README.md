@@ -1,7 +1,7 @@
 # cmst-window
 **The analytically sound, zero-preserving, interlace-preserving compact window.**
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Theory: CMST](https://img.shields.io/badge/Theory-CMST-purple)](https://github.com/aronp/CMST/cmst.pdf)
+[![Theory: CMST](https://img.shields.io/badge/Theory-CMST-purple)](https://github.com/aronp/CMST/blob/main/cmst.pdf)
 
 ### 🚀 The Problem
 Signal processing engineers often need a "Flat-Top" window to preserve signal amplitude while filtering noise. Existing standard solutions force a dangerous compromise:
