@@ -247,12 +247,12 @@ Thus $f'$ has real, simple zeros strictly interlacing those of $f$.
 \textbf{Logarithmic derivative monotonicity.}\newline
 The function
 \[
-\phi(t)=\frac{f'(t)}{f(t)}=\sum_{i=1}^n \frac{1}{t-r_i}
+\psi(t)=\frac{f'(t)}{f(t)}=\sum_{i=1}^n \frac{1}{t-r_i}
 \]
 is strictly decreasing on each interval $(r_i,r_{i+1})$, with 
-$\phi(t)\to +\infty$ as $t\downarrow r_i$ and 
-$\phi(t)\to -\infty$ as $t\uparrow r_{i+1}$.
-Thus $\phi(t)=c$ has exactly one solution in each such interval.
+$\psi(t)\to +\infty$ as $t\downarrow r_i$ and 
+$\psi(t)\to -\infty$ as $t\uparrow r_{i+1}$.
+Thus $\psi(t)=c$ has exactly one solution in each such interval.
 \textit{(Standard in Sturm theory; see Karlin--Studden, Ch.~1, or
 Marden, \emph{Geometry of Polynomials}, Ch.~6.)}
 
@@ -263,7 +263,7 @@ For every real $a$,
 f + a f'
 \]
 has real, simple zeros and shares a strict interlacing with $f$.  
-(This follows from (S2) by solving $f+af'=0$ via $\phi(t)=-1/a$.)
+(This follows from (S2) by solving $f+af'=0$ via $\psi(t)=-1/a$.)
 \textit{(See Marden, Ch.~6; also Obreschkoff,
 \emph{Verteilung und Berechnung der Nullstellen}, §10.)}
 
@@ -1070,7 +1070,7 @@ while $\cos s$ is entire of genus~1.
 \leavevmode
 \begin{enumerate}[label=(\alph*)]
 \item The Gaussian, $\,e^{-t^{2}}$ is zero free (though I think we show here that on any finite domain it has an infinity of real zeros).
-\item For the monomial case $\phi(t)=e^{-t^{2m}}$ with $m\ge 2$, it is classical (Pólya) that $\widehat{\phi}$ has only real zeros
+\item For the monomial case $\psi(t)=e^{-t^{2m}}$ with $m\ge 2$, it is classical (Pólya) that $\widehat{\psi}$ has only real zeros
 \item Known “universal factor’’ results (Pólya–de~Bruijn type) and total-positivity criteria cover several two– and three–term exponents (e.g.\ $e^{-(a t^{4}+b t^{2})}$ and, more generally, $e^{-(a t^{4q}+b t^{2q}+c t^{2})}$ under constraints)
 \item $e^{-\cosh(t)}$
 G. Pólya, "Über trigonometrische Integrale mit nur reellen Nullstellen" (1927)
@@ -1533,14 +1533,14 @@ Note that the the terms of  $f'(\mathcal{T}_{\text{rad}})$ are positive.  This s
 We consider the specific kernel defined by the infinite product of exponential monomials, which corresponds to the following compact-support function on $[-1, 1]$:
 
 \begin{equation}
-    \Phi(t) = \prod_{n=0}^{\infty} e^{-t^{2nk}} = \exp\left( \frac{1}{t^{2k}-1} \right), \quad t \in (-1, 1)
+    \psi(t) = \prod_{n=0}^{\infty} e^{-t^{2nk}} = \exp\left( \frac{1}{t^{2k}-1} \right), \quad t \in (-1, 1)
 \end{equation}
 
-and $\Phi(t) = 0$ for $|t| \ge 1$. This function is $C^\infty$ and vanishes with all its derivatives at the boundaries $t = \pm 1$.
+and $\psi(t) = 0$ for $|t| \ge 1$. This function is $C^\infty$ and vanishes with all its derivatives at the boundaries $t = \pm 1$.
 
 \begin{theorem}[CMST Membership of the Geometric Kernel]
-The function $\Phi(t) = \exp\left( \frac{1}{t^{2k}-1} \right)$ belongs to the CMST class on the interval $[-1, 1]$. Consequently, its CMST 
-$F_n(s) = \mathcal{C}_1[t^{2n}\Phi(t)](s)$ is a interlacing family in 
+The function $\psi(t) = \exp\left( \frac{1}{t^{2k}-1} \right)$ belongs to the CMST class on the interval $[-1, 1]$. Consequently, its CMST 
+$F_n(s) = \mathcal{C}_1[t^{2n}\psi(t)](s)$ is a interlacing family in 
 $\mathcal{P}_{\mathrm{pos}}$ 
 
 \end{theorem}
@@ -1558,11 +1558,11 @@ We can then take the limit as $a \to 1$ which for $e^{-f(t^2)}$ is finite.
 \begin{remark}[The Infinite Product of Hyper-Gaussians]
 The factorization
 \begin{equation}
-\Phi(t) = \prod_{n=0}^{\infty} e^{-t^{2nk}}  = \exp\left( \frac{1}{t^{2k}-1} \right) 
+\psi(t) = \prod_{n=0}^{\infty} e^{-t^{2nk}}  = \exp\left( \frac{1}{t^{2k}-1} \right) 
 = e^{\sum _{n=0}^{\infty } t^{2 n k} }
 \end{equation}
 reveals a fundamental structural property of the CMST window. Each factor $e^{-t^{2nk}}$ represents a ``Hyper-Gaussian'' of order $2nk$. 
-This implies that the window $\Phi(t)$ can be interpreted as the infinite intersection of all Hyper-Gaussian stability classes. 
+This implies that the window $\psi(t)$ can be interpreted as the infinite intersection of all Hyper-Gaussian stability classes. 
 
 This product structure is analogous to the Euler product of the Zeta function, where the additive structure of the singularity (the geometric series sum in the exponent) generates the multiplicative structure of the function.
 \begin{equation}
@@ -1690,23 +1690,23 @@ As a result, while the main-lobe width (resolution) is comparable to a Kaiser wi
 
 \section{Differential Structure and Efficient Computation of the CMST Window}
 
-While the integral definition of the CMST window $\Phi(t) = \exp\left( \frac{1}{t^2-1} \right)$ ensures its theoretical properties in $C_c^\infty$, its practical application in digital signal processing (such as FIR filter design) benefits from a differential formulation. 
+While the integral definition of the CMST window $\psi(t) = \exp\left( \frac{1}{t^2-1} \right)$ ensures its theoretical properties in $C_c^\infty$, its practical application in digital signal processing (such as FIR filter design) benefits from a differential formulation. 
 This section derives the governing differential equations in both the time and spectral domains, yielding a stable recurrence relation for high-precision generation of the window's transform.
 
 \subsection{The Time-Domain Governing Equation}
-Differentiating the kernel $\Phi(t)$ with respect to $t$ reveals a distinct non-linear relationship.
+Differentiating the kernel $\psi(t)$ with respect to $t$ reveals a distinct non-linear relationship.
 \begin{equation}
-\Phi'(t) = \frac{d}{dt} \exp\left( \frac{1}{t^2-1} \right) = \frac{-2t}{(t^2-1)^2} \Phi(t)
+\psi'(t) = \frac{d}{dt} \exp\left( \frac{1}{t^2-1} \right) = \frac{-2t}{(t^2-1)^2} \psi(t)
 \end{equation}
 Rearranging terms eliminates the singularity in the denominator and linearizes the expression, yielding the defining Ordinary Differential Equation (ODE) for the window:
 \begin{equation}
 \label{eq:time_ode}
-(1 - t^2)^2 \Phi'(t) + 2t \Phi(t) = 0
+(1 - t^2)^2 \psi'(t) + 2t \psi(t) = 0
 \end{equation}
 This equation encodes the boundary behavior: the term $(1-t^2)^2$ enforces a "soft landing" at $t=\pm 1$, ensuring that the derivative vanishes faster than the function itself, a necessary condition for the preservation of smoothness.
 
 \subsection{The Spectral Differential Equation}
-To determine the behavior of the Fourier transform $F(s) = \mathcal{C}[\Phi](s)$, we map the time-domain operators of \cref{eq:time_ode} to the frequency domain using the standard correspondences $\Phi'(t) \leftrightarrow s F(s)$ and $t^n (\cdot) \leftrightarrow i^n D^n (\cdot)$.
+To determine the behavior of the Fourier transform $F(s) = \mathcal{C}[\psi](s)$, we map the time-domain operators of \cref{eq:time_ode} to the frequency domain using the standard correspondences $\psi'(t) \leftrightarrow s F(s)$ and $t^n (\cdot) \leftrightarrow i^n D^n (\cdot)$.
 Expanding the polynomial term $(1-t^2)^2 = 1 - 2t^2 + t^4$, the transformed operator acts on the product $sF(s)$:
 \begin{equation}
 \left( 1 + \frac{d^2}{ds^2} \right)^2 [s F(s)] + 2 F'(s) = 0
@@ -1718,7 +1718,7 @@ s F''''(s) + 4 F'''(s) + 2s F''(s) + 6 F'(s) + s F(s) = 0
 \end{equation}
 
 \subsection{Power Series Solution and Recurrence Relation}
-Since $\Phi(t)$ is an even function, $F(s)$ admits a power series expansion of the form:
+Since $\psi(t)$ is an even function, $F(s)$ admits a power series expansion of the form:
 \begin{equation}
 F(s) = \sum_{k=0}^{\infty} a_k s^{2k}
 \end{equation}
@@ -1785,15 +1785,15 @@ $\psi \approx -0.0790568$.  I cant find any other relationships with this number
 but it generates our whole FIR and so it is important here.
 
 \subsection*{5. First few terms}
-So if we normalise the first two terms to be 1 and $\phi$ we get the following.
+So if we normalise the first two terms to be 1 and $\psi$ we get the following.
 \begin{equation}
 \begin{aligned}
 a_0 &= 1 \\
-a_1 &= \phi \\
-a_2 &= \frac{-1 - 16\phi}{120} \\
-a_3 &= \frac{2 + 27\phi}{4200} \\
-a_4 &= \frac{-157 - 2032\phi}{12,700,800} \\
-a_5 &= \frac{10,360 + 133,735\phi}{44,008,272,000}
+a_1 &= \psi \\
+a_2 &= \frac{-1 - 16\psi}{120} \\
+a_3 &= \frac{2 + 27\psi}{4200} \\
+a_4 &= \frac{-157 - 2032\psi}{12,700,800} \\
+a_5 &= \frac{10,360 + 133,735\psi}{44,008,272,000}
 \end{aligned}
 \end{equation}
 
@@ -1809,11 +1809,11 @@ Rearranging for the moment $\mu_{2n}$
 Noting that $\mu_{0}$ has been normalised
 \end{remark}
 
-\begin{remark}[Relationship of $\phi$]
-Noting that if we set $a_0 = 1$ and $a_1 = \phi$ we get
+\begin{remark}[Relationship of $\psi$]
+Noting that if we set $a_0 = 1$ and $a_1 = \psi$ we get
 
 \begin{equation}
-\phi = -\frac{\int_{-1}^1 t^2 \exp \left(\frac{1}{t^2-1}\right) \, dt}{2 \int_{-1}^1 \exp
+\psi = -\frac{\int_{-1}^1 t^2 \exp \left(\frac{1}{t^2-1}\right) \, dt}{2 \int_{-1}^1 \exp
    \left(\frac{1}{t^2-1}\right) \, dt}
 \end{equation}
 Which is just a case of using the moment transform
@@ -1853,10 +1853,10 @@ which is the intergral of the Schwartz function. $\cite{schwartz1950}$
 \end{theorem}
 
 \begin{remark}
-Note that numeric convergence of the above series is hugely dependant on the accuracy of $\phi$.  A 7 decimal place accurate value for $\phi$ blows up around the 5th term for instance.  However if we work out the terms they do telescope giving for instance the first ten terms as
+Note that numeric convergence of the above series is hugely dependant on the accuracy of $\psi$.  A 7 decimal place accurate value for $\psi$ blows up around the 5th term for instance.  However if we work out the terms they do telescope giving for instance the first ten terms as
 \begin{equation}
 \int_{-1}^{1}  \exp\left(\frac{1}{t^2 -1}\right)\, dt 
-\approx -\frac{676457349120}{17\, e \, (741069365504297 \phi +58553612934767)} \approx 0.4439530
+\approx -\frac{676457349120}{17\, e \, (741069365504297 \psi +58553612934767)} \approx 0.4439530
 \end{equation}
 which is accurate to about $0.01\%$
 
@@ -1867,9 +1867,9 @@ which is accurate to about $0.01\%$
 As described by Boyd \cite{Boyd2001}, the rate of convergence of the Fourier coefficients is governed by the smoothness of the function at its boundaries...
 
 \begin{theorem}[Super-Algebraic Decay]
-Let $\Phi(t) = \exp\left(\frac{1}{t^2-1}\right)$ for $|t| < 1$ and $0$ otherwise. The Fourier transform $\hat{\Phi}(\omega)$ satisfies:
+Let $\psi(t) = \exp\left(\frac{1}{t^2-1}\right)$ for $|t| < 1$ and $0$ otherwise. The Fourier transform $\hat{\psi}(\omega)$ satisfies:
 \begin{equation}
-\lim_{\omega \to \infty} |\omega|^N \hat{\Phi}(\omega) = 0 \quad \forall N \in \mathbb{N}
+\lim_{\omega \to \infty} |\omega|^N \hat{\psi}(\omega) = 0 \quad \forall N \in \mathbb{N}
 \end{equation}
 implying decay faster than any polynomial order (super-algebraic).
 \end{theorem}
@@ -1877,19 +1877,19 @@ implying decay faster than any polynomial order (super-algebraic).
 \begin{proof}
 Consider the Fourier integral definition:
 \begin{equation}
-\hat{\Phi}(\omega) = \int_{-1}^{1} \Phi(t) e^{-i\omega t} dt
+\hat{\psi}(\omega) = \int_{-1}^{1} \psi(t) e^{-i\omega t} dt
 \end{equation}
-Integrating by parts once, let $u = \Phi(t)$ and $dv = e^{-i\omega t}dt$:
+Integrating by parts once, let $u = \psi(t)$ and $dv = e^{-i\omega t}dt$:
 \begin{equation}
-\hat{\Phi}(\omega) = \left[ \frac{\Phi(t) e^{-i\omega t}}{-i\omega} \right]_{-1}^{1} + \frac{1}{i\omega} \int_{-1}^{1} \Phi'(t) e^{-i\omega t} dt
+\hat{\psi}(\omega) = \left[ \frac{\psi(t) e^{-i\omega t}}{-i\omega} \right]_{-1}^{1} + \frac{1}{i\omega} \int_{-1}^{1} \psi'(t) e^{-i\omega t} dt
 \end{equation}
-The boundary term vanishes because $\Phi(\pm 1) = 0$. Repeating this process $k$ times yields:
+The boundary term vanishes because $\psi(\pm 1) = 0$. Repeating this process $k$ times yields:
 \begin{equation}
-\hat{\Phi}(\omega) = \frac{1}{(i\omega)^k} \int_{-1}^{1} \Phi^{(k)}(t) e^{-i\omega t} dt
+\hat{\psi}(\omega) = \frac{1}{(i\omega)^k} \int_{-1}^{1} \psi^{(k)}(t) e^{-i\omega t} dt
 \end{equation}
-Since $\Phi(t) \in C_c^\infty(-1, 1)$, all derivatives $\Phi^{(k)}(t)$ vanish at the boundaries $t=\pm 1$. The remaining integral is bounded by the maximum of the $k$-th derivative $||\Phi^{(k)}||_\infty$. Thus:
+Since $\psi(t) \in C_c^\infty(-1, 1)$, all derivatives $\psi^{(k)}(t)$ vanish at the boundaries $t=\pm 1$. The remaining integral is bounded by the maximum of the $k$-th derivative $||\psi^{(k)}||_\infty$. Thus:
 \begin{equation}
-|\hat{\Phi}(\omega)| \leq \frac{2 ||\Phi^{(k)}||_\infty}{|\omega|^k}
+|\hat{\psi}(\omega)| \leq \frac{2 ||\psi^{(k)}||_\infty}{|\omega|^k}
 \end{equation}
 Since this holds for any arbitrarily large integer $k$, the decay is super-algebraic.
 \end{proof}
@@ -1897,24 +1897,24 @@ Since this holds for any arbitrarily large integer $k$, the decay is super-algeb
 
 
 \subsection{Asymptotic Decay Analysis}
-While the super-algebraic property guarantees decay faster than any polynomial $O(\omega^{-N})$, it is useful to derive the precise asymptotic envelope. The window function $\Phi(t) = \exp((t^2-1)^{-1})$ belongs to the Gevrey class $\mathcal{G}^s$ with index $s=2$. The bounds on its derivatives satisfy the Gevrey condition:
+While the super-algebraic property guarantees decay faster than any polynomial $O(\omega^{-N})$, it is useful to derive the precise asymptotic envelope. The window function $\psi(t) = \exp((t^2-1)^{-1})$ belongs to the Gevrey class $\mathcal{G}^s$ with index $s=2$. The bounds on its derivatives satisfy the Gevrey condition:
 \begin{equation}
-\max_{t \in [-1, 1]} |\Phi^{(k)}(t)| \leq C^{k+1} (2k)!
+\max_{t \in [-1, 1]} |\psi^{(k)}(t)| \leq C^{k+1} (2k)!
 \end{equation}
 for some constant $C > 0$. Using the standard bound for the Fourier transform derived via repeated integration by parts:
 \begin{equation}
-|\hat{\Phi}(\omega)| \leq \frac{2 \max |\Phi^{(k)}(t)|}{|\omega|^k} \approx \frac{2 C^{k+1} (2k)!}{|\omega|^k}
+|\hat{\psi}(\omega)| \leq \frac{2 \max |\psi^{(k)}(t)|}{|\omega|^k} \approx \frac{2 C^{k+1} (2k)!}{|\omega|^k}
 \end{equation}
 To find the tightest bound, we minimize the right-hand side with respect to $k$. Using Stirling's approximation $(2k)! \approx \sqrt{4\pi k} (2k/e)^{2k}$, the term behaves approximately as $(4k^2/\omega)^k$. The minimum occurs when $k \sim \sqrt{\omega}$. Substituting this optimal order back into the bound yields a root-exponential decay envelope:
 \begin{equation}
-|\hat{\Phi}(\omega)| \leq A \exp\left( -B \sqrt{|\omega|} \right)
+|\hat{\psi}(\omega)| \leq A \exp\left( -B \sqrt{|\omega|} \right)
 \end{equation}
 where $A$ and $B$ are positive constants. This confirms that the spectral leakage decays significantly faster than the polynomial rates of standard cosine-sum windows (e.g., Blackman-Harris), approaching the ideal band-limited behavior.
 
 \begin{theorem}[Asymptotic Decay Rate]
-For the window function $\Phi(t) = \exp((t^2-1)^{-1})$, the Fourier transform magnitude behaves asymptotically as:
+For the window function $\psi(t) = \exp((t^2-1)^{-1})$, the Fourier transform magnitude behaves asymptotically as:
 \begin{equation}
-|\hat{\Phi}(\omega)| \sim \mathcal{O}\left( |\omega|^{-3/4} \exp\left(-\sqrt{|\omega|}\right) \right) \quad \text{as } |\omega| \to \infty
+|\hat{\psi}(\omega)| \sim \mathcal{O}\left( |\omega|^{-3/4} \exp\left(-\sqrt{|\omega|}\right) \right) \quad \text{as } |\omega| \to \infty
 \end{equation}
 This establishes the Gevrey $\cite{Gevrey1918}$ index $s=2$, corresponding to a root-exponential decay rate.
 
@@ -1924,11 +1924,11 @@ decay is achievable without sacrificing compact support.
 
 \end{theorem}
 \begin{theorem}[Asymptotic Decay Rate]
-For the window function $\Phi(t) = \exp((t^2-1)^{-1})$, the Fourier transform magnitude satisfies the Gevrey class condition:
+For the window function $\psi(t) = \exp((t^2-1)^{-1})$, the Fourier transform magnitude satisfies the Gevrey class condition:
 \begin{equation}
     |F(i\omega)| \approx C \, |\omega|^{-3/4} \exp\left(-\sqrt{|\omega|}\right) \quad \text{as } |\omega| \to \infty
 \end{equation}
-This establishes that $\Phi(t)$ belongs to the Gevrey class $\mathcal{G}^2$ \cite{Gevrey1918}, corresponding to a root-exponential spectral decay.
+This establishes that $\psi(t)$ belongs to the Gevrey class $\mathcal{G}^2$ \cite{Gevrey1918}, corresponding to a root-exponential spectral decay.
 \end{theorem}
 
 \begin{remark}
@@ -1987,7 +1987,7 @@ To distinguish two signals with an amplitude ratio $R$, separated by a normalize
 
 \subsection{Implications}
 
-\textbf{1. Solving for Time ($T$):}
+\textbf{1. Solving for Time ($T$):}\textit{\textit{•}}
 How long must I observe?
 \begin{equation}
     T \ge \frac{1}{\pi \Delta f} [\ln(R)]^2
