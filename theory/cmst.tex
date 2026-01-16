@@ -1879,9 +1879,23 @@ which is accurate to about $0.01\%$
 
 \end{remark}
 
+\begin{remark}
+The resulting FIR filter is not only stable under high-order 
+recurrence but also exhibits
+a strictly confined bandwidth. 
+Because the CMST Window is $C^{\infty}$ and of Gevrey class $\mathcal{G}^2$
+the spectral footprint undergoes a root exponential
+plunge, allowing for target resolutions 
+to be reached 
+with a 
+minimal tap count.
+
+\end{remark}
+
 \section{Spectral Decay Analysis}
 
 As described by Boyd \cite{Boyd2001}, the rate of convergence of the Fourier coefficients is governed by the smoothness of the function at its boundaries...
+Because the CMST Window is $C^{\infty}$ and of Gevrey class $\mathcal{G}^2$ the spectral footprint undergoes a root exponential
 
 \begin{theorem}[Super-Algebraic Decay]
 Let $\psi(t) = \exp\left(\frac{1}{t^2-1}\right)$ for $|t| < 1$ and $0$ otherwise. The Fourier transform $\hat{\psi}(\omega)$ satisfies:
