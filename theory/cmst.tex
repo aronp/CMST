@@ -1572,6 +1572,22 @@ This product structure is analogous to the Euler product of the Zeta function, w
 \end{remark}
 
 
+\begin{remark}[Construction via the Fundamental Eigenmode]
+The construction of the window can be physically interpreted through the eigenmodes of the Fourier-Laplace operator. 
+It is a classical result that the Gaussian function $e^{-t^2}$ is the fundamental eigenfunction (ground state) of the Fourier transform, representing the state of minimum uncertainty.
+
+The CMST exponent $\Phi(t)$ is constructed by summing the geometric power series of this fundamental mode:
+\begin{equation}
+    \Phi(t) = \sum_{n=0}^{\infty} (t^{2k})^n = \frac{1}{1 - t^{2k}}
+\end{equation}
+By defining the window as $\psi(t) = \exp(-\Phi(t))$, we are effectively creating a "Super-Gaussian" composed of an infinite superposition of higher-order modes.
+\begin{enumerate}
+    \item \textbf{The Ground State ($n=0$):} Represents the standard Gaussian width.
+    \item \textbf{The Infinite Sum ($n \to \infty$):} As the modes pile up, the function transitions from a "soft" bell curve to a "hard" wall at $|t|=1$.
+\end{enumerate}
+This construction guarantees that the window inherits the smoothness properties of the Gaussian eigenmode (analyticity) while achieving the compact support required for finite-time signal analysis.
+\end{remark}
+
 
 \begin{theorem} [Analytic form for $\int_{-a}^a \frac{\cos (s t)}{1-t^2} \, dt$ ]
 We show that
@@ -1793,7 +1809,8 @@ a_1 &= \psi \\
 a_2 &= \frac{-1 - 16\psi}{120} \\
 a_3 &= \frac{2 + 27\psi}{4200} \\
 a_4 &= \frac{-157 - 2032\psi}{12,700,800} \\
-a_5 &= \frac{10,360 + 133,735\psi}{44,008,272,000}
+a_5 &= \frac{10,360 + 133,735\psi}{44,008,272,000}  \\
+\cdots
 \end{aligned}
 \end{equation}
 
