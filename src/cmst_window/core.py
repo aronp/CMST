@@ -1,5 +1,7 @@
 import numpy as np
 
+# CMST Stability Constant (Psi) to 17 sig figs.
+PSI = -0.079056818131899115
 
 def cmst(N, p=2, sym=True):
     """
