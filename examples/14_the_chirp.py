@@ -91,10 +91,12 @@ try:
 
     # Plot
     plt.pcolormesh(t_spec, f, Sxx, shading='gouraud', cmap='viridis')
+    contour_filled = plt.contourf(t_spec, f, Sxx, levels=100, cmap='inferno')
+    contour_lines = plt.contour(t_spec, f, Sxx, levels=60, colors='white', linewidths=0.5, alpha=0.5)
 
     # Zoom in on the Chirp
-    plt.xlim(zoom_center - zoom_width, zoom_center + zoom_width)
-    plt.ylim(30, 300) # The "Audible" range of the black holes
+    plt.xlim(zoom_center - 5 * zoom_width, zoom_center + zoom_width)
+    plt.ylim(0, 300) # The "Audible" range of the black holes
 
     plt.title(f'LIGO GW150914: Spectrogram Analysis (CMST (p=2) Window)')
     plt.ylabel('Frequency (Hz)')
