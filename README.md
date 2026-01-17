@@ -103,6 +103,11 @@ Theortical law vs practical. (There is actually a small log term that gives the 
 
 ![Theortical law vs practical](cmst_decay_vs_law.png)
 
+![Trying real data](Chirp.png)
+
+To benchmark performance on real-world signals, the CMST window was applied to the raw 4kHz data from GW150914, the first direct detection of gravitational waves.
+Standard analysis of this event typically resolves the signal for approximately 0.2 seconds due to low-frequency seismic noise, but using CMST seems to extend that a bit further.
+
 
 ### 📉 The Math: 
 Behind all of this there is a CMST theory paper here [CMST](cmst.pdf)
