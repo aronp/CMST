@@ -1704,6 +1704,11 @@ This smoothness guarantees super-algebraic decay of the Fourier transform side-l
 As a result, while the main-lobe width (resolution) is comparable to a Kaiser window, the dynamic range (sidelobe suppression) is vastly superior, avoiding the "spectral floor" caused by boundary discontinuities.  Windows like the Planck window while smooth at $t = 1$ introduce discontinuities elsewhere.
 \end{remark}
 
+\begin{remark}
+Since the CMST family is closed under multiplication, the energy window is itself a CMST. This implies the Power Spectral Density (PSD) inherits the same super-algebraic decay and resolution properties as the amplitude spectrum, a unique feature not found in polynomial-based windows
+\end{remark}
+
+
 \section{Differential Structure and Efficient Computation of the CMST Window}
 
 While the integral definition of the CMST window $\psi(t) = \exp\left( \frac{1}{t^2-1} \right)$ ensures its theoretical properties in $C_c^\infty$, its practical application in digital signal processing (such as FIR filter design) benefits from a differential formulation. 
