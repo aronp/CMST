@@ -106,7 +106,7 @@ Theortical law vs practical. (There is actually a small log term that gives the 
 ![Trying real data](Chirp.png)
 
 To benchmark performance on real-world signals, the CMST window was applied to the raw 4kHz data from GW150914, the first direct detection of gravitational waves.
-Standard analysis of this event typically resolves the signal for approximately 0.2 seconds due to low-frequency seismic noise, but using CMST that seems to extend that a bit further.
+Standard analysis of this event typically resolves the signal for approximately 0.2 seconds due to low-frequency seismic noise, but using CMST that seems to extend a bit further.
 
 
 ### 📉 The Math: 
