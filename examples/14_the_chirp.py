@@ -96,13 +96,14 @@ try:
 
     # Zoom in on the Chirp
     plt.xlim(zoom_center - 5 * zoom_width, zoom_center + 3/2 * zoom_width)
-    plt.ylim(0, 300) # The "Audible" range of the black holes
+    plt.ylim(0, 350) # The "Audible" range of the black holes
 
     plt.title(f'LIGO GW150914: Spectrogram Analysis (CMST (p=2) Window)')
     plt.ylabel('Frequency (Hz)')
     plt.xlabel('Time (s)')
     plt.grid(False) # Turn off grid to see the track clearly
     plt.colorbar(contour_filled, label='Signal-to-Noise Ratio')
+    plt.grid(True)
     
     plt.savefig("Chirp.png")
     print("Saved Chirp.png")
