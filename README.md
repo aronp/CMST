@@ -108,6 +108,11 @@ Theortical law vs practical. (There is actually a small log term that gives the 
 To benchmark performance on real-world signals, the CMST window was applied to the raw 4kHz data from GW150914, the first direct detection of gravitational waves.
 
 
+![Kepler 10](kepler_10.png)
+
+Running the window on the Kepler 10 data, we get a clear frequency plot with clear harmonics.  When we run a regression on these harmonics we get an R^2 of ~0.99997 and an estimate of the rotation period of 0.8386540 days, which is within 0.1% of the NASA number, or roughly out by 114 seconds.
+
+
 ### 📉 The Math: 
 Behind all of this there is a CMST theory paper here [CMST](cmst.pdf)
 
