@@ -114,6 +114,18 @@ To benchmark performance on real-world signals, the CMST window was applied to t
 
 Running the window on the Kepler 10 data, a detection of a planet orbitting a sun, we get a frequency plot with clear harmonics.  When we run a regression on these harmonics we get an R^2 of ~0.99997 and an estimate of the rotation period of 0.8386 days, which is within 0.1% of the NASA number, or roughly out by only 114 seconds.
 
+### 📉 Data Preparation
+
+Do NOT pre-filter your data.
+
+The CMST algorithm is designed to operate on Raw time-series data. Applying standard signal processing filters before the transform will degrade performance since they have algerbraic side lobes which CMST wont be able to remove.
+You can:
+
+Fill Gaps: Use linear interpolation to ensure a rigid time grid.
+Center the Data: Subtract the mean (y = y - np.mean(y)) to remove the DC offset.
+and then apply CMST.
+
+Note: The CMST window provides sufficient dynamic range to isolate low-frequency noise (e.g., Stellar Rotation, Seismic Noise) from the signal of interest in the frequency domain. Pre-filtering is redundant and destructive.
 
 ### 📉 The Math: 
 Behind all of this there is a CMST theory paper here [CMST](cmst.pdf)
