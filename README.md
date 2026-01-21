@@ -146,6 +146,12 @@ The CMST window family allows you to tune the shape parameter **p** to balance C
 * **Spectral Decay:** The slope constant 'a' describing how fast the side-lobes vanish. More negative is better/faster.
 
 The numbers here are numeric estimates, but they show there is a balance between SNR and Side lobe decay.  CMST(2) is a general workhorse but CMST(4) for instance got me down to within 2 seconds of NASA's orbit time for Kepler 10.
+
+The **Std. Bump** (often denoted as $\Psi$ in distribution theory) is the canonical example of a smooth, compactly supported function ($C_c^\infty$). It serves as the baseline ancestor for the CMST window family.
+
+$$
+\Psi(t) = \exp\left(\frac{1}{t^2 - 1} \right) 
+$$
   
 ### 📉 The Math: 
 Behind all of this there is a CMST theory paper here [CMST](cmst.pdf)
