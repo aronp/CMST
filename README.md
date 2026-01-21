@@ -125,7 +125,7 @@ Fill Gaps: Use linear interpolation to ensure a rigid time grid.
 Center the Data: Subtract the mean (y = y - np.mean(y)) to remove the DC offset.
 and then apply CMST.
 
-Note: The CMST window provides sufficient dynamic range to isolate low-frequency noise (e.g., Stellar Rotation, Seismic Noise) from the signal of interest in the frequency domain. Pre-filtering is redundant and destructive.
+Note: The CMST window provides sufficient dynamic range to isolate other signals from the signal of interest in the frequency domain. Pre-filtering is redundant and destructive.
 
 ### 📉 The Math: 
 Behind all of this there is a CMST theory paper here [CMST](cmst.pdf)
