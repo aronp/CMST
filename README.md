@@ -119,6 +119,8 @@ Running the window on the Kepler 10 data, a detection of a planet orbitting a su
 Do NOT pre-filter your data.
 
 The CMST algorithm is designed to operate on Raw time-series data. Applying standard signal processing filters before the transform will degrade performance since they have algerbraic side lobes which CMST wont be able to remove.
+
+
 You can:
 
 Fill Gaps: Use linear interpolation to ensure a rigid time grid.
