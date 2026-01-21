@@ -129,6 +129,24 @@ and then apply CMST.
 
 Note: The CMST window provides sufficient dynamic range to isolate other signals from the signal of interest in the frequency domain. Pre-filtering is redundant and destructive.
 
+### Performance Trade-offs: SNR vs. Spectral Decay
+
+The CMST window family allows you to tune the shape parameter **p** to balance Coherent Gain (SNR) against the speed of Spectral Decay.
+
+| Window Variant | Parameter (p) | SNR Loss (vs Rect) | Spectral Decay (a) | 
+| :--- | :---: | :---: | :---: | 
+| **Rectangle** | N/A | **0.00 dB** | N/A | 
+| **Std. Bump** | N/A | -1.30 dB | -1.92 | 
+| **CMST(2)** | p=2 | -0.96 dB | -1.91 | 
+| **CMST(4)** | p=4 | -0.50 dB | -1.40 | 
+| **CMST(6)** | p=6 | -0.34 dB | -1.19 | 
+
+**Key Metrics:**
+* **SNR Loss:** Signal loss relative to a perfect Rectangular window. Lower is better (closer to 0 dB).
+* **Spectral Decay:** The slope constant 'a' describing how fast the side-lobes vanish. More negative is better/faster.
+
+The numbers here are numeric estimates, but they show there is a balance between SNR and Side lobe decay.  CMST(2) is a general workhorse but CMST(4) for instance got me down to within 2 seconds of NASA's orbit time for Kepler 10.
+  
 ### 📉 The Math: 
 Behind all of this there is a CMST theory paper here [CMST](cmst.pdf)
 
