@@ -129,7 +129,7 @@ and then apply CMST.
 
 Note: The CMST window provides sufficient dynamic range to isolate other signals from the signal of interest in the frequency domain. Pre-filtering is redundant and destructive.
 
-### Performance Trade-offs: SNR vs. Spectral Decay
+###  🎛️ Performance Trade-offs: SNR vs. Spectral Decay
 
 The CMST window family allows you to tune the shape parameter **p** to balance Coherent Gain (SNR) against the speed of Spectral Decay.
 
