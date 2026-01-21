@@ -99,7 +99,7 @@ plt.figure(figsize=(12, 6))
 plt.semilogy(freqs, np.abs(spectrum), label="CMST Spectrum")
 plt.title("Frequency Domain: The Comb")
 plt.xlabel("Frequency (cycles/day)")
-plt.xlim(0, 14) # Zoom in on low frequencies first
+plt.xlim(0, 24) # Zoom in on low frequencies first
 plt.ylim(10**-3, 20) # Zoom in on low frequencies first
 
 
