@@ -124,7 +124,7 @@ The CMST algorithm is designed to operate on Raw time-series data. Applying stan
 You can:
 
 Fill Gaps: Use linear interpolation to ensure a rigid time grid.
-Center the Data: Subtract the mean (y = y - np.mean(y)) to remove the DC offset.
+Center the Data: Subtract the mean to remove the DC offset.
 and then apply CMST.
 
 Note: The CMST window provides sufficient dynamic range to isolate other signals from the signal of interest in the frequency domain. Pre-filtering is redundant and destructive.
