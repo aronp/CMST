@@ -152,6 +152,9 @@ The **Std. Bump** (often denoted as $\Psi$ in distribution theory) is the canoni
 $$
 \Psi(t) = \exp\left(\frac{1}{t^2 - 1} \right) 
 $$
+
+It has the best spectral decay, but CMST(2) is almost the same and has a better SNR.
+
   
 ### 📉 The Math: 
 Behind all of this there is a CMST theory paper here [CMST](cmst.pdf)
