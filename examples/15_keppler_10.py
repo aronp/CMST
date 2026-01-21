@@ -37,7 +37,7 @@ windowed_data = flux_centered * window
 spectrum = np.fft.rfft(windowed_data)
 freqs = np.fft.rfftfreq(N, d=(lc_clean.time.value[1] - lc_clean.time.value[0])) # 'd' is sample spacing in days
 
-search_mask = (freqs >= 0.5) & (freqs <= 16.0)
+search_mask = (freqs >= 0.5) & (freqs <= 24.0)
 f_search = freqs[search_mask]
 s_search = np.abs(spectrum[search_mask])
 
