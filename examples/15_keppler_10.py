@@ -6,10 +6,11 @@ from scipy.signal import find_peaks
 from scipy.stats import linregress
 from scipy.stats import binned_statistic
 
+# Try CMST(4) for better signal to noise.
 def cmst_window(N):
     t = np.linspace(-1, 1, N)
     with np.errstate(divide='ignore', invalid='ignore'):
-        w = np.exp(t**4 / (t**2 - 1))
+        w = np.exp(t**8 / (t**4 - 1))
     w = np.where(np.abs(t) < 1, w, 0.0)
     return w
 
@@ -134,6 +135,7 @@ for i, (f, a) in enumerate(zip(final_freqs, final_amps)):
         weight=font_weight
     )
 
+plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.savefig('kepler_10.png', dpi=300)
@@ -218,7 +220,7 @@ f_sorted = final_flux[sort_idx]
 bin_means, bin_edges, _ = binned_statistic(p_sorted, f_sorted, statistic='mean', bins=100)
 bin_centers = 0.5 * (bin_edges[1:] + bin_edges[:-1])
 
-window_size = 12
+window_size = 6
 kernel = np.ones(window_size) / window_size
 
 tiled_data = np.concatenate([bin_means, bin_means, bin_means])
@@ -239,7 +241,7 @@ plt.plot(bin_centers, smoothed_means, 'b-', linewidth=3, label=f'Moving Avg ({wi
 plt.title(f"Kepler-10b: Drift-Corrected & Smoothed\n(Stacked 100-day segments)")
 plt.xlabel("Orbital Phase")
 plt.ylabel("Flux (PPM)")
-plt.ylim(-100, 40)
+plt.ylim(-150, 40)
 plt.xlim(-0.5, 0.5)
 plt.legend(loc='lower right')
 plt.grid(True, alpha=0.3)
