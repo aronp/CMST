@@ -15,15 +15,12 @@ def cmst_window(N):
 
 
 
-# Download ALL data (Quarters 1 through 17)
 print("Downloading full mission data for Kepler-10...")
 search = lk.search_lightcurve("Kepler-10", author="Kepler", cadence="long")
 lc_collection = search.download_all()
 
-# Stitch them together
 lc_stitched = lc_collection.stitch()
 
-# Fill Gaps & Center
 lc_clean = lc_stitched.fill_gaps()
 flux = lc_clean.flux.value
 flux_centered = flux - np.nanmean(flux)
@@ -37,95 +34,61 @@ N = len(flux_centered)
 window = cmst_window(N)
 windowed_data = flux_centered * window
 
-# RUN THE FFT
 spectrum = np.fft.rfft(windowed_data)
 freqs = np.fft.rfftfreq(N, d=(lc_clean.time.value[1] - lc_clean.time.value[0])) # 'd' is sample spacing in days
 
-# FIND ALL CANDIDATE PEAKS
-# We search in the range 0.5 to 16.0 cycles/day
 search_mask = (freqs >= 0.5) & (freqs <= 16.0)
 f_search = freqs[search_mask]
 s_search = np.abs(spectrum[search_mask])
 
-# Low threshold to catch even faint high harmonics
 peaks_idx, _ = find_peaks(s_search, height=np.max(s_search)*0.05, distance=5)
 candidate_freqs = f_search[peaks_idx]
 candidate_amps = s_search[peaks_idx]
 
-# THE "CHAMPION" BUCKET LOGIC
-# We define the fundamental frequency (approximate)
 approx_f0 = 1.1939 
 
-# Calculate which harmonic "bucket" each peak belongs to
-# e.g., 1.18 -> bucket 1,  2.41 -> bucket 2
 candidate_n = np.round(candidate_freqs / approx_f0)
 
 final_freqs = []
 final_ns = []
 final_amps = []
 
-# Iterate through every unique bucket found (e.g., 1, 2, 3... 13)
 unique_buckets = np.unique(candidate_n)
 
 for n in unique_buckets:
     if n <= 0: continue # Skip DC or negative rubbish
     
-    # Find all peaks that claimed to be in harmonic 'n'
     mask = (candidate_n == n)
     
-    # Isolate their frequencies and amplitudes
     bucket_freqs = candidate_freqs[mask]
     bucket_amps = candidate_amps[mask]
     
-    # --- THE FIX: Pick only the Highest Amplitude in this bucket ---
     champion_idx = np.argmax(bucket_amps)
     
-    # Check if the champion is actually close to the predicted center (tolerance check)
-    # This prevents picking a noise spike that rounded into the bucket by accident
     current_freq = bucket_freqs[champion_idx]
     if abs(current_freq - (n * approx_f0)) < 0.2: 
         final_freqs.append(current_freq)
         final_ns.append(n)
         final_amps.append(bucket_amps[champion_idx])
 
-# Convert to arrays for regression
 final_freqs = np.array(final_freqs)
 final_ns = np.array(final_ns)
 
-# 3. LEAST SQUARES REGRESSION THROUGH ORIGIN
 x = final_ns
 y = final_freqs
 
 slope = np.sum(x * y) / np.sum(x**2)
 intercept = 0.0
 
-# CALCULATE STATISTICS MANUALLY
 y_pred = slope * x
 
-# R-squared Calculation
 ss_res = np.sum((y - y_pred)**2)
 ss_tot = np.sum((y - np.mean(y))**2)
 r_squared = 1 - (ss_res / ss_tot)
 
-# Refined Period
 refined_period = 1.0 / slope
 
 
-# 4. PLOT
-plt.figure(figsize=(10, 6))
-plt.plot(final_ns, final_freqs, 'ro', markersize=8, label='Champion Peaks')
-plt.plot(final_ns, slope*final_ns + intercept, 'k--', label=f'Fit ($R^2={r_squared:.6f}$)')
-plt.title(f"Harmonic Regression (Best Peak Per Bucket)\nRefined Period: {refined_period:.6f} days")
-plt.xlabel("Harmonic Index (n)")
-plt.ylabel("Frequency (cycles/day)")
-plt.legend()
-plt.grid(True, alpha=0.3)
-# Only show if NOT running on CI
-if not os.environ.get('CI'):
-    plt.show()
-
-print(f"Refined Period: {refined_period:.7f} days")
-print(f"R-squared: {r_squared:.6f}")
 
 
 
@@ -179,59 +142,107 @@ plt.savefig('kepler_10.png', dpi=300)
 if not os.environ.get('CI'):
     plt.show()
 
+plt.figure(figsize=(10, 6))
+plt.plot(final_ns, final_freqs, 'ro', markersize=8, label='Champion Peaks')
+plt.plot(final_ns, slope*final_ns + intercept, 'k--', label=f'Fit ($R^2={r_squared:.6f}$)')
+plt.title(f"Harmonic Regression (Best Peak Per Bucket)\nRefined Period: {refined_period:.6f} days")
+plt.xlabel("Harmonic Index (n)")
+plt.ylabel("Frequency (cycles/day)")
+plt.legend()
+plt.grid(True, alpha=0.3)
+# Only show if NOT running on CI
+if not os.environ.get('CI'):
+    plt.show()
 
-# 1. SETUP PARAMETERS
-# We assume 'time' and 'flux' are from your stitched lightkurve object
-# Ensure we are using the raw values
+print(f"Refined Period: {refined_period:.7f} days")
+print(f"R-squared: {r_squared:.6f}")
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import binned_statistic
+
+# --- 1. SETUP PARAMETERS ---
+# We assume 'lc_clean' and 'refined_period' are already defined from previous steps
 t_all = lc_clean.time.value
 f_all = lc_clean.flux.value
 
-# 2. NORMALIZE TO PPM (Parts Per Million)
-# This makes the Y-axis readable (e.g. -150 instead of 0.00015)
-# We divide by the median to normalize to 1, then subtract 1, then * 1e6
+# Normalize to PPM
 f_ppm = 1e6 * (f_all / np.nanmedian(f_all) - 1)
 
-# 3. LIMIT THE FOLD (The Critical Fix)
-# We only fold the first 100 days to avoid "Drift Smearing"
-# because our calculated period isn't precise enough for 4 years yet.
-mask = (t_all < (t_all[0] + 100))
-t_subset = t_all[mask]
-f_subset = f_ppm[mask]
+# --- 2. DRIFT CORRECTION (STACKING) ---
+# We slice the data into 100-day chunks and re-center the dip locally
+chunk_size = 100.0 # days
+t_start = t_all[0]
+t_end = t_all[-1]
 
-# 4. CALCULATE PHASE
-# We add a 't0' (Epoch) estimation to center the dip
-# A simple way to guess t0 for plotting is the time of the minimum flux
-t0_guess = t_subset[np.argmin(f_subset)]
-phase = ((t_subset - t0_guess) % refined_period) / refined_period
+corrected_phases = []
+aligned_fluxes = []
 
-# Shift phase so 0.0 is in the middle (0.5)
-phase = (phase + 0.5) % 1.0 - 0.5
+print(f"Stacking 100-day chunks to correct drift...")
 
-# 5. BINNING
-sort_idx = np.argsort(phase)
-phase_sorted = phase[sort_idx]
-f_sorted = f_subset[sort_idx]
+current_t = t_start
+while current_t < t_end:
+    mask = (t_all >= current_t) & (t_all < current_t + chunk_size)
+    
+    if np.sum(mask) < 100: 
+        current_t += chunk_size
+        continue
+        
+    t_chunk = t_all[mask]
+    f_chunk = f_ppm[mask]
+    
+    local_phase = ((t_chunk - t_chunk[0]) % refined_period) / refined_period
+    
+    bin_means_temp, bin_edges_temp, _ = binned_statistic(local_phase, f_chunk, statistic='mean', bins=50)
+    bin_centers_temp = 0.5 * (bin_edges_temp[1:] + bin_edges_temp[:-1])
+    
+    min_idx = np.argmin(bin_means_temp)
+    phase_offset = bin_centers_temp[min_idx]
+    
+    shifted_phase = local_phase - phase_offset
+    shifted_phase = (shifted_phase + 0.5) % 1.0 - 0.5
+    
+    corrected_phases.append(shifted_phase)
+    aligned_fluxes.append(f_chunk)
+    
+    current_t += chunk_size
 
-bin_means, bin_edges, _ = binned_statistic(phase_sorted, f_sorted, statistic='mean', bins=50)
+final_phase = np.concatenate(corrected_phases)
+final_flux = np.concatenate(aligned_fluxes)
+
+sort_idx = np.argsort(final_phase)
+p_sorted = final_phase[sort_idx]
+f_sorted = final_flux[sort_idx]
+
+bin_means, bin_edges, _ = binned_statistic(p_sorted, f_sorted, statistic='mean', bins=100)
 bin_centers = 0.5 * (bin_edges[1:] + bin_edges[:-1])
 
-# 6. PLOT
-plt.figure(figsize=(10, 6))
+window_size = 12
+kernel = np.ones(window_size) / window_size
 
-# Plot Raw Data (Grey)
-plt.plot(phase_sorted, f_sorted, '.', color='lightgrey', alpha=0.5, markersize=2, label='Raw Data')
+tiled_data = np.concatenate([bin_means, bin_means, bin_means])
+smoothed_tiled = np.convolve(tiled_data, kernel, mode='same')
 
-# Plot Binned Model (Red)
-plt.plot(bin_centers, bin_means, 'r-', linewidth=3, label='Binned Signal')
+start = len(bin_means)
+end = 2 * len(bin_means)
+smoothed_means = smoothed_tiled[start:end]
 
-plt.title(f"Kepler-10b Phase Fold\nUsing Calculated Period: {refined_period:.5f} days")
-plt.xlabel("Orbital Phase (Centered)")
+plt.figure(figsize=(12, 6))
+
+plt.plot(p_sorted, f_sorted, '.', color='lightgrey', markersize=1, alpha=0.05, label='Aligned Raw Data')
+
+plt.plot(bin_centers, bin_means, 'r-', linewidth=1.5, alpha=0.4, label='Binned (Raw)')
+
+plt.plot(bin_centers, smoothed_means, 'b-', linewidth=3, label=f'Moving Avg ({window_size} bins)')
+
+plt.title(f"Kepler-10b: Drift-Corrected & Smoothed\n(Stacked 100-day segments)")
+plt.xlabel("Orbital Phase")
 plt.ylabel("Flux (PPM)")
-plt.ylim(-200, 100) # Zoom to see the dip
+plt.ylim(-100, 40)
 plt.xlim(-0.5, 0.5)
-plt.legend()
+plt.legend(loc='lower right')
 plt.grid(True, alpha=0.3)
-
 
 if not os.environ.get('CI'):
     plt.show()
