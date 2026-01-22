@@ -76,6 +76,8 @@ def generate_pulse_demo():
     idx_rect, _ = calc_99_bw(chain_rect)
     idx_cmst, _ = calc_99_bw(chain_cmst)
     
+    print("Ratio of 99 BW ",idx_rect/idx_cmst)
+    
     # Convert to Frequency Axis
     freqs = np.linspace(0, 0.5, len(np.fft.rfft(chain_rect)))
     bw_rect = freqs[idx_rect]
@@ -100,7 +102,7 @@ def generate_pulse_demo():
     ax2.plot(freqs, spec_cmst, 'g', alpha=0.8, linewidth=0.8, label='CMST Spectrum (Gevrey Decay)')
 
     ax2.axvline(bw_cmst, color='green', linestyle='--', alpha=0.7)
-    ax2.text(bw_cmst + 0.01, -150, f'CMST 99% BW\n{bw_cmst:.3f} Hz', color='darkgreen', fontweight='bold')
+    ax2.text(bw_cmst + 0.01, -155, f'CMST 99% BW\n{bw_cmst:.3f} Hz', color='darkgreen', fontweight='bold')
     
     # Mark the 99% BW for Rect
     ax2.axvline(bw_rect, color='red', linestyle='--', alpha=0.7)
