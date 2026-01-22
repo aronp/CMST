@@ -22,10 +22,13 @@ def generate_pulse_demo():
     np.random.seed(42)
     N_bits = 1024  # Increased for better spectral resolution
     bits = np.random.randint(0, 2, N_bits)
-    samples_per_symbol = 128
+    
+    pulse_width = 128
+    gap = 12            
+    samples_per_symbol = pulse_width + gap
     
     # Define the Shapes
-    t = np.linspace(-1, 1, samples_per_symbol)
+    t = np.linspace(-1, 1, pulse_width)
     
     # Shape A: Rectangular (Standard Digital)
     kernel_rect = np.ones_like(t)
@@ -61,7 +64,7 @@ def generate_pulse_demo():
     zoom_subset = slice(0, 4000) # Show first few bits
     ax1.plot(chain_rect[zoom_subset], 'r', alpha=0.4, label='Rectangular Pulses (Standard)')
     ax1.plot(chain_cmst[zoom_subset], 'g', linewidth=2, label='CMST Pulses (Gevrey)')
-    ax1.set_title(f"Time Domain: First 30 of {N_bits} bits")
+    ax1.set_title(f"Time Domain: First few of {N_bits} bits")
     ax1.set_ylabel("Amplitude")
     ax1.legend(loc="upper right")
     ax1.grid(alpha=0.3)
