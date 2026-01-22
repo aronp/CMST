@@ -159,6 +159,14 @@ $$
 It has the best spectral decay, but CMST(2) is almost the same and has a better SNR.
 
 Traditional windows (like Hann, Hamming, or Blackman) exhibit algebraic spectral decay. Because they decay much slower (following a polynomial curve rather than an exponential one), they do not possess a comparable decay constant $a$.
+
+###  🎛️ Using CMST as a signal
+
+We can use the super algerbraic side lobe decay to confine a signal into a lower bandwidth.
+
+![CMST as pulse](pulse_shaping_comparison.png)
+
+
   
 ### 📉 The Math: 
 Behind all of this there is a CMST theory paper here [CMST](cmst.pdf)
