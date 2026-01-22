@@ -50,10 +50,10 @@ def generate_pulse_demo():
     kernel_rect = np.ones_like(t)
     
     # Shape B: CMST(2) 
-    # Formula: exp(1 + t^2 + 1/(t^2-1))
+    # standard bump is best.
     k = 1
     with np.errstate(divide='ignore', invalid='ignore'):
-        val = 1 + t**(2*k) + 1/(t**(2*k) - 1)
+        val = 1 + 1/(t**(2*k) - 1)
         kernel_cmst = np.exp(val)
     kernel_cmst[np.abs(t) >= 1] = 0
     
@@ -98,10 +98,6 @@ def generate_pulse_demo():
     # Freq Domain (Full Chain Analysis)
     ax2.plot(freqs, spec_rect, 'r', alpha=0.3, linewidth=0.5, label='Rect Spectrum (Algebraic Decay)')
     ax2.plot(freqs, spec_cmst, 'g', alpha=0.8, linewidth=0.8, label='CMST Spectrum (Gevrey Decay)')
-    
-    # Add an annotation arrow
-    ax2.annotate('Spectral Floor (-120dB)', xy=(0.25, -120), xytext=(0.3, -100),
-                 arrowprops=dict(facecolor='black', shrink=0.05))
 
     ax2.axvline(bw_cmst, color='green', linestyle='--', alpha=0.7)
     ax2.text(bw_cmst + 0.01, -150, f'CMST 99% BW\n{bw_cmst:.3f} Hz', color='darkgreen', fontweight='bold')
