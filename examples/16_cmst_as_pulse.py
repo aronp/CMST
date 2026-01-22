@@ -15,6 +15,22 @@ def get_db_spec(s):
     spec /= np.max(spec) # Normalize
     return 20 * np.log10(spec + 1e-15)
 
+    # 4. Helper: Calculate 99% Bandwidth
+def calc_99_bw(signal):
+    # Get Power Spectrum
+    spec = np.abs(np.fft.rfft(signal))**2
+        
+    # Cumulative Sum
+    cum_energy = np.cumsum(spec)
+    total_energy = cum_energy[-1]
+    norm_energy = cum_energy / total_energy
+        
+    # Find index crossing 0.99
+    idx_99 = np.where(norm_energy >= 0.99)[0][0]
+        
+    return idx_99, norm_energy
+
+
 def generate_pulse_demo():
     print("Generating Long-Chain Pulse Shaping Comparison...")
     
@@ -56,6 +72,15 @@ def generate_pulse_demo():
     freqs = np.linspace(0, 0.5, len(get_db_spec(chain_rect)))
     spec_rect = get_db_spec(chain_rect)
     spec_cmst = get_db_spec(chain_cmst)
+
+    idx_rect, _ = calc_99_bw(chain_rect)
+    idx_cmst, _ = calc_99_bw(chain_cmst)
+    
+    # Convert to Frequency Axis
+    freqs = np.linspace(0, 0.5, len(np.fft.rfft(chain_rect)))
+    bw_rect = freqs[idx_rect]
+    bw_cmst = freqs[idx_cmst]
+
     
     # Plot
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
@@ -68,6 +93,7 @@ def generate_pulse_demo():
     ax1.set_ylabel("Amplitude")
     ax1.legend(loc="upper right")
     ax1.grid(alpha=0.3)
+    ax2.set_xlim(0,4000)
     
     # Freq Domain (Full Chain Analysis)
     ax2.plot(freqs, spec_rect, 'r', alpha=0.3, linewidth=0.5, label='Rect Spectrum (Algebraic Decay)')
@@ -76,6 +102,13 @@ def generate_pulse_demo():
     # Add an annotation arrow
     ax2.annotate('Spectral Floor (-120dB)', xy=(0.25, -120), xytext=(0.3, -100),
                  arrowprops=dict(facecolor='black', shrink=0.05))
+
+    ax2.axvline(bw_cmst, color='green', linestyle='--', alpha=0.7)
+    ax2.text(bw_cmst + 0.01, -150, f'CMST 99% BW\n{bw_cmst:.3f} Hz', color='darkgreen', fontweight='bold')
+    
+    # Mark the 99% BW for Rect
+    ax2.axvline(bw_rect, color='red', linestyle='--', alpha=0.7)
+    ax2.text(bw_rect + 0.01, -175, f'Rect 99% BW\n{bw_rect:.3f} Hz', color='darkred')
     
     ax2.set_title(f"Frequency Domain: Spectrum of {N_bits}-bit Chain")
     ax2.set_ylabel("Magnitude (dB)")
@@ -83,6 +116,7 @@ def generate_pulse_demo():
     ax2.set_ylim(-200, 0)
     ax2.legend(loc="upper right")
     ax2.grid(alpha=0.3)
+    ax2.set_xlim(0,0.5)
     
     plt.tight_layout()
     plt.savefig('pulse_shaping_comparison.png')
