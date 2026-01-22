@@ -133,6 +133,9 @@ Note: The CMST window provides sufficient dynamic range to isolate other signals
 
 The CMST window family allows you to tune the shape parameter **p** to balance Coherent Gain (SNR) against the speed of Spectral Decay.
 
+Where spectral decay is
+$$|\hat{\Psi}(\omega)| \propto e^{a \sqrt{\omega}}$$
+
 | Window Variant | Parameter (p) | SNR Loss (vs Rect) | Spectral Decay (a) | 
 | :--- | :---: | :---: | :---: | 
 | **Rectangle** | N/A | **0.00 dB** | N/A | 
