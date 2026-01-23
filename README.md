@@ -166,7 +166,7 @@ We can use the super algerbraic side lobe decay to confine a signal into a lower
 
 ![CMST as pulse](pulse_shaping_comparison.png)
 
-Note the CMST 99% bandwidth is 5 times smaller than the Rectangular window BW
+Note the CMST 99% bandwidth is 5 times smaller than the Rectangular window 99% bandwidth
   
 ### 📉 The Math: 
 Behind all of this there is a CMST theory paper here [CMST](cmst.pdf)
