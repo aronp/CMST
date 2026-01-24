@@ -39,7 +39,7 @@ def generate_pulse_demo():
     N_bits = 1024  # Increased for better spectral resolution
     bits = np.random.randint(0, 2, N_bits)
     
-    pulse_width = 128
+    pulse_width = 256
     gap = 12            
     samples_per_symbol = pulse_width + gap
     
@@ -88,7 +88,7 @@ def generate_pulse_demo():
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
     
     # Time Domain (Zoomed in to show pulse shape)
-    zoom_subset = slice(0, 4000) # Show first few bits
+    zoom_subset = slice(0, 12000) # Show first few bits
     ax1.plot(chain_rect[zoom_subset], 'r', alpha=0.4, label='Rectangular Pulses (Standard)')
     ax1.plot(chain_cmst[zoom_subset], 'g', linewidth=2, label='CMST Pulses (Gevrey)')
     ax1.set_title(f"Time Domain: First few of {N_bits} bits")
@@ -102,11 +102,11 @@ def generate_pulse_demo():
     ax2.plot(freqs, spec_cmst, 'g', alpha=0.8, linewidth=0.8, label='CMST Spectrum (Gevrey Decay)')
 
     ax2.axvline(bw_cmst, color='green', linestyle='--', alpha=0.7)
-    ax2.text(bw_cmst + 0.01, -155, f'CMST 99% BW\n{bw_cmst:.3f} Hz', color='darkgreen', fontweight='bold')
+    ax2.text(bw_cmst + 0.001, -155, f'CMST 99% BW\n{bw_cmst:.3f} Hz', color='darkgreen', fontweight='bold')
     
     # Mark the 99% BW for Rect
     ax2.axvline(bw_rect, color='red', linestyle='--', alpha=0.7)
-    ax2.text(bw_rect + 0.01, -175, f'Rect 99% BW\n{bw_rect:.3f} Hz', color='darkred')
+    ax2.text(bw_rect + 0.001, -175, f'Rect 99% BW\n{bw_rect:.3f} Hz', color='darkred')
     
     ax2.set_title(f"Frequency Domain: Spectrum of {N_bits}-bit Chain")
     ax2.set_ylabel("Magnitude (dB)")
@@ -114,7 +114,7 @@ def generate_pulse_demo():
     ax2.set_ylim(-200, 0)
     ax2.legend(loc="upper right")
     ax2.grid(alpha=0.3)
-    ax2.set_xlim(0,0.5)
+    ax2.set_xlim(0,0.1)
     
     plt.tight_layout()
     plt.savefig('pulse_shaping_comparison.png')
