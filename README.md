@@ -139,16 +139,16 @@ $$|\hat{\Psi}(\omega)| \propto e^{a \sqrt{\omega}}$$
 | Window Variant | Parameter (p) | SNR Loss (vs Rect) | Spectral Decay (a) | 
 | :--- | :---: | :---: | :---: | 
 | **Rectangle** | N/A | **0.00 dB** | N/A | 
-| **Std. Bump** | N/A | -1.30 dB | -1.92 | 
-| **CMST(2)** | p=2 | -0.96 dB | -1.91 | 
-| **CMST(4)** | p=4 | -0.50 dB | -1.40 | 
-| **CMST(6)** | p=6 | -0.34 dB | -1.19 | 
+| **Std. Bump** | N/A | -1.30 dB | -1 | 
+| **CMST(2)** | p=2 | -0.96 dB | -1 | 
+| **CMST(4)** | p=4 | -0.50 dB | $$-1/\sqrt(2)$$ | 
+| **CMST(6)** | p=6 | -0.34 dB | $$-1/\sqrt(3)$$  | 
 
 **Key Metrics:**
 * **SNR Loss:** Signal loss relative to a perfect Rectangular window. Lower is better (closer to 0 dB).
 * **Spectral Decay:** The slope constant 'a' describing how fast the side-lobes vanish. More negative is better/faster.
 
-The numbers here are numeric estimates, but they show there is a balance between SNR and Side lobe decay.  CMST(2) is a general workhorse but CMST(4) for instance got me down to within 2 seconds of NASA's orbit time for Kepler 10 where SNR is probably more important than spectral resolution.
+The numbers here show there is a balance between SNR and Side lobe decay.  CMST(2) is a general workhorse but CMST(4) for instance got me down to within 2 seconds of NASA's orbit time for Kepler 10 where SNR is probably more important than spectral resolution.
 
 The **Std. Bump** (often denoted as $\Psi$ in distribution theory) is the canonical example of a smooth, compactly supported function ($C_c^\infty$). It serves as the baseline ancestor for the CMST window family.
 
