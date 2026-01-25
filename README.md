@@ -141,8 +141,8 @@ $$|\hat{\Psi}(\omega)| \propto e^{a \sqrt{\omega}}$$
 | **Rectangle** | N/A | **0.00 dB** | N/A | 
 | **Std. Bump** | N/A | -1.30 dB | -1 | 
 | **CMST(2)** | p=2 | -0.96 dB | -1 | 
-| **CMST(4)** | p=4 | -0.50 dB | $$-1/\sqrt{2}$$ | 
-| **CMST(6)** | p=6 | -0.34 dB | $$-1/\sqrt{3}$$  | 
+| **CMST(4)** | p=4 | -0.50 dB | $$-\frac{1}{\sqrt{2}}$$ | 
+| **CMST(6)** | p=6 | -0.34 dB | $$-\frac{1}{\sqrt{3}}$$  | 
 
 **Key Metrics:**
 * **SNR Loss:** Signal loss relative to a perfect Rectangular window. Lower is better (closer to 0 dB).
