@@ -1918,90 +1918,79 @@ Since $\psi(t) \in C_c^\infty(-1, 1)$, all derivatives $\psi^{(k)}(t)$ vanish at
 Since this holds for any arbitrarily large integer $k$, the decay is super-algebraic.
 \end{proof}
 
+\section*{Saddle Point Analysis: Real vs. Imaginary Axis Behavior}
 
+We examine the asymptotic behavior of the Cosh Moment Sturm Transform (CMST) kernel integral as $|s| \to \infty$. The integral is defined as:
+\begin{equation}
+    I(s) = \int_{-1}^{1} \exp\left( st + \frac{1}{t^2 - 1} \right) dt
+\end{equation}
 
-\subsection{Asymptotic Decay Analysis}
-While the super-algebraic property guarantees decay faster than any polynomial $O(\omega^{-N})$, it is useful to derive the precise asymptotic envelope. The window function $\psi(t) = \exp((t^2-1)^{-1})$ belongs to the Gevrey class $\mathcal{G}^s$ with index $s=2$. The bounds on its derivatives satisfy the Gevrey condition:
+\subsection*{1. The Asymptotic Expansion}
+The dominant contribution to the integral arises near the boundary $t = 1$. Let $t = 1 - \epsilon$, where $\epsilon \to 0^+$. The exponent $\Phi(\epsilon)$ can be approximated as:
+\begin{align}
+    \Phi(\epsilon) &= st + \frac{1}{t^2 - 1} \\
+    &\approx s(1 - \epsilon) + \frac{1}{(1-\epsilon)^2 - 1} \\
+    &\approx s - s\epsilon - \frac{1}{2\epsilon}
+\end{align}
+To find the saddle point, we maximize $\Phi(\epsilon)$ with respect to $\epsilon$:
 \begin{equation}
-\max_{t \in [-1, 1]} |\psi^{(k)}(t)| \leq C^{k+1} (2k)!
+    \frac{d\Phi}{d\epsilon} = -s + \frac{1}{2\epsilon^2} = 0 \implies \epsilon_0 = \frac{1}{\sqrt{2s}}
 \end{equation}
-for some constant $C > 0$. Using the standard bound for the Fourier transform derived via repeated integration by parts:
-\begin{equation}
-|\hat{\psi}(\omega)| \leq \frac{2 \max |\psi^{(k)}(t)|}{|\omega|^k} \approx \frac{2 C^{k+1} (2k)!}{|\omega|^k}
-\end{equation}
-To find the tightest bound, we minimize the right-hand side with respect to $k$. Using Stirling's approximation $(2k)! \approx \sqrt{4\pi k} (2k/e)^{2k}$, the term behaves approximately as $(4k^2/\omega)^k$. The minimum occurs when $k \sim \sqrt{\omega}$. Substituting this optimal order back into the bound yields a root-exponential decay envelope:
-\begin{equation}
-|\hat{\psi}(\omega)| \leq A \exp\left( -B \sqrt{|\omega|} \right)
-\end{equation}
-where $A$ and $B$ are positive constants. This confirms that the spectral leakage decays significantly faster than the polynomial rates of standard cosine-sum windows (e.g., Blackman-Harris), approaching the ideal band-limited behavior.
+Substituting $\epsilon_0$ back into the exponent gives the \textbf{Master Equation}:
+\begin{align}
+    \Phi_{\text{max}}(s) &= s - s\left(\frac{1}{\sqrt{2s}}\right) - \frac{1}{2\left(\frac{1}{\sqrt{2s}}\right)} \\
+    &= s - \frac{\sqrt{s}}{\sqrt{2}} - \frac{\sqrt{2s}}{2} \\
+    &= s - \sqrt{2s}
+\end{align}
 
-\begin{theorem}[Asymptotic Decay Rate]
-For the window function $\psi(t) = \exp((t^2-1)^{-1})$, the Fourier transform magnitude behaves asymptotically as:
+\subsection*{2. Case A: The Real Axis (Laplace Domain)}
+Let $s$ be a large positive real number ($s \in \mathbb{R}^+$). The behavior is dominated by the linear term:
 \begin{equation}
-|\hat{\psi}(\omega)| \sim \mathcal{O}\left( |\omega|^{-3/4} \exp\left(-\sqrt{|\omega|}\right) \right) \quad \text{as } |\omega| \to \infty
+    \Phi_{\text{max}}(s) = s - \sqrt{2s} \approx s
 \end{equation}
-This establishes the Gevrey $\cite{Gevrey1918}$ index $s=2$, corresponding to a root-exponential decay rate.
-
-This decay rate is optimal among all compactly supported 
-$C^\infty$ functions in the sense that no faster-than-root-exponential 
-decay is achievable without sacrificing compact support.
-
-\end{theorem}
-\begin{theorem}[Asymptotic Decay Rate]
-For the window function $\psi(t) = \exp((t^2-1)^{-1})$, the Fourier transform magnitude satisfies the Gevrey class condition:
+Thus, the integral exhibits \textbf{exponential growth}:
 \begin{equation}
-    |F(i\omega)| \approx C \, |\omega|^{-3/4} \exp\left(-\sqrt{|\omega|}\right) \quad \text{as } |\omega| \to \infty
+    |I(s)| \sim e^s
 \end{equation}
-This establishes that $\psi(t)$ belongs to the Gevrey class $\mathcal{G}^2$ \cite{Gevrey1918}, corresponding to a root-exponential spectral decay.
-\end{theorem}
+
+\subsection*{3. Case B: The Imaginary Axis (Fourier Domain)}
+Let $s$ be purely imaginary, corresponding to frequency $s = i\omega$. Substituting into the Master Equation:
+\begin{equation}
+    \Phi_{\text{max}}(i\omega) \approx i\omega - \sqrt{2(i\omega)}
+\end{equation}
+Using the principal root $\sqrt{i} = \frac{1+i}{\sqrt{2}}$, the square root term becomes:
+\begin{equation}
+    \sqrt{2(i\omega)} = \sqrt{2\omega} \cdot \frac{1+i}{\sqrt{2}} = \sqrt{\omega}(1+i) = \sqrt{\omega} + i\sqrt{\omega}
+\end{equation}
+Substituting this back into $\Phi_{\text{max}}$:
+\begin{align}
+    \Phi_{\text{max}}(i\omega) &\approx i\omega - \left( \sqrt{\omega} + i\sqrt{\omega} \right) \\
+    &= -\sqrt{\omega} + i(\omega - \sqrt{\omega})
+\end{align}
+The magnitude of the integral depends only on the real part of the exponent:
+\begin{equation}
+    |I(\omega)| \sim \exp\left( \text{Re}[\Phi_{\text{max}}] \right) = e^{-\sqrt{\omega}}
+\end{equation}
+\textbf{Conclusion:} On the imaginary axis, the linear growth term $i\omega$ becomes purely distinct phase oscillation, leaving the $\sqrt{\omega}$ term to enforce \textbf{Gevrey-class decay}.
 
 \begin{remark}
-In the discrete domain (FFT), the angular frequency relates to the bin index $m$ by $\omega \approx \pi m$. Substituting this yields the effective decay rate for signal processing:
+We can do similar analysis from functions of the form
 \begin{equation}
-    |W[m]| \sim m^{-3/4} e^{-\sqrt{\pi m}}
+    I(s) = \int_{-1}^{1} \exp\left( st + \frac{1}{t^{2n} - 1} \right) dt
 \end{equation}
+and we arrive at the asymptotic expression
+\begin{equation}
+|I(\omega)| \sim e^{-\sqrt{\frac{ \omega}{n}}}
+\end{equation}
+
+\end{remark}
+
+\begin{remark}
+This shows us that higher n, the more boxy shapes have not as good spectral decay, but due to the nature of their shapes, they have better SNR.
 \end{remark}
 
 
-\section{The CMST Discrimination Formula}
-
-For a Gevrey-class window of index $s$ (where $s=2$ for the CMST), the asymptotic spectral decay is governed by a stretched exponential. To distinguish a weak signal from a strong interfering source with a dynamic range ratio $R$, the window function $W(\omega)$ must decay sufficiently at the frequency separation $\Delta f$.
-
-\subsection{The Gevrey Decay Law}
-The spectral magnitude of the CMST window decays as:
-\begin{equation}
-    |W(\omega)| \approx C e^{-\sqrt{\omega}}
-\end{equation}
-where $\omega$ is the frequency offset in bins.
-
-\subsection{The Resolution Condition}
-Let $R$ be the required linear dynamic range (e.g., $R = 10^5$ for 100 dB). The leakage at distance $\omega$ must satisfy:
-\begin{equation}
-    e^{ -\sqrt{\omega}} \le \frac{1}{R}
-\end{equation}
-
-Solving for the minimum number of frequency bins $m$ required for separation:
-\begin{align}
-    -\sqrt{\pi m} &\le -\ln(R) \\
-    m &\ge \frac{\left( \ln(R) \right)^2}{\pi}
-\end{align}
-
-\subsection{The Discrimination Formula}
-Relating the bin count $m$ to physical parameters, where $m = \frac{N \cdot \Delta f}{f_s}$:
-\begin{equation}
-    \frac{N \cdot \Delta f}{f_s} \ge \left( \ln(R) \right)^2
-\end{equation}
-
-Solving for the total number of samples $N$:
-\begin{equation}
-     N \ge \frac{f_s}{\Delta f} \cdot \frac{\left(\ln(R)\right)^2 }{\pi}
-\end{equation}
-
-\noindent \textbf{Interpretation:}
-Unlike polynomial windows (where $N \propto R^{1/p}$), the CMST cost scales with the \textit{square of the logarithm} of the dynamic range. This allows for high-contrast detection with significantly shorter integration times than standard smooth windows.
-
-
-\section{The CMST Resolution Law}
+\section{The CMST Resolution Law for CMST(2)}
 
 To distinguish two signals with an amplitude ratio $R$, separated by a normalized frequency ratio $\rho$, an instrument with sampling rate $f_s$ requires a minimum observation time $T$. These four variables are governed by the inequality:
 
