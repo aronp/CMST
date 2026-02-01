@@ -249,4 +249,38 @@ def cmst_pure_window(t, width=1.0):
     
     return y
     
+def cmst_f(x):
+    """
+    The Base CMST Function (MyF).
+    f(x) = exp(x^4 / (x^2 - 1)) for |x| < 1, else 0.
+    """
+    res = np.zeros_like(x, dtype=float)
+    
+    mask = np.abs(x) < 1.0
+    
+    safe_x = x[mask]
+    res[mask] = np.exp(safe_x**4 / (safe_x**2 - 1))
+    
+    return res
+
+def get_normalised_cmst_window(N):
+    """
+    Generates the Normalized CMST Window
+    Mapped to N points corresponding to x = [-1, 1].
+    """
+    x = np.linspace(-1, 1, N)
+    
+    num = cmst_f(x)
+    
+    denom = (
+        cmst_f(x) +             # Center
+        cmst_f(x - 1.0) +       # Right 1/2
+        cmst_f(x + 1.0)        # Left 1/2
+    )
+    
+    with np.errstate(divide='ignore', invalid='ignore'):
+        my_g = num / denom
+        my_g = np.nan_to_num(my_g) # Replace NaNs with 0
+        
+    return my_g
 
