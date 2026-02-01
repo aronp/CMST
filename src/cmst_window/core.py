@@ -4,7 +4,7 @@ import numpy as np
 PSI = -0.079056818131899115
 
 def cmst(N, p=2, sym=True):
-    """
+    r"""
     Return a Cosh-Moment Sturm Transform (CMST) window.
 
     The CMST window is a "perfectly smooth" (C-infinity) test function generated 
