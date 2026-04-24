@@ -104,7 +104,7 @@ Theortical law vs practical. (There is actually a small log term that gives the 
 ### 📉 GW150914 (The first Gravity wave detected)
 ![Trying real data](Chirp.png)
 
-To benchmark performance on real-world signals, the CMST window was applied to the raw 4kHz data from GW150914, the first direct detection of gravitational waves.
+To benchmark performance on real-world signals, the CMST window was applied to the raw (now) 16kHz data from GW150914, the first direct detection of gravitational waves.
 
 ### 📉 Kepler 10
 
