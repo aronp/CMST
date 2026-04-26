@@ -1971,10 +1971,12 @@ The magnitude of the integral depends only on the real part of the exponent:
 \begin{equation}
     |I(\omega)| \sim \exp\left( \text{Re}[\Phi_{\text{max}}] \right) = e^{-\sqrt{\omega}}
 \end{equation}
-\textbf{Conclusion:} On the imaginary axis, the linear growth term $i\omega$ becomes purely distinct phase oscillation, leaving the $\sqrt{\omega}$ term to enforce \textbf{Gevrey-class decay}.
+\textbf{Conclusion:} On the imaginary axis, the linear growth term $i\omega$ 
+becomes purely distinct phase oscillation, leaving the $\sqrt{\omega}$ 
+term to enforce Gevrey-class decay.
 
 \begin{remark}
-We can do similar analysis from functions of the form
+We can do similar analysis for functions of the form
 \begin{equation}
     I(s) = \int_{-1}^{1} \exp\left( st + \frac{1}{t^{2n} - 1} \right) dt
 \end{equation}
@@ -2034,8 +2036,52 @@ Since the number of frequency bins separating two signals is defined as $m = T \
     \item For $120\,\text{dB}$ contrast ($R=10^6$): Separation $\ge \mathbf{61}$ bins.
 \end{itemize}
 
+\subsection{Numerical Accuracy of amplitude and phase}
+For a function $f(t) = A \cos(\omega t) + B \sin(\omega t)$
+The Fourier transform at frequency $\omega$  with window w(t) is:
 
-\subsection{Numerical Visualisation: The "Planet Test"}
+\begin{equation}
+\mathcal{F}(\omega) = \int_{-1}^{1} w(t) \left( A \cos(\omega t) + B \sin(\omega t) \right) e^{i \omega t} \, dt
+\end{equation}
+or
+\begin{equation}
+\mathcal{F}(\omega) = \int_{-1}^{1} w(t) [A \cos^2(\omega t) + B \sin(\omega t) \cos(\omega t) + i (A \sin(\omega t) \cos(\omega t) + B \sin^2(\omega t))] \, dt
+\end{equation}
+and assuming w(t) is even gives
+\begin{equation}
+\text{Re}(\mathcal{F(\omega)}) = \frac{A}{2} \left[ \int_{-1}^{1} w(t) \, dt + \int_{-1}^{1} w(t) \cos(2\omega t) \, dt \right]
+\end{equation}
+and
+\begin{equation}
+\text{Im}(\mathcal{F(\omega)}) = \frac{i B}{2} \left[ \int_{-1}^{1} w(t) \, dt - \int_{-1}^{1} w(t) \cos(2\omega t) \, dt \right]
+\end{equation}
+
+So the perfect window would give us just this.
+
+\begin{equation}
+\mathcal{F(\omega)} = \frac{A}{2} \int_{-1}^{1} w(t) \, dt + i \frac{i B}{2}  \int_{-1}^{1} w(t) \, dt 
+\end{equation}
+
+where 
+
+\begin{equation}
+\int_{-1}^{1} w(t) \, dt
+\end{equation}
+
+is just a constant, independant of frequency, so the error term is
+\begin{equation}
+\int_{-1}^{1} w(t) \cos(2 \omega t) \, dt
+\end{equation}
+
+Which is 
+\begin{equation}
+\text{Re}(\mathcal{F}(2\omega))
+\end{equation}
+
+which, since $\mathcal{F}(s)$ decays super-algebraically with CMST, means that  the CMST is generally more accurate in both phase and amplitude than  windows with algebraic decay.
+
+
+\subsection{Numerical Visualisation: The "Planet Test}
 To visualise the resolution law in a 2D imaging context, we simulated a high-contrast stellar observation.
 \begin{itemize}
     \item \textbf{Setup:} A "Sun" (Radius $15\,\text{px}$) and eight "Planets" (at radius $50\,\text{px}$) on a $2048 \times 2048$ grid.
