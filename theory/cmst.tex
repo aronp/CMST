@@ -2080,6 +2080,102 @@ Which is
 
 which, since $\mathcal{F}(s)$ decays super-algebraically with CMST, means that  the CMST is generally more accurate in both phase and amplitude than  windows with algebraic decay.
 
+\subsection{Spectral Stiffness}
+If we consider a signal transform around its center frequency we get
+\begin{equation}
+F(s) = \int_{-1}^{1} \cos(s+\delta)\cos(s)w(t) \, dt
+\end{equation}
+Rearranging gives
+\begin{equation}
+ \int_{-1}^{1} \frac{1}{2} (\cos (\delta +2 s)+\cos (\delta )) w(t) \, dt
+\end{equation}
+Now since $ \int_{-1}^{1} \frac{1}{2} (\cos (\delta +2 s)) w(t) \, dt \approx -F(2s)/2 $
+and since for any reasonable window and $s$ , $F(2s) \ll F(s)$ we get
+
+\begin{equation}
+F(s+\delta) \approx \int_{-1}^1 \frac{1}{2} \cos (\delta ) w(t) \, dt
+\end{equation}
+
+Expanding the first 3 derivatives gives us
+\begin{equation}
+F(s+\delta) \approx \int_{-1}^{1} w(t) \, dt (1  -\frac{\mathcal{K^2}}{2} \delta ^2 )
+\end{equation}
+Where 
+\begin{equation}
+\mathcal{K} = \sqrt{\frac{\int_{-1}^{1} t^2 w(t) \, dt}{\int_{-1}^{1} w(t) \, dt}}
+\end{equation}
+which we shall refer to as the Spectral stiffness or the normalised standard deviation of the window.
+
+I believe this is a useful measure in determinig how sharp a window creates peaks from signals.  The higher, the better.
+
+\subsection{Using Spectral Stiffness to bound signal resolution}
+
+To look at the resolution of two signals with the same strength and difference in frequency of $\delta$ we can model the frequency response as a Gaussian.  We then get:
+
+\begin{equation}
+G(\delta) = e^{-\frac{\delta^2}{2\sigma^2}} \approx 1 - \frac{\delta^2}{2\sigma^2}
+\end{equation}
+and from our approximation above this gives us:
+
+\begin{equation}
+\frac{\mathcal{K}^{2}}{2} = \frac{1}{2\sigma^2} \implies \sigma = \frac{1}{\mathcal{K}}
+\end{equation}
+Now, if we assume that for the same amplitude Gaussian we need $2\sigma$ for the peaks to be distinct we get:
+
+\begin{equation}
+\delta \ge 2\sigma \implies \delta \ge \frac{2}{\mathcal{K}}
+\end{equation}
+
+Which converting into time  of recording, T means:
+\begin{equation}
+T \ge \frac{2}{{\mathcal{K} \, \delta} }
+\end{equation}
+
+\begin{remark}
+This is true of the "perfect" transform, not a discrete transform and is a fundamental function of the window itself.  The sample frequency does not matter.  It is an approximation, but I think a reasonable one.
+\end{remark}
+
+
+\subsection{Using Spectral Stiffness to produce "bin limit"}
+
+For a given observation time T we have:
+\begin{equation}
+T = \frac{2}{\kappa \delta} 
+\end{equation}
+
+giving number of samples N as:
+\begin{equation}
+N = f_s T = \frac{2 f_s}{\kappa \delta} 
+\end{equation}
+Using a bin width of 
+\begin{equation}
+\Delta f_{\text{bin}} = \frac{f_s}{N} 
+\end{equation}
+and a minimum signal separation ability of
+\begin{equation}
+\Delta F = \delta
+\end{equation}
+We get that the separation of the minimum resolvable signals is
+\begin{equation}
+S_{\text{bins}} = \frac{\Delta F}{\Delta f_{\text{bin}}} = \frac{\delta}{\left(\frac{f_s}{N}\right)} = \frac{N\delta}{f_s} 
+\end{equation}
+giving a final bin resolution limit of
+\begin{equation}
+S_{\text{bins}} = \frac{2}{\kappa}
+\end{equation}
+
+\begin{remark}
+Again, $f_s$ does not come into it.  Obviously we would want  $f_s$ to be bigger than twice the frequencies that we wanted to separate for them to appear at the correct frequencies.  
+\end{remark}
+
+\begin{remark}
+Geometrically, placing the centers of two peaks exactly 2 bins apart requires a frequency separation of precisely $\Delta F = \frac{2}{T} = \frac{2f_s}{N}$.
+\end{remark}
+
+\begin{remark}
+In reality, however, the spectral leakage of the applied window prevents us from resolving signals at this ideal 2-bin limit. Because our window parameter is $\kappa \le 1$, the true physical minimum resolvable separation is wider, bounded at $\delta_{min} = \frac{2}{\kappa T} = \frac{2f_s}{\kappa N}$. Therefore, while a 2-bin geometric separation is $2/T$, our practical reality restricts us to only resolving signals separated by $2/(\kappa T)$ or greater. This demonstrates the role Spectral Stiffness plays in distinguishing signals with the same amplittude. 
+\end{remark}
+
 
 \subsection{Numerical Visualisation: The "Planet Test}
 To visualise the resolution law in a 2D imaging context, we simulated a high-contrast stellar observation.
