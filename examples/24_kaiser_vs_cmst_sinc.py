@@ -58,4 +58,36 @@ print("Saved Kaiser_vs_CMST_sinc.png")
 # Only show if NOT running on CI
 if not os.environ.get('CI'):
     plt.show()
+    
+pass_mask = (freqs >= -4.0) & (freqs <= 4.0)
+stop_mask = (freqs >= 15.0) | (freqs <= -15.0)
+
+ripple_cmst = np.max(mag_cmst[pass_mask]) - np.min(mag_cmst[pass_mask])
+ripple_kaiser = np.max(mag_hann[pass_mask]) - np.min(mag_hann[pass_mask])
+
+rejection_cmst = np.max(mag_cmst[stop_mask])
+rejection_kaiser = np.max(mag_hann[stop_mask])
+
+# Display the results
+print("\n" + "="*35)
+print(f"{'Metric':<20} | {'CMST':<8} | {'Kaiser':<8}")
+print("-" * 35)
+print(f"{'Passband Ripple (dB)':<20} | {ripple_cmst:.4f} | {ripple_kaiser:.4f}")
+print(f"{'Stopband Rejection (dB)':<20} | {rejection_cmst:.2f} | {rejection_kaiser:.2f}")
+print("="*35 + "\n")    
+
+power_cmst = 10**(mag_cmst / 10)
+power_kaiser = 10**(mag_hann / 10)
+
+total_leakage_cmst = np.trapezoid(power_cmst[stop_mask], x=freqs[stop_mask])
+total_leakage_kaiser = np.trapezoid(power_kaiser[stop_mask], x=freqs[stop_mask])
+
+total_p_cmst = np.trapezoid(power_cmst, freqs)
+total_p_kaiser = np.trapezoid(power_kaiser, freqs)
+
+leakage_ratio_cmst = 10 * np.log10(total_leakage_cmst / total_p_cmst)
+leakage_ratio_kaiser = 10 * np.log10(total_leakage_kaiser / total_p_kaiser)
+
+print(f"Total Stopband Leakage (CMST):   {leakage_ratio_cmst:.2f} dB")
+print(f"Total Stopband Leakage (Kaiser): {leakage_ratio_kaiser:.2f} dB")
 
