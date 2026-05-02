@@ -2177,6 +2177,25 @@ In reality, however, the spectral leakage of the applied window prevents us from
 \end{remark}
 
 
+\subsection{Using Spectral Stiffness to Sharpen Output}
+
+To recover spectral resolution lost to the window's main-lobe spread, we model the blurring process as a discrete convolution. Given the Taylor expansion of our window peak $G(\delta) \approx 1 - \frac{\kappa^2 \delta^2}{2}$, the observed value in a frequency bin $n$ can be approximated as the sum of the true signal at that bin and the "leakage" from its immediate neighbors ($\delta = \pm 1$):
+
+\begin{equation}
+bin(n) \approx (1 - \kappa^2) signal(n) + \frac{\kappa^2}{2} signal(n-1) + \frac{\kappa^2}{2} signal(n+1)
+\end{equation}
+
+By solving this system of equations for $signal(n)$, we derive a discrete 3-tap Laplacian sharpening filter. While the neighbors $bin(n \pm 1)$ also contain components of $signal(n)$, a first-order algebraic inversion yields the following sharpening operator:
+
+\begin{equation}
+signal(n) \approx \frac{1}{1 - \kappa^2} \left[ bin(n) - \frac{\kappa^2}{2} \left( bin(n+1) + bin(n-1) \right) \right]
+\end{equation}
+
+This filter effectively reverses the spectral "softness" introduced by the window. Because the Spectral Stiffness $\kappa$ is a deterministic property of the chosen window, this correction is scale-invariant and independent of the sampling frequency $F_s$. In high signal-to-noise ratio (SNR) environments this recovers some of the resolution lost to spectral stiffness.  It should however be noted that applying this filter magnifies noise and there are a couple of approximations in the derivation.  The window shape is not gaussian and our bins are impacted by more than just the adjacent bins.  Its usefulness will depend on the application.
+
+
+
+
 \subsection{Numerical Visualisation: The "Planet Test}
 To visualise the resolution law in a 2D imaging context, we simulated a high-contrast stellar observation.
 \begin{itemize}
