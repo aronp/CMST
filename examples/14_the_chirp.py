@@ -15,79 +15,73 @@ def cmst_window(N):
     w = np.where(np.abs(t) < 1, w, 0.0)
     return w
 
+def calculate_alpha(window):
+    """
+    Calculates the sharpening parameter alpha directly 
+    from the spectral footprint of the discrete window.
+    """
+    sum_w = np.sum(window)
+    t = np.linspace(-1, 1, len(window))
+    t2 = t*t
+    t2sum = np.sum(t2*window)/sum_w
+    return t2sum
+
 def get_gw150914_data():
-    print("Fetching valid download URL from GWOSC API...")
-    api_url = "https://www.gw-openscience.org/eventapi/json/GWTC-1-confident/GW150914/v3/H-H1_GWOSC_16KHZ_R1-1126259447-32.hdf5"
-    
+    # Attempting to fetch data from GWOSC
+    api_url = "https://www.gw-openscience.org/eventapi/json/GWTC-1-confident/GW150914/v3/L-L1_GWOSC_16KHZ_R1-1126259447-32.hdf5"
     r_meta = requests.get(api_url)
-    
     try:
         meta = r_meta.json()
         file_url = meta['url']
-        print(f"Target Acquired: {file_url}")
-    except json.JSONDecodeError:
+    except:
         file_url = api_url
 
-    print("Downloading raw HDF5 data...")
     r_file = requests.get(file_url)
-    
     with h5py.File(io.BytesIO(r_file.content), 'r') as f:
         strain = f['strain/Strain'][:]
         dt = f['strain/Strain'].attrs['Xspacing']
     return strain, dt
 
-def whiten_data(strain, dt, window):
+def whiten_data(strain, dt, window_func):
     N = len(strain)
-    spec = np.fft.rfft(strain * window(N))
+    spec = np.fft.rfft(strain * window_func(N))
     freqs = np.fft.rfftfreq(N, dt)
-    
     mag = np.abs(spec)
     psd_smooth = interp1d(freqs, mag, kind='nearest', fill_value="extrapolate")(freqs)
-    
-    whitened_spec = spec / psd_smooth
-    
-    whitened_strain = np.fft.irfft(whitened_spec)
-    return whitened_strain
+    whitened_spec = spec / (psd_smooth + 1e-20)
+    return np.fft.irfft(whitened_spec, n=N)
 
-
+# --- Execution ---
 try:
     strain, dt = get_gw150914_data()
     fs = 1.0 / dt
-    N = len(strain)
-    print(f"Data Loaded: {N} samples at {fs} Hz")
-
-    win_cmst = cmst_window(N)
-
-    # 4. FFT & Plot
-    print("Computing FFTs...")
-    spec_cmst = np.fft.rfft(strain * win_cmst)
-    freqs = np.fft.rfftfreq(N, dt)
-
-    fs = 1.0 / dt
-    time_vector = np.arange(len(strain)) * dt
-
-    print("Whitening the data (this extracts the chirp from the seismic noise)...")
-    # We use the CMST window for the whitening step too
     whitened_strain = whiten_data(strain, dt, cmst_window)
 
-    print("Generating Waterfall...")
+    # Parameters for Spectrogram
+    NFFT = 256
+    noverlap = 240
+    zoom_width, zoom_center = 0.07, 15.39
 
-    # Parameters for the Spectrogram
-    # We focus on the event time. In this file, the event is at ~15.4 seconds.
-    NFFT = 256        
-    noverlap = 240    # High overlap for smooth image
+    # 1. Prepare Window and calculate alpha
+    win_seg = cmst_window(NFFT)
+    alpha = calculate_alpha(win_seg)
+    print(f"Calculated alpha: {alpha}")
 
-    zoom_width = 0.07  
-    zoom_center = 15.39
-
-    # Create the figure
-    plt.figure(figsize=(10, 8))
-
-    # Compute Spectrogram using YOUR window
+    # 2. Compute Spectrogram
     f, t_spec, Sxx = spectrogram(whitened_strain, fs, 
-                             window=cmst_window(NFFT), 
-                             nperseg=NFFT, 
-                             noverlap=noverlap)
+                                 window=win_seg, 
+                                 nperseg=NFFT, 
+                                 noverlap=noverlap)
+
+    # 3. Frequency-Domain Laplacian Sharpening
+    # S_sharp = S - alpha * Laplacian_f(S)
+    laplacian_f = np.zeros_like(Sxx)
+    # Approximate 2nd derivative along frequency axis (axis 0)
+    laplacian_f[1:-1, :] = Sxx[2:, :] - 2*Sxx[1:-1, :] + Sxx[0:-2, :]
+    Sxx_sharp = Sxx - alpha * laplacian_f
+    
+    # Clip to prevent negative values (non-physical energy)
+    Sxx_sharp = np.maximum(Sxx_sharp, 1e-20)
 
     # Plot
     plt.pcolormesh(t_spec, f, Sxx, shading='gouraud', cmap='viridis')
@@ -111,7 +105,6 @@ try:
     # Only show if NOT running on CI
     if not os.environ.get('CI'):
         plt.show()
-
 
 except Exception as e:
     print(f"Failed again: {e}")
