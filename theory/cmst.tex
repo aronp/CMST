@@ -319,7 +319,7 @@ and
 \]
 
 Then $h_\theta$ has a (necessarily unique) zero in $(0,\infty)$ if and only if for 
-$-\pi/2 > \theta > \pi/2$ then $\theta_{\infty} < \theta <= \theta_{0}$
+$-\pi/2 < \theta < \pi/2$ then $\theta_{\infty} < \theta <= \theta_{0}$
 
 \item (\emph{Zero at infinity / degree drop})
 If $\theta=\theta_{\infty}$
@@ -526,7 +526,7 @@ which only has zeros on the negative real axis and noting that $ t^2$ maps $P_{\
 \subsection*{Cosh Moment Sturm Tower (CMST)}
 
 \begin{definition}[CMST family]
-A \emph{Cosine--Moment Sturm Tower} (CMST) is a collection
+A \emph{Cosh Moment Sturm Tower} (CMST) is a collection
 \[
 \mathcal{C}_a = \{F_\alpha : \alpha\in A\}
 \]
@@ -552,7 +552,7 @@ with a distinguished total order $<$ $A$ on the index set $A$, such that:
 We say that $(\mathcal{C}_a)$ is a CMST structure if it
 satisfies (i)--(iii).
 We also say that $f(t) \in CMST$ if it preserves CMST.
-We will refer to $f(t)$ as even if its an even function and $f(t)$ not even if $f(t) \ne f(-t)$
+We will refer to $f(t)$ as even if it's an even function and $f(t)$ not even if $f(t) \ne f(-t)$
 \end{definition}
 
 \begin{theorem}[Interlacing Direction by Reciprocal Roots]\label{def:Roots}
@@ -703,7 +703,7 @@ and then look at the $s$ term in the expansion, we see that using $\cref{def:Cau
 
 \begin{remark}[Convergence Assumption]
 \label{rem:convergence}
-Unless explicitly stated otherwise, all differential and integral operators, particularly those defined on spaces of polynomials or analytic functions, are assumed to operate within domains where the resulting integrals and series expressions **converge**. Specifically, any results concerning zero-preserving properties or interlacing are valid only when the formal application of the operator yields a well-defined function. This includes, but is not limited to, the proper convergence of integrals used in generating function representations or the convergence of series expansions for associated polynomials.
+Unless explicitly stated otherwise, all differential and integral operators, particularly those defined on spaces of polynomials or analytic functions, are assumed to operate within domains where the resulting integrals and series expressions \textbf{converge}. Specifically, any results concerning zero-preserving properties or interlacing are valid only when the formal application of the operator yields a well-defined function. This includes, but is not limited to, the proper convergence of integrals used in generating function representations or the convergence of series expansions for associated polynomials.
 \end{remark}
 
 \section{CMST Zero-Preserving Operators}
@@ -1289,12 +1289,12 @@ resulting in functions with infinite numbers of zeros with $f(n) \to f(n+1)$ and
 \end{remark}
 
 \section{Asymptotic Distribution of Zeros}
-This section is all known theory based on the works of $E.~C.~Titchmarsh$,
+This section is all known theory based on the works of E.C.Titchmarsh,
 G.~P\'olya and 
-$F.~W.~J.~Olver$ \newline
+F.W.J. Olver \newline
 \newline
 
-We wont be using these results further on, but if you are here, looking at zeros, their distribution is probably of interest. \newline
+We won't be using these results further on, but if you are here, looking at zeros, their distribution is probably of interest. \newline
 
 
 If we think of 
@@ -1323,7 +1323,7 @@ By performing the substitution $s \to is$, we move to the cosine series:
 
 
 \begin{remark}
-Asymptotically we should expect the function to behave like $\cos(s z(s))$
+AsymptoticalGW150914ly we should expect the function to behave like $\cos(s z(s))$
 This approximation should get better and better for higher values of s as the function becomes more Dirac delta  like
 \end{remark}
 \begin{remark}
@@ -1338,7 +1338,7 @@ It becomes very clear if you try to numerically integrate functions like
 \begin{equation}
 \int_0^{\infty } e^{s t-\cosh (t)} \, dt
 \end{equation}
-near say $s=100$ where the normalisation term is of the order of $\sim 10^{274}$ and the function becomes really sharp.  And since its Dirac delta like, we get that the terms in $s$ have the ratio of roughly the saddle point and since the shape is skewed to the high side each term will increase in ratio over the previous terms.  This results in the terms having a strict Log Concavity. This is not meant to be rigourous, just an insight into whats going on with large exponential type functions.
+near say $s=100$ where the normalisation term is of the order of $\sim 10^{274}$ and the function becomes really sharp.  And since its Dirac delta like, we get that the terms in $s$ have the ratio of roughly the saddle point and since the shape is skewed to the high side each term will increase in ratio over the previous terms.  This results in the terms having a strict Log Concavity. This is not meant to be rigorous, just an insight into whats going on with large exponential type functions.
 \end{remark}
 
 
@@ -1642,7 +1642,7 @@ Noting that the function is even and equating coefficients gives us $c_1 =0$, $c
 \begin{equation}
 \int_{-a}^a \frac{\cos (s t)}{1-t^2} \, dt
 \end{equation}
-does not coverge as $a \to 1$ however if we use the substitution $u = i t$ the integral does converge giving us the analytic continuation.
+does not converge as $a \to 1$ however if we use the substitution $u = i t$ the integral does converge giving us the analytic continuation.
 \begin{equation}
     I(s) = \int_{-1}^{1} \frac{\cosh(st)}{1+t^2} \, dt
 \end{equation}
@@ -1871,7 +1871,8 @@ or
 \begin{equation}
 \int_{-1}^{1}  \exp\left(\frac{1}{t^2 -1}\right)\, dt = \frac{1}{e} \cdot \left[ \sum_{k=0}^{\infty} \frac{4k+1}{2} \sum_{j=0}^{k} \left[ \frac{\binom{2k}{k}}{2^{2k}} \cdot \frac{\binom{2k}{k-j}}{2^{2k}} \right] \binom{2k+2j}{2k} (2j)! \, a_j \right]^{-1}
 \end{equation}
-which is the intergral of the Schwartz function. $\cite{schwartz1950}$
+which is the intergral of the Schwartz function.
+ \cite{schwartz1950}
 \end{theorem}
 
 \begin{remark}
@@ -2068,7 +2069,7 @@ where
 \int_{-1}^{1} w(t) \, dt
 \end{equation}
 
-is just a constant, independant of frequency, so the error term is
+is just a constant, independent of frequency, so the error term is
 \begin{equation}
 \int_{-1}^{1} w(t) \cos(2 \omega t) \, dt
 \end{equation}
@@ -2081,6 +2082,7 @@ Which is
 which, since $\mathcal{F}(s)$ decays super-algebraically with CMST, means that  the CMST is generally more accurate in both phase and amplitude than  windows with algebraic decay.
 
 \subsection{Spectral Stiffness}
+(Largley Harrris \cite{Harris1978})
 If we consider a signal transform around its center frequency we get
 \begin{equation}
 F(s) = \int_{-1}^{1} \cos(s+\delta)\cos(s)w(t) \, dt
@@ -2173,12 +2175,12 @@ Geometrically, placing the centers of two peaks exactly 2 bins apart requires a 
 \end{remark}
 
 \begin{remark}
-In reality, however, the spectral leakage of the applied window prevents us from resolving signals at this ideal 2-bin limit. Because our window parameter is $\kappa \le 1$, the true physical minimum resolvable separation is wider, bounded at $\delta_{min} = \frac{2}{\kappa T} = \frac{2f_s}{\kappa N}$. Therefore, while a 2-bin geometric separation is $2/T$, our practical reality restricts us to only resolving signals separated by $2/(\kappa T)$ or greater. This demonstrates the role Spectral Stiffness plays in distinguishing signals with the same amplittude. 
+In reality, however, the spectral leakage of the applied window prevents us from resolving signals at this ideal 2-bin limit. Because our window parameter is $\kappa \le 1$, the true physical minimum resolvable separation is wider, bounded at $\delta_{min} = \frac{2}{\kappa T} = \frac{2f_s}{\kappa N}$. Therefore, while a 2-bin geometric separation is $2/T$, our practical reality restricts us to only resolving signals separated by $2/(\kappa T)$ or greater. This demonstrates the role Spectral Stiffness plays in distinguishing signals with the same amplitude. 
 \end{remark}
 
 
 \subsection{Using Spectral Stiffness to Sharpen Output}
-
+(Possibly new)
 To recover spectral resolution lost to the window's main-lobe spread, we model the blurring process as a discrete convolution. Given the Taylor expansion of our window peak $G(\delta) \approx 1 - \frac{\kappa^2 \delta^2}{2}$, the observed value in a frequency bin $n$ can be approximated as the sum of the true signal at that bin and the "leakage" from its immediate neighbors ($\delta = \pm 1$):
 
 \begin{equation}
@@ -2191,12 +2193,12 @@ By solving this system of equations for $signal(n)$, we derive a discrete 3-tap 
 signal(n) \approx \frac{1}{1 - \kappa^2} \left[ bin(n) - \frac{\kappa^2}{2} \left( bin(n+1) + bin(n-1) \right) \right]
 \end{equation}
 
-This filter effectively reverses the spectral "softness" introduced by the window. Because the Spectral Stiffness $\kappa$ is a deterministic property of the chosen window, this correction is scale-invariant and independent of the sampling frequency $F_s$. In high signal-to-noise ratio (SNR) environments this recovers some of the resolution lost to spectral stiffness.  It should however be noted that applying this filter magnifies noise and there are a couple of approximations in the derivation.  The window shape is not gaussian and our bins are impacted by more than just the adjacent bins.  Its usefulness will depend on the application.
+This filter attempts to reverse the spectral "softness" introduced by the window. Because the Spectral Stiffness $\kappa$ is a deterministic property of the chosen window, this correction is scale-invariant and independent of the sampling frequency $F_s$. In high signal-to-noise ratio (SNR) environments this recovers some of the resolution lost to spectral stiffness.  It should however be noted that applying this filter magnifies noise and there are a couple of approximations in the derivation.  The window shape is not gaussian and our bins are impacted by more than just the adjacent bins.  Its usefulness will depend on the application.
 
 
 
 
-\subsection{Numerical Visualisation: The "Planet Test}
+\subsection{Numerical Visualisation: The "Planet Test"}
 To visualise the resolution law in a 2D imaging context, we simulated a high-contrast stellar observation.
 \begin{itemize}
     \item \textbf{Setup:} A "Sun" (Radius $15\,\text{px}$) and eight "Planets" (at radius $50\,\text{px}$) on a $2048 \times 2048$ grid.
@@ -2206,9 +2208,10 @@ To visualise the resolution law in a 2D imaging context, we simulated a high-con
 
 \begin{figure}[h!]
     \centering
-    \caption{\textbf{The "Planet Test"}} 
     \includegraphics[width=0.8\linewidth]{planets.png}
     \label{fig:Planets}
+    \caption{\textbf{The "Planet Test"}} 
+
 \end{figure}
 
 \noindent \textbf{Calculation:} According to the CMST Resolution Law for $R=10^4$ ($80\,\text{dB}$), the required separation is:
@@ -2236,7 +2239,7 @@ The two main references are S.~Fisk,  and G.P\'olya. While it is true that when 
 \bibitem{Fisk}
 S.~Fisk,
 \emph{Polynomials, roots, and interlacing},
-arXiv preprint arXiv:0612833, 2006.
+arXiv preprint arXiv:math/0612833 2006.
 
 
 \bibitem{polya1918}
@@ -2312,6 +2315,10 @@ M.~Gevrey,
 \emph{Sur la nature analytique des solutions des \'equations aux d\'eriv\'ees partielles. Premier m\'emoire},
 Ann. Sci. \'Ecole Norm. Sup. (3), vol.~35, 1918, pp.~129--190.
 
+\bibitem{Harris1978}
+F.~J.~Harris,
+\emph{On the Use of Windows for Harmonic Analysis with the Discrete {Fourier} Transform},
+\textit{Proceedings of the {IEEE}}, vol.~66, no.~1, pp.~51--83, Jan.\ 1978.
 
 \end{thebibliography}
 
