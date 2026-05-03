@@ -15,6 +15,19 @@ def cmst_window(N):
     w = np.where(np.abs(t) < 1, w, 0.0)
     return w
 
+def planck_taper(N, epsilon=0.1):
+    t = np.linspace(0, 1, N)
+    w = np.ones(N)
+    # Left taper
+    n_left = int(epsilon * (N - 1))
+    for i in range(1, n_left):
+        w[i] = 1.0 / (np.exp(epsilon * (N - 1) / i - epsilon * (N - 1) / (n_left - i)) + 1)
+    # Right taper
+    w[0] = 0
+    w[-1] = 0
+    w[N-n_left:-1] = w[1:n_left][::-1]
+    return w
+
 def calculate_alpha(window):
     """
     Calculates the sharpening parameter alpha directly 
@@ -96,9 +109,9 @@ try:
     # Plot
     plt.figure(figsize=(14, 8))
     
-    plt.pcolormesh(t_spec, f, Sxx, shading='gouraud', cmap='viridis')
-    contour_filled = plt.contourf(t_spec, f, Sxx, levels=100, cmap='inferno')
-    contour_lines = plt.contour(t_spec, f, Sxx, levels=60, colors='white', linewidths=0.5, alpha=0.5)
+    plt.pcolormesh(t_spec, f, Sxx_sharp, shading='gouraud', cmap='viridis')
+    contour_filled = plt.contourf(t_spec, f, Sxx_sharp, levels=100, cmap='inferno')
+    contour_lines = plt.contour(t_spec, f, Sxx_sharp, levels=60, colors='white', linewidths=0.5, alpha=0.5)
 
     # Zoom in on the Chirp
     plt.xlim(zoom_center - 1.25 * zoom_width, zoom_center + 2/2 * zoom_width)
