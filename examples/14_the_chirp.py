@@ -68,10 +68,20 @@ try:
     print(f"Calculated alpha: {alpha}")
 
     # 2. Compute Spectrogram
-    f, t_spec, Sxx = spectrogram(whitened_strain, fs, 
-                                 window=win_seg, 
-                                 nperseg=NFFT, 
-                                 noverlap=noverlap)
+#    f, t_spec, Sxx = spectrogram(whitened_strain, fs, 
+#                                 window=win_seg, 
+#                                 nperseg=NFFT, 
+#                                 noverlap=noverlap)
+    # Compute Spectrogram (defaults to Power)
+    f, t_spec, Sxx_power = spectrogram(whitened_strain, fs, 
+                                   window=win_seg, 
+                                   nperseg=NFFT, 
+                                   noverlap=noverlap,
+                                   scaling='spectrum') # 'spectrum' ensures units are V^2
+
+    # Convert Power to Amplitude (Linear Magnitude)
+    Sxx = np.sqrt(Sxx_power)
+
 
     # 3. Frequency-Domain Laplacian Sharpening
     # S_sharp = S - alpha * Laplacian_f(S)
