@@ -84,6 +84,8 @@ try:
     Sxx_sharp = np.maximum(Sxx_sharp, 1e-20)
 
     # Plot
+    plt.figure(figsize=(14, 8))
+    
     plt.pcolormesh(t_spec, f, Sxx, shading='gouraud', cmap='viridis')
     contour_filled = plt.contourf(t_spec, f, Sxx, levels=100, cmap='inferno')
     contour_lines = plt.contour(t_spec, f, Sxx, levels=60, colors='white', linewidths=0.5, alpha=0.5)
