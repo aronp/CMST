@@ -65,7 +65,7 @@ try:
     # 1. Prepare Window and calculate alpha
     win_seg = cmst_window(NFFT)
     alpha = calculate_alpha(win_seg)
-    print(f"Calculated alpha: {alpha}")
+    print(f"Calculated alpha: {alpha:.3f}")
 
     # 2. Compute Spectrogram
 #    f, t_spec, Sxx = spectrogram(whitened_strain, fs, 
@@ -101,7 +101,7 @@ try:
     contour_lines = plt.contour(t_spec, f, Sxx, levels=60, colors='white', linewidths=0.5, alpha=0.5)
 
     # Zoom in on the Chirp
-    plt.xlim(zoom_center - 1 * zoom_width, zoom_center + 2/2 * zoom_width)
+    plt.xlim(zoom_center - 1.25 * zoom_width, zoom_center + 2/2 * zoom_width)
     plt.ylim(0, 400) # The "Audible" range of the black holes
 
     plt.title(f'LIGO GW150914: Spectrogram Analysis (CMST (p=2) Window)')
