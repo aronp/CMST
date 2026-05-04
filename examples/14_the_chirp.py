@@ -8,6 +8,13 @@ import os
 from scipy.signal import spectrogram
 from scipy.interpolate import interp1d
 
+h1_api_url = "https://www.gw-openscience.org/eventapi/json/GWTC-1-confident/GW150914/v3/H-H1_GWOSC_16KHZ_R1-1126259447-32.hdf5"
+l1_api_url = "https://www.gw-openscience.org/eventapi/json/GWTC-1-confident/GW150914/v3/L-L1_GWOSC_16KHZ_R1-1126259447-32.hdf5"
+
+h1_local = "H1_data.hdf5"
+l1_local = "L1_data.hdf5"
+
+
 def cmst_window(N):
     t = np.linspace(-1, 1, N)
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -39,17 +46,32 @@ def calculate_alpha(window):
     t2sum = np.sum(t2*window)/sum_w
     return t2sum
 
-def get_gw150914_data():
-    # Attempting to fetch data from GWOSC
-    api_url = "https://www.gw-openscience.org/eventapi/json/GWTC-1-confident/GW150914/v3/L-L1_GWOSC_16KHZ_R1-1126259447-32.hdf5"
+def get_gw150914_data(api_url, local_filename):
+    # Check if the file already exists locally
+    if os.path.exists(local_filename):
+        print(f"Loading {local_filename} from local storage...")
+        with h5py.File(local_filename, 'r') as f:
+            strain = f['strain/Strain'][:]
+            dt = f['strain/Strain'].attrs['Xspacing']
+        return strain, dt
+
+    # If not local, download and save
+    print(f"{local_filename} not found. Downloading from GWOSC...")
     r_meta = requests.get(api_url)
     try:
         meta = r_meta.json()
         file_url = meta['url']
-    except:
+    except (requests.JSONDecodeError, KeyError):
         file_url = api_url
 
     r_file = requests.get(file_url)
+    
+    # Save to local file
+    with open(local_filename, 'wb') as f_out:
+        f_out.write(r_file.content)
+    print(f"Saved to {local_filename}")
+
+    # Return the data
     with h5py.File(io.BytesIO(r_file.content), 'r') as f:
         strain = f['strain/Strain'][:]
         dt = f['strain/Strain'].attrs['Xspacing']
@@ -66,7 +88,7 @@ def whiten_data(strain, dt, window_func):
 
 # --- Execution ---
 try:
-    strain, dt = get_gw150914_data()
+    strain, dt = get_gw150914_data(h1_api_url,h1_local)
     fs = 1.0 / dt
     whitened_strain = whiten_data(strain, dt, cmst_window)
 
