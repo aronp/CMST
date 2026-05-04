@@ -104,7 +104,7 @@ try:
     zoom_width, zoom_center = 0.07, 15.39-t_start
     # Parameters for Spectrogram
     NPERSEG = 256  # The physical window size (your 'stiffness')
-    NFFT = 2048    # The padded size (your 'interpolation')
+    NFFT = 1024    # The padded size (your 'interpolation')
     noverlap = 240
 
     # 1. Prepare Window and calculate alpha
@@ -154,7 +154,7 @@ try:
 
     # Zoom in on the Chirp
     plt.xlim(zoom_center - 1.25 * zoom_width, zoom_center + 2/2 * zoom_width)
-    plt.ylim(0, 400) # The "Audible" range of the black holes
+    plt.ylim(0, 500) # The "Audible" range of the black holes
 
     plt.title(f'LIGO GW150914: Spectrogram Analysis (CMST (p=2) Window)')
     plt.ylabel('Frequency (Hz)')
