@@ -88,17 +88,27 @@ def whiten_data(strain, dt, window_func):
 
 # --- Execution ---
 try:
-    strain, dt = get_gw150914_data(h1_api_url,h1_local)
+    strain_full, dt = get_gw150914_data(h1_api_url,h1_local)
     fs = 1.0 / dt
+    
+    # Slice around the event (approx 15.3 - 15.5s)
+    t_start, t_end = 15.0, 16.0 
+    i_start, i_end = int(t_start * fs), int(t_end * fs)
+    
+    # Chop it
+    strain = strain_full[i_start:i_end]
+    
     whitened_strain = whiten_data(strain, dt, cmst_window)
 
     # Parameters for Spectrogram
-    NFFT = 256
+    zoom_width, zoom_center = 0.07, 15.39-t_start
+    # Parameters for Spectrogram
+    NPERSEG = 256  # The physical window size (your 'stiffness')
+    NFFT = 2048    # The padded size (your 'interpolation')
     noverlap = 240
-    zoom_width, zoom_center = 0.07, 15.39
 
     # 1. Prepare Window and calculate alpha
-    win_seg = cmst_window(NFFT)
+    win_seg = cmst_window(NPERSEG)
     alpha = calculate_alpha(win_seg)
     print(f"Calculated alpha: {alpha:.3f}")
 
@@ -108,12 +118,19 @@ try:
 #                                 nperseg=NFFT, 
 #                                 noverlap=noverlap)
     # Compute Spectrogram (defaults to Power)
+#    f, t_spec, Sxx_power = spectrogram(whitened_strain, fs, 
+#                                   window=win_seg, 
+#                                   nperseg=NFFT, 
+#                                   noverlap=noverlap,
+#                                   scaling='spectrum') # 'spectrum' ensures units are V^2
+
     f, t_spec, Sxx_power = spectrogram(whitened_strain, fs, 
                                    window=win_seg, 
-                                   nperseg=NFFT, 
+                                   nperseg=NPERSEG, # Window is 256 long
+                                   nfft=NFFT,       # Padded to 1024
                                    noverlap=noverlap,
-                                   scaling='spectrum') # 'spectrum' ensures units are V^2
-
+                                   scaling='spectrum')
+                                   
     # Convert Power to Amplitude (Linear Magnitude)
     Sxx = np.sqrt(Sxx_power)
 
@@ -126,8 +143,8 @@ try:
     Sxx_sharp = Sxx - alpha * laplacian_f
     
     # Clip to prevent negative values (non-physical energy)
-    Sxx_sharp = np.maximum(Sxx_sharp, 1e-20)
-
+    Sxx_sharp = np.maximum(Sxx_sharp, 1e-200)
+    Sxx_sharp = Sxx - (alpha / (NFFT/NPERSEG)) * laplacian_f
     # Plot
     plt.figure(figsize=(14, 8))
     
