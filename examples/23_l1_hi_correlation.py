@@ -1,12 +1,47 @@
+import os
+import requests
+import h5py
+import io
 import numpy as np
 import matplotlib.pyplot as plt
-import h5py
 import requests
-import io
 import json
-import os
 from scipy.signal import spectrogram
 from scipy.interpolate import interp1d
+
+h1_api_url = "https://www.gw-openscience.org/eventapi/json/GWTC-1-confident/GW150914/v3/H-H1_GWOSC_16KHZ_R1-1126259447-32.hdf5"
+l1_api_url = "https://www.gw-openscience.org/eventapi/json/GWTC-1-confident/GW150914/v3/L-L1_GWOSC_16KHZ_R1-1126259447-32.hdf5"
+
+def get_gw150914_data(api_url, local_filename):
+    # Check if the file already exists locally
+    if os.path.exists(local_filename):
+        print(f"Loading {local_filename} from local storage...")
+        with h5py.File(local_filename, 'r') as f:
+            strain = f['strain/Strain'][:]
+            dt = f['strain/Strain'].attrs['Xspacing']
+        return strain, dt
+
+    # If not local, download and save
+    print(f"{local_filename} not found. Downloading from GWOSC...")
+    r_meta = requests.get(api_url)
+    try:
+        meta = r_meta.json()
+        file_url = meta['url']
+    except (requests.JSONDecodeError, KeyError):
+        file_url = api_url
+
+    r_file = requests.get(file_url)
+    
+    # Save to local file
+    with open(local_filename, 'wb') as f_out:
+        f_out.write(r_file.content)
+    print(f"Saved to {local_filename}")
+
+    # Return the data
+    with h5py.File(io.BytesIO(r_file.content), 'r') as f:
+        strain = f['strain/Strain'][:]
+        dt = f['strain/Strain'].attrs['Xspacing']
+    return strain, dt
 
 def cmst_window(N):
     t = np.linspace(-1, 1, N)
@@ -14,26 +49,6 @@ def cmst_window(N):
         w = np.exp(t**4 / (t**2 - 1))
     w = np.where(np.abs(t) < 1, w, 0.0)
     return w
-
-def get_gw150914_data(api_url):
-    print("Fetching valid download URL from GWOSC API...")
-    
-    r_meta = requests.get(api_url)
-    
-    try:
-        meta = r_meta.json()
-        file_url = meta['url']
-        print(f"Target Acquired: {file_url}")
-    except json.JSONDecodeError:
-        file_url = api_url
-
-    print("Downloading raw HDF5 data...")
-    r_file = requests.get(file_url)
-    
-    with h5py.File(io.BytesIO(r_file.content), 'r') as f:
-        strain = f['strain/Strain'][:]
-        dt = f['strain/Strain'].attrs['Xspacing']
-    return strain, dt
 
 def whiten_data(strain, dt, window):
     N = len(strain)
@@ -100,189 +115,169 @@ def plot_cmst_spectrogram(ax, data, title):
     return fig.colorbar(mesh, ax=ax, label='Log Power')
 
 
+def calculate_alpha(window):
+    """
+    Calculates the sharpening parameter alpha directly 
+    from the spectral footprint of the discrete window.
+    """
+    sum_w = np.sum(window)
+    t = np.linspace(-1, 1, len(window))
+    t2 = t*t
+    return np.sum(t2*window)/sum_w
 
-h1_api_url = "https://www.gw-openscience.org/eventapi/json/GWTC-1-confident/GW150914/v3/H-H1_GWOSC_16KHZ_R1-1126259447-32.hdf5"
-l1_api_url = "https://www.gw-openscience.org/eventapi/json/GWTC-1-confident/GW150914/v3/L-L1_GWOSC_16KHZ_R1-1126259447-32.hdf5"
+def sharpen_spectrogram(Sxx, alpha):
+    laplacian_f = np.zeros_like(Sxx)
+    # Approximate 2nd derivative along frequency axis (axis 0)
+    laplacian_f[1:-1, :] = Sxx[2:, :] - 2*Sxx[1:-1, :] + Sxx[0:-2, :]
+    Sxx_sharp = Sxx - alpha * laplacian_f
+    
+    # Clip to prevent negative values (non-physical energy)
+    Sxx_sharp = np.maximum(Sxx_sharp, 1e-20)
+    return Sxx_sharp
 
-strain_h1, dt_h1 = get_gw150914_data(h1_api_url)
-strain_l1, dt_l1 = get_gw150914_data(l1_api_url)
+def plot_grid(Sxx_sharp,low = 20):  
+    plt.figure(figsize=(14, 8))
+
+    # This prevents the 60Hz line from washing out the plot.
+    vmax = np.percentile(Sxx_sharp, 99.9) + (np.abs(np.percentile(Sxx_sharp, 99.9)) * 0.1)
+    # Set the 'Darkest' point to be 10-15 orders of magnitude below the signal.
+    vmin = np.percentile(Sxx_sharp, low) 
+    levels = np.linspace(vmin, vmax, 20)
+    
+    plt.pcolormesh(t_spec, f, Sxx_sharp, shading='gouraud', cmap='viridis',vmin=vmin, vmax=vmax)
+    contour_filled = plt.contourf(t_spec, f, Sxx_sharp, levels=levels, cmap='inferno')
+    contour_lines = plt.contour(t_spec, f, Sxx_sharp, levels=levels, colors='white', linewidths=0.5, alpha=0.5)
+
+    # Zoom in on the Chirp
+    plt.xlim(zoom_center - 1.25 * zoom_width, zoom_center + 2/2 * zoom_width)
+    plt.ylim(0, 500) # The "Audible" range of the black holes
+
+    plt.title(f'LIGO GW150914: Spectrogram Analysis (CMST (p=2) Window)')
+    plt.ylabel('Frequency (Hz)')
+    plt.xlabel('Time (s)')
+    plt.colorbar(contour_filled, label='Signal-to-Noise Ratio')
+    plt.grid(True)
+    plt.show()
+
+
+def generate_band_limited_map(h1, l1, freqs, freq_limit=500):
+    """
+    Computes correlation only for frequencies up to freq_limit.
+    """
+    # 1. Identify the index for 500Hz
+    idx_limit = np.searchsorted(freqs, freq_limit)
+    
+    # 2. Slice the spectrograms to focus on the 0-500Hz band
+    h1_slice = h1[:idx_limit, :]
+    l1_slice = l1[:idx_limit, :]
+    
+    # 3. Standardize only the relevant data
+    h1_n = (h1_slice - np.mean(h1_slice)) / np.std(h1_slice)
+    l1_n = (l1_slice - np.mean(l1_slice)) / np.std(l1_slice)
+    
+    # 4. Compute the local correlation map (zero-lag product)
+    # This results in values between -1 and 1 if normalized correctly
+    corr_slice = h1_n * l1_n
+    
+    # 5. Reconstruct the full-size map with zeros for irrelevant frequencies
+    # This prevents high-frequency noise from affecting the final product
+    full_corr_map = np.zeros_like(h1)
+    full_corr_map[:idx_limit, :] = corr_slice
+    
+    return full_corr_map
+    
+
+# Execution
+h1_local = "H1_data.hdf5"
+l1_local = "L1_data.hdf5"
+
+#strain_h1, dt_h1 = get_gw150914_data(h1_api_url, h1_local)
+#strain_l1, dt_l1 = get_gw150914_data(l1_api_url, l1_local)
+
+try:
+    strain_full_h1, dt_h1 = get_gw150914_data(h1_api_url,h1_local)
+    strain_full_l1, dt_l1 = get_gw150914_data(l1_api_url,l1_local)
+
+    fs = 1.0 / dt_h1
+
+    t_start, t_end = 15.0, 16.0
+    i_start, i_end = int(t_start * fs), int(t_end * fs)
+    
+    strain_h1 = strain_full_h1[i_start:i_end]
+    strain_l1 = strain_full_l1[i_start:i_end]
+
     
     # to align the two chirps.
-shift = 113
+    shift = 113
     
     # L1 was hit first, so we "delay" it to match H1
-l1_aligned, h1_aligned = align_ligo_data(strain_l1,strain_h1)
-    
-fs = 1.0 / dt_h1
-N = len(h1_aligned)
-print(f"Data Loaded: {N} samples at {fs} Hz")
+    l1_aligned, h1_aligned = align_ligo_data(strain_l1,strain_h1)
 
-win_cmst = cmst_window(N)
 
-dt = dt_h1
+    N = len(h1_aligned)
+    print(f"Data Loaded: {N} samples at {fs} Hz")
+
+    win_cmst = cmst_window(N)
+
+    dt = dt_h1
     # 4. FFT & Plot
-print("Computing FFTs...")
-spec_cmst_h1 = np.fft.rfft(h1_aligned * win_cmst)
-spec_cmst_l1 = np.fft.rfft(l1_aligned * win_cmst)
-freqs = np.fft.rfftfreq(N, dt)
+    print("Computing FFTs...")
+    spec_cmst_h1 = np.fft.rfft(h1_aligned * win_cmst)
+    spec_cmst_l1 = np.fft.rfft(l1_aligned * win_cmst)
+    freqs = np.fft.rfftfreq(N, dt)
 
-fs = 1.0 / dt
-time_vector = np.arange(len(h1_aligned)) * dt
+    fs = 1.0 / dt
+    time_vector = np.arange(len(h1_aligned)) * dt
 
 
-print("Whitening the data (this extracts the chirp from the seismic noise)...")
+    print("Whitening the data (this extracts the chirp from the seismic noise)...")
     # We use the CMST window for the whitening step too
-whitened_strain_h1 = whiten_data(h1_aligned, dt, cmst_window)
-whitened_strain_l1 = whiten_data(l1_aligned, dt, cmst_window)
+    whitened_strain_h1 = whiten_data(h1_aligned, dt, cmst_window)
+    whitened_strain_l1 = whiten_data(l1_aligned, dt, cmst_window)
 
- # --- Spectrogram Parameters ---
-NFFT = 256        
-noverlap = 240    
-zoom_width = 0.07  
-zoom_center = 15.39
+     # --- Spectrogram Parameters ---
+    # Parameters for Spectrogram
+    zoom_width, zoom_center = 0.07, 15.39-t_start
+#    zoom_width, zoom_center = 1.2, 16.1-t_start
+    # Parameters for Spectrogram
+    NPERSEG = 128  # The physical window size (your 'stiffness')
+    NFFT = 2*NPERSEG    # The padded size (your 'interpolation')
+    noverlap = int(NPERSEG*0.95)
 
+    # 1. Prepare Window and calculate alpha
+    win_seg = cmst_window(NPERSEG)
+    alpha = calculate_alpha(win_seg)
+    print(f"Calculated alpha: {alpha:.3f}")
 
+    # 2. Compute Spectrogram
+    f, t_spec, Sxx_h1_power = spectrogram(whitened_strain_h1, fs, 
+                                       window=win_seg, 
+                                   nperseg=NPERSEG, # Window is 256 long
+                                   nfft=NFFT,       # Padded to 1024
+                                   noverlap=noverlap,
+                                   scaling='spectrum')
 
-# Create figure with two subplots
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12), sharex=True)
-
-# Plot Hanford
-plot_cmst_spectrogram(ax1, whitened_strain_h1, 'Hanford (H1) Aligned')
-
-# Plot Livingston
-plot_cmst_spectrogram(ax2, whitened_strain_l1, 'Livingston (L1) Aligned (+7ms shift, Sign Inverted)')
-
-ax2.set_xlabel('Time (s)')
-plt.tight_layout()
-
-plt.savefig("H1_L1_Comparison.png")
-print("Saved H1_L1_Comparison.png")
-
-if not os.environ.get('CI'):
-    plt.show()
-    
-
-f_h1, t_spec_h1, Sxx_h1 = spectrogram(whitened_strain_h1, fs, 
-                                 window=cmst_window(NFFT), 
-                                 nperseg=NFFT, 
-                                 noverlap=noverlap)
-
-f_l1, t_spec_l1, Sxx_l1 = spectrogram(whitened_strain_l1, fs, 
-                                 window=cmst_window(NFFT), 
-                                 nperseg=NFFT, 
-                                 noverlap=noverlap)
-                                 
-                                 
-                                 # 1. Compute the Geometric Mean (Coherence)
-# This acts as a 'logical AND' for the two detectors.
-# If a feature only exists in one, it gets suppressed.
-Sxx_cross = np.sqrt(Sxx_h1 * Sxx_l1)
-
-# 2. Log-transform for visualization
-# Use a deep floor to accommodate the CMST resolution
-Sxx_cross_log = np.log10(Sxx_cross + 1e-50)
-
-# 3. Set robust color limits based on percentiles
-vmax = np.percentile(Sxx_cross_log, 99.9) 
-vmin = vmax - 12  # Show 120dB of dynamic range
-
-plt.figure(figsize=(12, 6))
-    # Set the 'Brightest' point to the 99th percentile, not the Max.
-    # This prevents the 60Hz line from washing out the plot.
-vmax = np.percentile(Sxx_cross_log, 99.95) + 1
-
-    # Set the 'Darkest' point to be 10-15 orders of magnitude below the signal.
-vmin = np.percentile(Sxx_cross_log, 40) 
- 
-# Plot the Cross-Correlation Map
-mesh = plt.pcolormesh(t_spec_h1, f_h1, Sxx_cross_log, 
-                      shading='gouraud', cmap='magma', 
-                      vmin=vmin, vmax=vmax)
-
-# Add contours to highlight the 'islands'
-plt.contour(t_spec_h1, f_h1, Sxx_cross_log, 
-            levels=np.linspace(vmin, vmax, 20), 
-            colors='white', linewidths=0.2, alpha=0.3)
-
-plt.title('H1-L1 Coherence Map: GW150914 (CMST p=2 Kernel)')
-plt.ylabel('Frequency (Hz)')
-plt.xlabel('Time (s)')
-plt.ylim(0, 500)
-plt.xlim(15.32, 15.46) # Zoom on the event
-plt.colorbar(mesh, label='Log Coherent Power')
-
-plt.savefig("Coherence_Map.png")
-plt.show()
-
-# 1. The Coherent Average (Linear Scale)
-# We sum the complex or real aligned strains to let the signals 
-# add constructively and noise add destructively.
-Sxx_consensus = (Sxx_h1 + Sxx_l1) / 2
-
-# 2. Apply the Coherence Mask (The "Sober" Filter)
-# We multiply by the normalized coherence to 'gate' the noise.
-# This ensures that if Coherence is low, the output is pushed toward zero.
-coherence_mask = np.sqrt(Sxx_h1 * Sxx_l1) / np.maximum(Sxx_h1, Sxx_l1)
-Sxx_final = Sxx_consensus * coherence_mask
-
-# 3. Log Transform for the Final Topography
-Sxx_final_log = np.log10(Sxx_final + 1e-250)
+    f, t_spec, Sxx_l1_power = spectrogram(whitened_strain_l1, fs, 
+                                   window=win_seg, 
+                                   nperseg=NPERSEG, # Window is 256 long
+                                   nfft=NFFT,       # Padded to 1024
+                                   noverlap=noverlap,
+                                   scaling='spectrum')
 
 
-
-plt.figure(figsize=(14, 8))
-
-# 1. Plot the base topography (the "heat map")
-mesh = plt.pcolormesh(t_spec_h1, f_h1, Sxx_final_log, 
-                      shading='gouraud', cmap='inferno', # 'inferno' often contrasts well with contours
-                      vmin=vmin, vmax=vmax)
-
-# Add the Contours (The "Topographic Lines")
-# Define the levels you want to draw.
-# Let's draw 20 lines evenly spaced between your floor and your peak.
-levels = np.linspace(vmin, vmax, 20)
-
-contours = plt.contour(t_spec_h1, f_h1, Sxx_final_log, 
-                       levels=levels, 
-                       colors='white', # White contrasts well with inferno/magma
-                       linewidths=0.2, # Keep them thin so they don't hide the data
-                       alpha=0.4, linestyles='solid') # Slightly transparent for better integration
-
-# Define specific 'islands' with thick contours
-# This is how you prove the 15.33s precursor is a solid object.
-# Let's pick a high level, say the top 10% of the signal power.
-peak_contour_level = vmax - 1.6 # -15dB below the peak
-plt.contour(t_spec_h1, f_h1, Sxx_final_log, 
-            levels=[peak_contour_level], 
-            colors='cyan', # A different color for emphasis
-            linewidths=1.0, 
-            alpha=0.7, linestyles='solid')
-
-# Draw many thin background contours to show the "terrain"
-# This will show the shape of everything, even the faint stuff.
-bg_levels = np.linspace(vmin, vmax, 30)
-plt.contour(t_spec_h1, f_h1, Sxx_final_log, levels=bg_levels, 
-            colors='white', linewidths=0.1, alpha=0.2, linestyles='solid')
-
-# Draw "Sub-threshold" highlight contours
-# Instead of one peak level, we define a RANGE of interest for the islands.
-# If vmax is -8.0, try looking between -9.2 and -8.5.
-island_levels = [vmax - 1.2, vmax - 1.0, vmax - 0.8] 
-
-plt.contour(t_spec_h1, f_h1, Sxx_final_log, levels=island_levels, 
-            colors='cyan', linewidths=0.8, alpha=0.8,linestyles='solid')
-
-# Final Polish
-plt.title('GW150914: H1-L1 Consensus Topography with Sub-threshold Contours (CMST p=2)')
-plt.ylabel('Frequency (Hz)')
-plt.xlabel('Time (s)')
-plt.ylim(0, 500)
-plt.xlim(15.32, 15.46)
-plt.colorbar(mesh, label='Log Consensus Power')
-
-plt.savefig("Consensus_Topography_Contours.png", dpi=300)
-plt.show()
+    # Convert Power to Amplitude (Linear Magnitude)
+    Sxx_h1 = np.sqrt(Sxx_h1_power)
+    Sxx_l1 = np.sqrt(Sxx_l1_power)
 
 
+    Sxx_h1_sharp = sharpen_spectrogram(Sxx_h1,alpha*NPERSEG/NFFT)
+    Sxx_l1_sharp = sharpen_spectrogram(Sxx_l1,alpha*NPERSEG/NFFT)
+    eps = 1e-100
+    Sxx_sharp = np.log(eps+np.sqrt(np.abs(Sxx_l1_sharp*Sxx_h1_sharp)))
+    plot_grid(Sxx_sharp,40)
+   
+
+except Exception as e:
+    print(f"Failed again: {e}")
 
 
