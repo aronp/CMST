@@ -6,7 +6,6 @@ from scipy.signal import find_peaks
 from scipy.stats import linregress
 from scipy.stats import binned_statistic
 
-# Try CMST(4) for better signal to noise.
 def cmst_window(N):
     t = np.linspace(-1, 1, N)
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -104,7 +103,6 @@ plt.xlim(0, 24) # Zoom in on low frequencies first
 plt.ylim(10**-3, 20) # Zoom in on low frequencies first
 
 
-# 3. THE ANNOTATION LOOP
 # We label the first peak clearly, and the others as harmonics
 for i, (f, a) in enumerate(zip(final_freqs, final_amps)):
     harmonic_num = final_ns[i] # Get the integer index (1, 2, 3...)
@@ -160,11 +158,7 @@ print(f"Refined Period: {refined_period:.7f} days")
 print(f"R-squared: {r_squared:.6f}")
 
 
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import binned_statistic
 
-# --- 1. SETUP PARAMETERS ---
 # We assume 'lc_clean' and 'refined_period' are already defined from previous steps
 t_all = lc_clean.time.value
 f_all = lc_clean.flux.value
@@ -172,7 +166,6 @@ f_all = lc_clean.flux.value
 # Normalize to PPM
 f_ppm = 1e6 * (f_all / np.nanmedian(f_all) - 1)
 
-# --- 2. DRIFT CORRECTION (STACKING) ---
 # We slice the data into 100-day chunks and re-center the dip locally
 chunk_size = 100.0 # days
 t_start = t_all[0]
