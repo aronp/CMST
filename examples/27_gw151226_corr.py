@@ -8,6 +8,7 @@ import requests
 import json
 from scipy.signal import spectrogram
 from scipy.interpolate import interp1d
+from scipy.special import erfc
 
 h1_api_url = "https://www.gw-openscience.org/eventapi/json/GWTC-1-confident/GW150914/v3/H-H1_GWOSC_16KHZ_R1-1126259447-32.hdf5"
 l1_api_url = "https://www.gw-openscience.org/eventapi/json/GWTC-1-confident/GW150914/v3/L-L1_GWOSC_16KHZ_R1-1126259447-32.hdf5"
@@ -50,10 +51,36 @@ def get_gw150914_data(api_url, local_filename):
         dt = f['strain/Strain'].attrs['Xspacing']
     return strain, dt
 
+def planck_taper(N, epsilon=0.1):
+    """
+    Computes a Planck-taper window.
+    N: Length of the window.
+    epsilon: Fraction of the window to taper (0 to 0.5).
+    """
+    n = np.arange(N)
+    w = np.ones(N)
+    
+    # Calculate tapering boundaries
+    m = int(epsilon * (N - 1))
+    
+    # Left taper
+    for i in range(1, m):
+        z = (m / i) - (m / (m - i))
+        w[i] = 1.0 / (np.exp(z) + 1)
+    
+    # Right taper (symmetry)
+    w[0] = 0
+    w[N-1] = 0
+    w[N-m:] = w[m:0:-1]
+    
+    return w
+
+
+
 def cmst_window(N):
     t = np.linspace(-1, 1, N)
     with np.errstate(divide='ignore', invalid='ignore'):
-        w = np.exp(t**8 / (t**4 - 1))
+        w = np.exp(t**4 / (t**2 - 1))
     w = np.where(np.abs(t) < 1, w, 0.0)
     return w
 
@@ -139,13 +166,12 @@ def sharpen_spectrogram(Sxx, alpha):
     Sxx_sharp = Sxx - alpha * laplacian_f
     
     # Clip to prevent negative values (non-physical energy)
-    Sxx_sharp = np.maximum(Sxx_sharp, 1e-20)
+    Sxx_sharp = np.maximum(Sxx_sharp, 1e-100)
     return Sxx_sharp
 
-def plot_grid(Sxx_sharp,low = 20):  
+def plot_grid(Sxx_sharp, t_spec, f, zoom_width, low=20):    
+    
     plt.figure(figsize=(14, 8))
-
-    # This prevents the 60Hz line from washing out the plot.
     vmax = np.percentile(Sxx_sharp, 99.9) + (np.abs(np.percentile(Sxx_sharp, 99.9)) * 0.01)
     # Set the 'Darkest' point to be 10-15 orders of magnitude below the signal.
     vmin = np.percentile(Sxx_sharp, low) 
@@ -157,14 +183,15 @@ def plot_grid(Sxx_sharp,low = 20):
 
     # Zoom in on the Chirp
     plt.xlim(trange/2 - zoom_width, trange/2 + zoom_width)
-    plt.ylim(0, 1000) # The "Audible" range of the black holes
+    plt.ylim(0, 500)
 
     plt.title(f'LIGO GW151226: Spectrogram Analysis (CMST Window)')
     plt.ylabel('Frequency (Hz)')
     plt.xlabel('Time (s)')
-    plt.colorbar(contour_filled, label='Signal-to-Noise Ratio')
+    plt.colorbar(contour_filled, label='Sigma (approx)')
     plt.grid(True)
     plt.show()
+
 
 
 def generate_band_limited_map(h1, l1, freqs, freq_limit=500):
@@ -192,8 +219,16 @@ def generate_band_limited_map(h1, l1, freqs, freq_limit=500):
     full_corr_map[:idx_limit, :] = corr_slice
     
     return full_corr_map
-    
 
+def whiten_spectrogram(Sxx):
+    # Axis 1 = Time. We find the noise floor for EACH frequency.
+    row_mean = np.mean(Sxx, axis=1, keepdims=True)
+    row_std = np.std(Sxx, axis=1, keepdims=True)
+    
+    # This is where we respect your 'small numbers'
+    # 1e-200 is essential here to resolve the 325Hz void
+    return (Sxx - row_mean) / (row_std + 1e-200)
+    
 try:
     strain_full_h1, dt_h1 = get_gw150914_data(GW151226_h1_url,h1_GW151226_local)
     strain_full_l1, dt_l1 = get_gw150914_data(GW151226_l1_url,l1_GW151226_local)
@@ -201,9 +236,7 @@ try:
     fs = 1.0 / dt_h1
 
     # Parameters for Spectrogram
-    zoom_width, zoom_center = 2, 16.1
-#    zoom_width, zoom_center = 1.2, 16.1-t_start
-
+    zoom_width, zoom_center = 4, 16.1
 
     t_start, t_end = zoom_center-2*zoom_width, zoom_center+2*zoom_width
     i_start, i_end = int(t_start * fs), int(t_end * fs)
@@ -244,7 +277,7 @@ try:
     # Parameters for Spectrogram
     NPERSEG = 2048  # The physical window size (your 'stiffness')
     NFFT = 2*NPERSEG    # The padded size (your 'interpolation')
-    noverlap = int(NPERSEG*0.9)
+    noverlap = int(NPERSEG*0.75)
 
     # 1. Prepare Window and calculate alpha
     win_seg = cmst_window(NPERSEG)
@@ -274,10 +307,16 @@ try:
 
     Sxx_h1_sharp = sharpen_spectrogram(Sxx_h1,alpha*NPERSEG/NFFT)
     Sxx_l1_sharp = sharpen_spectrogram(Sxx_l1,alpha*NPERSEG/NFFT)
-    eps = 1e-100
-    Sxx_sharp = np.log(eps+np.sqrt(np.abs(Sxx_l1_sharp*Sxx_h1_sharp)))
-    plot_grid(Sxx_sharp,70)
-   
+
+    Z_h1 = whiten_spectrogram(Sxx_h1_sharp)
+    Z_l1 = whiten_spectrogram(Sxx_l1_sharp)
+
+
+    P_h1 = erfc(-Z_h1 / np.sqrt(2))
+    P_l1 = erfc(-Z_l1 / np.sqrt(2))
+    P_prod = P_h1*P_l1
+    
+    plot_grid(P_prod,t_spec,f,zoom_width,90)   
 
 except Exception as e:
     print(f"Failed again: {e}")
