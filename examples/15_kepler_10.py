@@ -184,7 +184,6 @@ plt.legend()
 plt.tight_layout()
 plt.savefig('kepler_10.png', dpi=300)
 
-# Only show if NOT running on CI
 if not os.environ.get('CI'):
     plt.show()
 
@@ -196,7 +195,7 @@ plt.xlabel("Harmonic Index (n)")
 plt.ylabel("Frequency (cycles/day)")
 plt.legend()
 plt.grid(True, alpha=0.3)
-# Only show if NOT running on CI
+
 if not os.environ.get('CI'):
     plt.show()
 
@@ -300,8 +299,6 @@ plt.grid(True, alpha=0.3)
 if not os.environ.get('CI'):
     plt.show()
 
-
-
 n_data = final_ns
 a_data = final_amps
 
@@ -361,18 +358,15 @@ a_au = a_meters / 1.496e11
 T_star = 5627
 t_eq_c = (T_star * np.sqrt(R_STAR * 0.00465 / (2 * a_au)) * (1 - 0.3)**0.25) - 273.15
 
-# 6. Stellar Density using the 1.68hr Sinc duration (The 'Effective' density)
-D_eff_sec = 1.68 * 3600
-term1 = (3 * np.pi) / (G * P_sec**2)
 
 print("\n" + "="*50)
-print("          KEPLER-10b: FINAL MISSION SUMMARY")
+print("          KEPLER-10b: SUMMARY")
 print("="*50)
 print(f"{'Orbital Period:':<25} {refined_period:.6f} days")
-print(f"{'Transit Depth:':<25} {depth_ppm} PPM")
+print(f"{'Transit Depth:':<25} {depth_ppm:.0f} PPM")
 print(f"{'Planetary Radius:':<25} {rp_earth:.3f} R_earth")
 print("-" * 50)
-print(f"{'Effective Duration:':<25} {calc_duration_hours} hours (Sinc-derived)")
+print(f"{'Effective Duration:':<25} {calc_duration_hours:.3f} hours (Sinc-derived)")
 print("-" * 50)
 print(f"{'Orbital Distance:':<25} {a_au:.4f} AU")
 print(f"{'Equilibrium Temp:':<25} {t_eq_c:.0f} °C")
