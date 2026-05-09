@@ -260,13 +260,10 @@ start = len(bin_means)
 end = 2 * len(bin_means)
 smoothed_means = smoothed_tiled[start:end]
 
-# Find the index of the absolute minimum
 min_idx = np.argmin(bin_means)
 
-# Extract the minimum and its two neighbors
 neighbors = bin_means[max(0, min_idx-1) : min_idx+2]
 
-# Calculate the robust average depth
 mean_trough_flux = np.mean(neighbors)
 depth_ppm = abs(mean_trough_flux)
 
@@ -296,10 +293,6 @@ n_data = final_ns
 a_data = final_amps
 
 
-# Initial guess: 
-# d = 1/12 (based on your observation of the null)
-# delta = twice the fundamental amp (rough heuristic)
-
 popt, pcov = curve_fit(sinc_envelope, n_data, a_data, p0=[max(a_data)*2, 1/12])
 
 fit_delta, fit_d = popt
@@ -324,6 +317,39 @@ plt.grid(True, alpha=0.2)
 
 if not os.environ.get('CI'):
     plt.show()
+
+# 10c
+search_mask = (freqs >= 0.01) & (freqs <= 24.0)
+f_search = freqs[search_mask]
+s_search = np.abs(spectrum[search_mask])
+
+peaks_idx, _ = find_peaks(s_search, prominence=np.max(s_search)*0.01)
+peak_freqs = f_search[peaks_idx]
+peak_amps = s_search[peaks_idx]
+
+f_grid = np.linspace(0.01, 24.0, 100000)
+impulse_train = np.zeros_like(f_grid)
+
+for f, a in zip(peak_freqs, peak_amps):
+    idx = np.argmin(np.abs(f_grid - f))
+    impulse_train[idx] = a
+
+meta_fft = np.fft.rfft(impulse_train)
+period_axis = np.fft.rfftfreq(len(f_grid), d=(f_grid[1] - f_grid[0]))
+
+plt.figure(figsize=(12, 6))
+plt.plot(period_axis, np.abs(meta_fft), color='purple')
+plt.title("Kepler 10c")
+plt.xlabel("Orbital Period (Days)")
+plt.ylabel("Power")
+plt.xlim(0, 50) 
+plt.grid(True, alpha=0.2)
+
+# Label the expected targets
+plt.axvline(x=0.8375, color='blue', ls='--', alpha=0.5, label='Kepler-10b')
+plt.axvline(x=45.29, color='green', ls='--', alpha=0.5, label='Kepler-10c')
+plt.legend()
+plt.show()
 
 # --- PHYSICAL CALCULATIONS ---
 # Constants for the Kepler-10 System
