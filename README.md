@@ -109,7 +109,7 @@ To benchmark performance on real-world signals, the CMST window was applied to t
 ### 📉 GW151226 (The Boxing Day event)
 ![Boxing Day Event](gw151226.png)
 
-A much weaker and slower Gravitational Wave.  This image is created from correlated Hanford and Livingstone Observatories.
+A much weaker and slower Gravitational Wave.  This image is created from correlated data from Hanford and Livingstone Observatories.
 
 
 ### 📉 Kepler 10
