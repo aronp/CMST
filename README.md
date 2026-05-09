@@ -106,6 +106,12 @@ Theortical law vs practical. (There is actually a small log term that gives the 
 
 To benchmark performance on real-world signals, the CMST window was applied to the raw (now) 16kHz data from GW150914, the first direct detection of gravitational waves.
 
+### 📉 GW151226 (The Boxing Day event)
+![Boxing Day Event](gw151226.png)
+
+A much weaker and slower Gravitational Wave.
+
+
 ### 📉 Kepler 10
 
 ![Kepler 10](kepler_10.png)
