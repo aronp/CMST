@@ -122,33 +122,6 @@ def align_ligo_data(h1_strain, l1_strain, sample_rate=16384):
     
     return h1_final, l1_final
 
-def plot_cmst_spectrogram(ax, data, title):
-    f, t_spec, Sxx = spectrogram(data, fs, 
-                                 window=cmst_window(NFFT), 
-                                 nperseg=NFFT, 
-                                 noverlap=noverlap)
-    
-    # Use log scale for Sxx to bring out the sub-threshold islands
-    Sxx_log = np.log10(Sxx + 1e-250) 
-
-    # Set the 'Brightest' point to the 99th percentile, not the Max.
-    # This prevents the 60Hz line from washing out the plot.
-    vmax = np.percentile(Sxx_log, 99.95) + 1
-
-    # Set the 'Darkest' point to be 10-15 orders of magnitude below the signal.
-    vmin = np.percentile(Sxx_log, 20) 
-    
-    mesh = ax.pcolormesh(t_spec, f, Sxx_log, shading='gouraud', cmap='magma',vmin=vmin, vmax=vmax)
-    ax.contourf(t_spec, f, Sxx_log, levels=np.linspace(vmin, vmax, 60), cmap='magma', alpha=0.8)
-    ax.contour(t_spec, f, Sxx_log, levels=30, colors='white', linewidths=0.3, alpha=0.4)
-    
-    ax.set_title(title)
-    ax.set_ylabel('Frequency (Hz)')
-    ax.set_ylim(0, 500)
-    ax.set_xlim(zoom_center - zoom_width, zoom_center + zoom_width)
-    return fig.colorbar(mesh, ax=ax, label='Log Power')
-
-
 def calculate_alpha(window):
     """
     Calculates the sharpening parameter alpha directly 
@@ -183,50 +156,26 @@ def plot_grid(Sxx_sharp, t_spec, f, zoom_width, low=20):
 
     # Zoom in on the Chirp
     plt.xlim(trange/2 - zoom_width, trange/2 + zoom_width)
-    plt.ylim(0, 500)
+    plt.ylim(0, 300)
 
     plt.title(f'LIGO GW151226: Spectrogram Analysis (CMST Window)')
     plt.ylabel('Frequency (Hz)')
     plt.xlabel('Time (s)')
     plt.colorbar(contour_filled, label='Sigma (approx)')
     plt.grid(True)
-    plt.show()
 
+    print("Saving gw151226.png"); 
+    plt.savefig("gw151226.png")
 
+    if not os.environ.get('CI'):
+        plt.show()
 
-def generate_band_limited_map(h1, l1, freqs, freq_limit=500):
-    """
-    Computes correlation only for frequencies up to freq_limit.
-    """
-    # 1. Identify the index for 500Hz
-    idx_limit = np.searchsorted(freqs, freq_limit)
-    
-    # 2. Slice the spectrograms to focus on the 0-500Hz band
-    h1_slice = h1[:idx_limit, :]
-    l1_slice = l1[:idx_limit, :]
-    
-    # 3. Standardize only the relevant data
-    h1_n = (h1_slice - np.mean(h1_slice)) / np.std(h1_slice)
-    l1_n = (l1_slice - np.mean(l1_slice)) / np.std(l1_slice)
-    
-    # 4. Compute the local correlation map (zero-lag product)
-    # This results in values between -1 and 1 if normalized correctly
-    corr_slice = h1_n * l1_n
-    
-    # 5. Reconstruct the full-size map with zeros for irrelevant frequencies
-    # This prevents high-frequency noise from affecting the final product
-    full_corr_map = np.zeros_like(h1)
-    full_corr_map[:idx_limit, :] = corr_slice
-    
-    return full_corr_map
 
 def whiten_spectrogram(Sxx):
-    # Axis 1 = Time. We find the noise floor for EACH frequency.
+    # Axis = Time. We find the noise floor for EACH frequency.
     row_mean = np.mean(Sxx, axis=1, keepdims=True)
     row_std = np.std(Sxx, axis=1, keepdims=True)
     
-    # This is where we respect your 'small numbers'
-    # 1e-200 is essential here to resolve the 325Hz void
     return (Sxx - row_mean) / (row_std + 1e-200)
     
 try:
@@ -236,20 +185,14 @@ try:
     fs = 1.0 / dt_h1
 
     # Parameters for Spectrogram
-    zoom_width, zoom_center = 4, 16.1
+    zoom_width, zoom_center = 1.5, 16.6
 
     t_start, t_end = zoom_center-2*zoom_width, zoom_center+2*zoom_width
     i_start, i_end = int(t_start * fs), int(t_end * fs)
     
     strain_h1 = strain_full_h1[i_start:i_end]
     strain_l1 = strain_full_l1[i_start:i_end]
-
     
-    # to align the two chirps.
-#    shift = 113
-    
-    # L1 was hit first, so we "delay" it to match H1
-#    l1_aligned, h1_aligned = align_ligo_data(strain_l1,strain_h1)
     l1_aligned, h1_aligned = strain_l1, strain_h1
 
     N = len(h1_aligned)
@@ -279,23 +222,23 @@ try:
     NFFT = 2*NPERSEG    # The padded size (your 'interpolation')
     noverlap = int(NPERSEG*0.75)
 
-    # 1. Prepare Window and calculate alpha
+    # Prepare Window and calculate alpha
     win_seg = cmst_window(NPERSEG)
     alpha = calculate_alpha(win_seg)
     print(f"Calculated alpha: {alpha:.3f}")
 
-    # 2. Compute Spectrogram
+    # Compute Spectrogram
     f, t_spec, Sxx_h1_power = spectrogram(whitened_strain_h1, fs, 
                                        window=win_seg, 
-                                   nperseg=NPERSEG, # Window is 256 long
-                                   nfft=NFFT,       # Padded to 1024
+                                   nperseg=NPERSEG, 
+                                   nfft=NFFT,       
                                    noverlap=noverlap,
                                    scaling='spectrum')
 
     f, t_spec, Sxx_l1_power = spectrogram(whitened_strain_l1, fs, 
                                    window=win_seg, 
-                                   nperseg=NPERSEG, # Window is 256 long
-                                   nfft=NFFT,       # Padded to 1024
+                                   nperseg=NPERSEG, 
+                                   nfft=NFFT,       
                                    noverlap=noverlap,
                                    scaling='spectrum')
 
@@ -319,6 +262,6 @@ try:
     plot_grid(P_prod,t_spec,f,zoom_width,90)   
 
 except Exception as e:
-    print(f"Failed again: {e}")
+    print(f"Failed: {e}")
 
 
