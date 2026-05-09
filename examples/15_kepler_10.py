@@ -18,9 +18,6 @@ def cmst_window(N):
     return w
 
 def sinc_envelope(n, delta, d):
-    # n: harmonic index
-    # delta: scaling factor (related to transit depth)
-    # d: duty cycle (D/P)
     return delta * np.abs(np.sinc(n * d))
 
 
@@ -41,7 +38,7 @@ else:
     time = lc_clean.time.value
     flux = lc_clean.flux.value
     
-    # Save for future stability
+    # Save 
     df = pd.DataFrame({'time': time, 'flux': flux})
     df.to_csv(DATA_FILENAME, index=False)
     print(f"Data saved to {DATA_FILENAME}. Future runs will be identical.")
@@ -89,8 +86,6 @@ for f_try in f_candidates:
             match_score += candidate_amps[idx]
             hits += 1 # Track how many rungs actually had a peak
     
-    # We multiply by the "Occupancy Ratio" (hits / total harmonics checked)
-    # This kills sub-harmonics where every other rung is empty
     comb_power.append(match_score * (hits / 14))
 
 approx_f0 = f_candidates[np.argmax(comb_power)]
@@ -149,11 +144,9 @@ plt.xlim(0, 24) # Zoom in on low frequencies first
 plt.ylim(10**-3, 20) # Zoom in on low frequencies first
 
 
-# We label the first peak clearly, and the others as harmonics
 for i, (f, a) in enumerate(zip(final_freqs, final_amps)):
     harmonic_num = final_ns[i] # Get the integer index (1, 2, 3...)
     
-    # Logic for the labels
     if harmonic_num == 1:
         text_label = "Kepler-10b\n(Fundamental)"
         y_offset_factor = 10 # Higher up for the main label
@@ -311,8 +304,6 @@ popt, pcov = curve_fit(sinc_envelope, n_data, a_data, p0=[max(a_data)*2, 1/12])
 
 fit_delta, fit_d = popt
 
-# 4. Calculate the Physical Duration
-# D = P * d
 calc_duration_hours = (refined_period * fit_d) * 24
 
 print(f"--- Sinc Fit Results ---")
@@ -341,8 +332,6 @@ M_STAR = 0.910       # Solar Masses
 G = 6.67430e-11
 R_EARTH_SUN = 0.00917 # Conversion ratio
 
-
-# Planetary Radius from your 115.98 PPM depth
 depth_ratio = depth_ppm / 1e6
 rp_rs = np.sqrt(depth_ratio)
 rp_earth = (rp_rs * R_STAR) / R_EARTH_SUN
