@@ -2,9 +2,13 @@ import os
 import lightkurve as lk
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 from scipy.signal import find_peaks
 from scipy.stats import linregress
 from scipy.stats import binned_statistic
+from scipy.optimize import curve_fit
+from scipy.optimize import minimize
+
 
 def cmst_window(N):
     t = np.linspace(-1, 1, N)
@@ -13,18 +17,37 @@ def cmst_window(N):
     w = np.where(np.abs(t) < 1, w, 0.0)
     return w
 
+def sinc_envelope(n, delta, d):
+    # n: harmonic index
+    # delta: scaling factor (related to transit depth)
+    # d: duty cycle (D/P)
+    return delta * np.abs(np.sinc(n * d))
 
 
+DATA_FILENAME = "kepler10_data.csv"
+
+if os.path.exists(DATA_FILENAME):
+    print(f"Loading local cached data: {DATA_FILENAME}")
+    df = pd.read_csv(DATA_FILENAME)
+    time = df['time'].values
+    flux = df['flux'].values
+else:
+    print("Local data not found. Downloading from MAST...")
+    search = lk.search_lightcurve("Kepler-10", author="Kepler", cadence="long")
+    lc_collection = search.download_all()
+    lc_stitched = lc_collection.stitch()
+    lc_clean = lc_stitched.fill_gaps()
+    
+    time = lc_clean.time.value
+    flux = lc_clean.flux.value
+    
+    # Save for future stability
+    df = pd.DataFrame({'time': time, 'flux': flux})
+    df.to_csv(DATA_FILENAME, index=False)
+    print(f"Data saved to {DATA_FILENAME}. Future runs will be identical.")
+    
 print("Downloading full mission data for Kepler-10...")
-search = lk.search_lightcurve("Kepler-10", author="Kepler", cadence="long")
-lc_collection = search.download_all()
-
-lc_stitched = lc_collection.stitch()
-
-lc_clean = lc_stitched.fill_gaps()
-flux = lc_clean.flux.value
 flux_centered = flux - np.nanmean(flux)
-time = lc_clean.time.value
 
 print(f"Total Duration: {time[-1] - time[0]:.1f} days")
 print(f"New FFT Resolution: {1/(time[-1] - time[0]):.6f} cycles/day")
@@ -35,17 +58,43 @@ window = cmst_window(N)
 windowed_data = flux_centered * window
 
 spectrum = np.fft.rfft(windowed_data)
-freqs = np.fft.rfftfreq(N, d=(lc_clean.time.value[1] - lc_clean.time.value[0])) # 'd' is sample spacing in days
+freqs = np.fft.rfftfreq(N, d=(time[1] - time[0])) # 'd' is sample spacing in days
 
 search_mask = (freqs >= 0.5) & (freqs <= 24.0)
 f_search = freqs[search_mask]
 s_search = np.abs(spectrum[search_mask])
 
-peaks_idx, _ = find_peaks(s_search, height=np.max(s_search)*0.05, distance=5)
-candidate_freqs = f_search[peaks_idx]
-candidate_amps = s_search[peaks_idx]
+peaks_idx, _ = find_peaks(s_search, prominence=np.max(s_search)*0.05, distance=100)
 
-approx_f0 = 1.1939 
+top_indices = np.argsort(s_search[peaks_idx])[-45:]
+candidate_freqs = f_search[peaks_idx][top_indices]
+candidate_amps = s_search[peaks_idx][top_indices]
+
+# Find the fundamental from these 'Clean' peaks
+# The smallest gap between these top peaks is likely the true f0
+gaps = np.diff(np.sort(candidate_freqs))
+auto_f0 = np.median(gaps[gaps > 0.5])
+
+f_candidates = np.linspace(0.5, 5.0, 2000)
+comb_power = []
+
+for f_try in f_candidates:
+    match_score = 0
+    hits = 0
+    for n in range(1, 15):
+        target = n * f_try
+        dist = np.abs(candidate_freqs - target)
+        idx = np.argmin(dist)
+        if dist[idx] < 0.1:
+            match_score += candidate_amps[idx]
+            hits += 1 # Track how many rungs actually had a peak
+    
+    # We multiply by the "Occupancy Ratio" (hits / total harmonics checked)
+    # This kills sub-harmonics where every other rung is empty
+    comb_power.append(match_score * (hits / 14))
+
+approx_f0 = f_candidates[np.argmax(comb_power)]
+print(f"Auto-Detected Fundamental Frequency (Occupancy Weighted): {approx_f0:.6f} cycles/day")
 
 candidate_n = np.round(candidate_freqs / approx_f0)
 
@@ -87,9 +136,6 @@ ss_tot = np.sum((y - np.mean(y))**2)
 r_squared = 1 - (ss_res / ss_tot)
 
 refined_period = 1.0 / slope
-
-
-
 
 
 # PLOT
@@ -159,9 +205,8 @@ print(f"R-squared: {r_squared:.6f}")
 
 
 
-# We assume 'lc_clean' and 'refined_period' are already defined from previous steps
-t_all = lc_clean.time.value
-f_all = lc_clean.flux.value
+t_all =time
+f_all =flux
 
 # Normalize to PPM
 f_ppm = 1e6 * (f_all / np.nanmedian(f_all) - 1)
@@ -223,6 +268,19 @@ start = len(bin_means)
 end = 2 * len(bin_means)
 smoothed_means = smoothed_tiled[start:end]
 
+# Find the index of the absolute minimum
+min_idx = np.argmin(bin_means)
+
+# Extract the minimum and its two neighbors
+neighbors = bin_means[max(0, min_idx-1) : min_idx+2]
+
+# Calculate the robust average depth
+mean_trough_flux = np.mean(neighbors)
+depth_ppm = abs(mean_trough_flux)
+
+print(f"Raw Stacked Depth: {depth_ppm:.2f} PPM")
+
+
 plt.figure(figsize=(12, 6))
 
 plt.plot(p_sorted, f_sorted, '.', color='lightgrey', markersize=1, alpha=0.05, label='Aligned Raw Data')
@@ -241,4 +299,85 @@ plt.grid(True, alpha=0.3)
 
 if not os.environ.get('CI'):
     plt.show()
+
+
+
+n_data = final_ns
+a_data = final_amps
+
+
+# Initial guess: 
+# d = 1/12 (based on your observation of the null)
+# delta = twice the fundamental amp (rough heuristic)
+
+popt, pcov = curve_fit(sinc_envelope, n_data, a_data, p0=[max(a_data)*2, 1/12])
+
+fit_delta, fit_d = popt
+
+# 4. Calculate the Physical Duration
+# D = P * d
+calc_duration_hours = (refined_period * fit_d) * 24
+
+print(f"--- Sinc Fit Results ---")
+print(f"Deduced Duty Cycle (d): {fit_d:.6f}")
+print(f"Deduced Transit Duration: {calc_duration_hours:.2f} hours")
+print(f"--- ---")
+
+# 5. Visualization of the Fit
+plt.figure(figsize=(10, 5))
+plt.plot(n_data, a_data, 'ro', label='Measured Harmonic Amps')
+n_smooth = np.linspace(1, max(n_data), 500)
+plt.plot(n_smooth, sinc_envelope(n_smooth, *popt), 'b--', alpha=0.7, label='Sinc Envelope Fit')
+plt.title(f"Fourier Envelope Fit\nCalculated Duration: {calc_duration_hours:.2f} hrs")
+plt.xlabel("Harmonic Index (n)")
+plt.ylabel("Amplitude")
+plt.legend()
+plt.grid(True, alpha=0.2)
+
+if not os.environ.get('CI'):
+    plt.show()
+
+# --- PHYSICAL CALCULATIONS ---
+# Constants for the Kepler-10 System
+R_STAR = 1.056       # Solar Radii
+M_STAR = 0.910       # Solar Masses
+G = 6.67430e-11
+R_EARTH_SUN = 0.00917 # Conversion ratio
+
+
+# Planetary Radius from your 115.98 PPM depth
+depth_ratio = depth_ppm / 1e6
+rp_rs = np.sqrt(depth_ratio)
+rp_earth = (rp_rs * R_STAR) / R_EARTH_SUN
+
+# Semi-Major Axis
+M_kg = M_STAR * 1.989e30
+P_sec = refined_period * 86400
+a_meters = ((G * M_kg * P_sec**2) / (4 * np.pi**2))**(1/3)
+a_au = a_meters / 1.496e11
+
+
+# Equilibrium Temperature (Albedo = 0.3)
+T_star = 5627
+t_eq_c = (T_star * np.sqrt(R_STAR * 0.00465 / (2 * a_au)) * (1 - 0.3)**0.25) - 273.15
+
+# 6. Stellar Density using the 1.68hr Sinc duration (The 'Effective' density)
+D_eff_sec = 1.68 * 3600
+term1 = (3 * np.pi) / (G * P_sec**2)
+
+print("\n" + "="*50)
+print("          KEPLER-10b: FINAL MISSION SUMMARY")
+print("="*50)
+print(f"{'Orbital Period:':<25} {refined_period:.6f} days")
+print(f"{'Transit Depth:':<25} {depth_ppm} PPM")
+print(f"{'Planetary Radius:':<25} {rp_earth:.3f} R_earth")
+print("-" * 50)
+print(f"{'Effective Duration:':<25} {calc_duration_hours} hours (Sinc-derived)")
+print("-" * 50)
+print(f"{'Orbital Distance:':<25} {a_au:.4f} AU")
+print(f"{'Equilibrium Temp:':<25} {t_eq_c:.0f} °C")
+print("-" * 50)
+
+
+
 
