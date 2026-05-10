@@ -343,6 +343,7 @@ plt.title("Kepler 10c")
 plt.xlabel("Orbital Period (Days)")
 plt.ylabel("Power")
 plt.xlim(0, 50) 
+plt.ylim(0, 50) 
 plt.grid(True, alpha=0.2)
 
 # Label the expected targets
