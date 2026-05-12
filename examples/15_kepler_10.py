@@ -339,16 +339,21 @@ period_axis = np.fft.rfftfreq(len(f_grid), d=(f_grid[1] - f_grid[0]))
 
 plt.figure(figsize=(12, 6))
 plt.plot(period_axis, np.abs(meta_fft), color='purple')
-plt.title("Kepler 10c")
+plt.title("Throw all the peaks into an FFT to see what comes up")
 plt.xlabel("Orbital Period (Days)")
 plt.ylabel("Power")
-plt.xlim(0, 50) 
+plt.xlim(0, 200) 
 plt.ylim(0, 50) 
 plt.grid(True, alpha=0.2)
 
 # Label the expected targets
 plt.axvline(x=0.8375, color='blue', ls='--', alpha=0.5, label='Kepler-10b')
+
 plt.axvline(x=45.29, color='green', ls='--', alpha=0.5, label='Kepler-10c')
+plt.axvline(x=2*45.29, color='green', ls='--', alpha=0.5, label='2*Kepler-10c')
+plt.axvline(x=3*45.29, color='green', ls='--', alpha=0.5, label='3*Kepler-10c')
+plt.axvline(x=4*45.29, color='green', ls='--', alpha=0.5, label='4*Kepler-10c')
+
 plt.legend()
 plt.show()
 
