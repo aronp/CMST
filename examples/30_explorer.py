@@ -66,10 +66,10 @@ class GWExplorerApp:
         self.nfft_entry.pack(fill=tk.X, pady=2)
         self.nfft_entry.insert(0, "1024")
         
-        ttk.Label(sidebar, text="Overlap Samples (Must be < NPERSEG):").pack(anchor=tk.W)
-        self.overlap_entry = ttk.Entry(sidebar)
-        self.overlap_entry.pack(fill=tk.X, pady=2)
-        self.overlap_entry.insert(0, "220")
+        ttk.Label(sidebar, text="Overlap Target (Percentage 0-99%):").pack(anchor=tk.W)
+        self.overlap_pct_entry = ttk.Entry(sidebar)
+        self.overlap_pct_entry.pack(fill=tk.X, pady=2)
+        self.overlap_pct_entry.insert(0, "85")
         
         ttk.Separator(sidebar, orient='horizontal').pack(fill=tk.X, pady=10)
         
@@ -84,7 +84,7 @@ class GWExplorerApp:
         ttk.Label(sidebar, text="Time Window Center (seconds):").pack(anchor=tk.W)
         self.t_center_entry = ttk.Entry(sidebar)
         self.t_center_entry.pack(fill=tk.X, pady=2)
-        self.t_center_entry.insert(0, "1935.22")
+        self.t_center_entry.insert(0, "0.00") # Dynamically overwritten upon successful loading
         
         ttk.Label(sidebar, text="Min Frequency (Hz):").pack(anchor=tk.W)
         self.f_min_entry = ttk.Entry(sidebar)
@@ -165,6 +165,14 @@ class GWExplorerApp:
 
     def signal_load_success(self):
         self.status_label.config(text=f"Status: Loaded. Size: {self.total_duration:.1f}s", foreground="green")
+        
+        # CHANGED: Calculate exact halfway mark configuration of file
+        midpoint_time = self.total_duration / 2.0
+        
+        # Automatically insert the safe midpoint calculation value into user control text entry box
+        self.t_center_entry.delete(0, tk.END)
+        self.t_center_entry.insert(0, f"{midpoint_time:.2f}")
+        
         self.update_plot()
 
     def signal_load_failure(self, err):
@@ -201,26 +209,21 @@ class GWExplorerApp:
             t_center = float(self.t_center_entry.get())
             t_width = float(self.t_width_entry.get())
             
-            # Catch parsing tokens directly from Tkinter's internal frame commands
             if args[0] == 'moveto':
                 frac = float(args[1])
-                # Center positions based on where the left-hand slider boundary lands
                 new_center = (frac * self.total_duration) + (t_width / 2.0)
             elif args[0] == 'scroll':
                 steps = int(args[1])
                 unit = args[2]
                 
-                # Shift by half a window width whether step commands or page clicks occur
-                if unit == 'pages':
-                    new_center = t_center + (steps * 0.5 * t_width)
-                elif unit == 'units':
+                if unit == 'pages' or unit == 'units':
                     new_center = t_center + (steps * 0.5 * t_width)
                 else:
                     return
             else:
                 return
 
-            # Keep values clean within physical bounds of data arrays
+            # CHANGED: Tighten boundaries to prevent scrolling out past edge parameters
             new_center = max(t_width / 2.0, min(new_center, self.total_duration - t_width / 2.0))
             
             self.t_center_entry.delete(0, tk.END)
@@ -241,16 +244,30 @@ class GWExplorerApp:
         try:
             nperseg = int(self.nperseg_entry.get())
             nfft = int(self.nfft_entry.get())
-            noverlap = int(self.overlap_entry.get())
+            overlap_pct = float(self.overlap_pct_entry.get())
             
+            if overlap_pct >= 100.0:
+                overlap_pct = 99.0
+                self.overlap_pct_entry.delete(0, tk.END)
+                self.overlap_pct_entry.insert(0, "99")
+            elif overlap_pct < 0.0:
+                overlap_pct = 0.0
+                self.overlap_pct_entry.delete(0, tk.END)
+                self.overlap_pct_entry.insert(0, "0")
+                
+            noverlap = int(np.floor(nperseg * (overlap_pct / 100.0)))
             if noverlap >= nperseg:
                 noverlap = nperseg - 1
-                self.overlap_entry.delete(0, tk.END)
-                self.overlap_entry.insert(0, str(noverlap))
                 
             t_center = float(self.t_center_entry.get())
             t_width = float(self.t_width_entry.get())
             
+            # CHANGED: Force dynamic input cleaning to confirm requested value falls inside physical bounds of file duration
+            if t_center < 0.0 or t_center > self.total_duration:
+                t_center = self.total_duration / 2.0
+                self.t_center_entry.delete(0, tk.END)
+                self.t_center_entry.insert(0, f"{t_center:.2f}")
+
             t_start = max(0.0, t_center - t_width / 2.0)
             t_end = min(self.total_duration, t_center + t_width / 2.0)
             
@@ -310,7 +327,6 @@ class GWExplorerApp:
             
             if update_scrollbar:
                 self.is_updating_scroll = True
-                # Set slider coordinates to match standard left/right boundaries of current view window
                 left_frac = t_start / self.total_duration
                 right_frac = t_end / self.total_duration
                 self.time_scrollbar.set(left_frac, right_frac)
