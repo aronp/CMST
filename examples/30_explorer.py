@@ -4,6 +4,7 @@ import threading
 import numpy as np
 import h5py
 import requests
+from scipy import signal
 from scipy.signal import spectrogram
 from scipy.interpolate import interp1d
 
@@ -76,6 +77,20 @@ class GWExplorerApp:
         self.root.protocol("WM_DELETE_WINDOW", self.safe_exit)
         self.root.bind_all("<Control-c>", lambda event: self.safe_exit())
         
+        # Check for the specific H1 file and auto-load if present
+        startup_file = 'H-H1_GWOSC_16KHZ_R1-1126259447-32.hdf5'
+        if os.path.exists(startup_file):
+            # 1. Explicitly set metadata to ensure centering logic works
+            self.current_event_name = "GW150914"
+            # Hardcoded GPS merger time for this specific file to match your metadata needs
+            self.cached_target_gps = "1126259462" 
+            
+            # 2. Trigger the load
+            # We call the worker directly. Note: process_pipeline_worker 
+            # already handles its own threading for file I/O.
+            self.root.after(1000, lambda: self.process_pipeline_worker(startup_file, 'H1'))            
+            
+            
     def safe_exit(self):
         self.is_playing = False
         try:
@@ -121,7 +136,7 @@ class GWExplorerApp:
         self.overlap_pct = tk.DoubleVar(value=85.0)
         
         self.t_center = tk.DoubleVar(value=0.0)
-        self.t_width_seconds = 0.65
+        self.t_width_seconds = 1.00
         self.t_width_str = tk.StringVar(value="0.65")
         self.f_min = tk.DoubleVar(value=0)
         self.f_max = tk.DoubleVar(value=500)
@@ -205,6 +220,18 @@ class GWExplorerApp:
             self.tabs[tab_name] = {'fig': fig, 'ax': ax, 'canvas': canvas, 'pbar': pbar}
             
         self.notebook.bind("<<NotebookTabChanged>>", lambda e: self.update_all_tabs())
+
+        # --- Cross-Correlation Control Panel ---
+        self.corr_frame = ttk.LabelFrame(right_panel, text="Interferometer Time Delay Analysis", padding=10)
+#        self.corr_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
+
+        self.btn_correlate = ttk.Button(self.corr_frame, text="Correlate Current Frame", command=self.trigger_frame_correlation)
+        self.btn_correlate.pack(side=tk.LEFT, padx=5)
+
+        self.lbl_offset_result = ttk.Label(self.corr_frame, text="Time Offset: Waiting for input...", font=('Courier', 10, 'bold'), foreground="blue")
+        self.lbl_offset_result.pack(side=tk.LEFT, padx=15)
+        # ---------------------------------------
+        # ---------------------------------------
 
         # Integrated Control Console Layout
         controls_bar = ttk.LabelFrame(right_panel, text="Playback Control Desk & Global Positioning Timeline", padding="10")
@@ -781,7 +808,6 @@ class GWExplorerApp:
             self.root.after(0, lambda: self.lbl_meta_rate.config(text=f"Data Rate:     {self.current_file_rate}"))
             self.root.after(0, lambda: self.lbl_meta_evt.config(text=f"Event Offset:  {self.current_event_offset}"))
             self.root.after(0, lambda: self.lbl_meta_name.config(text=f"Event ID:      {self.current_event_name}"))
-            self.root.after(0, lambda: self.lbl_meta_len.config(text=f"Sample Length: {self.current_file_duration}"))            
             
             self.detectors[det]['whitened'] = self.whiten_by_intervals(self.detectors[det]['raw'], self.fs, self.whiten_interval.get(), det)
             
@@ -792,19 +818,32 @@ class GWExplorerApp:
             
             self.root.after(0, lambda: self.update_pbar(det, 100))
             self.detectors[det]['loaded'] = True
-            
+
+            # 1. Determine target time: Event offset if valid, else center of file
+            target_time = self.total_duration / 2.0
+            try:
+                if self.cached_target_gps != "N/A" and float(self.cached_target_gps) > 0:
+                    potential_offset = float(self.cached_target_gps) - float(gps_start)
+                    # Validate: Ensure time is within valid bounds [0, total_duration]
+                    if 0 <= potential_offset <= self.total_duration:
+                        target_time = potential_offset
+            except Exception:
+                pass
+
+            # 2. Update Slider and Jump exactly once
             if self.timeline_slider.cget('to') != self.total_duration:
                 self.root.after(0, lambda: self.timeline_slider.config(to=self.total_duration))
-                self.root.after(0, lambda: self.clamp_and_set_center(self.total_duration / 2.0))
-                
+            self.root.after(100, lambda: self.clamp_and_set_center(target_time))
+            
+            # 3. Final UI cleanup
             self.root.after(0, lambda: self.detectors[det]['status_lbl'].config(text="Status: Loaded & Cached", foreground="green"))
             self.root.after(0, lambda: self.hide_pbar(det))
             self.root.after(0, self.update_all_tabs)
             self.root.after(0, lambda: self.global_status.config(text="System: Idle"))
+
         except Exception as e:
             self.root.after(0, lambda: self.hide_pbar(det))
             self.root.after(0, lambda: messagebox.showerror("Pipeline Failure", str(e)))
-
     def whiten_by_intervals(self, strain, fs, interval_sec, det):
         N = len(strain)
         chunk_size = int(interval_sec * fs)
@@ -844,6 +883,49 @@ class GWExplorerApp:
             whitened = np.where(window_sum > 1e-10, whitened / window_sum, 0.0)
             
         return whitened
+        
+    def trigger_frame_correlation(self):
+        self.lbl_offset_result.config(text="Calculating...", foreground="orange")
+        self.root.update_idletasks()
+        
+        try:
+            # 1. Access whitened strain data
+            h1_data = self.detectors['H1']['whitened']
+            l1_data = self.detectors['L1']['whitened']
+            
+            # 2. Slice to the UI window (Crucial to match the spectrogram view)
+            t_center = self.t_center.get()
+            t_width = self.t_width_seconds
+            t_start, t_end = max(0.0, t_center - t_width/2), min(self.total_duration, t_center + t_width/2)
+            
+            idx_min = int(t_start * self.fs)
+            idx_max = int(t_end * self.fs)
+            
+            h1_slice = h1_data[idx_min:idx_max]
+            l1_slice = l1_data[idx_min:idx_max]
+            
+            # 3. Compute FFTs on the fly
+            h1_fft = np.fft.rfft(h1_slice)
+            l1_fft = np.fft.rfft(l1_slice)
+            freqs = np.fft.rfftfreq(len(h1_slice), 1/self.fs)
+            
+            # 4. Call the alignment method
+            offset_ms, lead_text = self.calculate_delay_from_existing_ffts(
+                h1_fft, 
+                l1_fft, 
+                freqs, 
+                max(0.1, self.f_min.get()), 
+                self.f_max.get()
+            )
+            
+            self.lbl_offset_result.config(
+                text=f"Time Offset: {offset_ms:.2f} ms ({lead_text})", 
+                foreground="green"
+            )
+            
+        except Exception as e:
+            self.lbl_offset_result.config(text=f"Error: {str(e)}", foreground="red")
+            print(f"Correlation Error: {e}")
 
     def compute_complete_spectrogram(self, det):
         nperseg = self.nperseg.get()
@@ -896,7 +978,47 @@ class GWExplorerApp:
         ax.set_ylim(self.f_min.get(), self.f_max.get())
         canvas.draw_idle()
 
+    def calculate_frame_correlation(self, h1_strain, l1_strain, time_array, sample_rate, current_t_min, current_t_max, f_min, f_max):
+        # 1. Slice to the UI window
+        idx_min = np.searchsorted(time_array, current_t_min)
+        idx_max = np.searchsorted(time_array, current_t_max)
+        h1 = h1_strain[idx_min:idx_max]
+        l1 = l1_strain[idx_min:idx_max]
     
+        # 2. Apply bandpass filter to the merger band
+        # This isolates the signal from seismic/instrumental noise
+        sos = signal.butter(4, [max(0.1, f_min), f_max], btype='bandpass', fs=sample_rate, output='sos')
+        h1_filt = signal.sosfiltfilt(sos, h1)
+        l1_filt = signal.sosfiltfilt(sos, l1)
+    
+        # 3. Compute Instantaneous Power: P(t) = s(t)^2
+        h1_power = h1_filt**2
+        l1_power = l1_filt**2
+    
+        # 4. Smooth the power (Moving Average)
+        window_size = int(0.01 * sample_rate) 
+        h1_smooth = np.convolve(h1_power, np.ones(window_size)/window_size, mode='same')
+        l1_smooth = np.convolve(l1_power, np.ones(window_size)/window_size, mode='same')
+    
+        # 5. Cross-correlate the filtered, smoothed power time series
+        correlation = signal.correlate(h1_smooth, l1_smooth, mode='full')
+        lags = signal.correlation_lags(len(h1_smooth), len(l1_smooth), mode='full')
+    
+        # 6. Find the peak
+        peak_idx = np.argmax(correlation)
+        tau = lags[peak_idx] / sample_rate
+    
+        return abs(tau * 1000), ("L1 leads H1" if tau > 0 else "H1 leads L1")        
+
+
+    def calculate_delay_from_existing_ffts(self, H1_fft, L1_fft, freqs, f_min, f_max):
+        mask = (freqs >= max(0.1, f_min)) & (freqs <= f_max)
+        cross_spectrum = H1_fft[mask] * np.conj(L1_fft[mask])
+        phase = np.unwrap(np.angle(cross_spectrum))
+        slope, _ = np.polyfit(freqs[mask], phase, 1)
+        tau = slope / (2 * np.pi)
+        return abs(tau * 1000), ("L1 leads H1" if tau > 0 else "H1 leads L1")
+            
 if __name__ == "__main__":
     root = tk.Tk(className="GWExplorer")
     app = GWExplorerApp(root)
