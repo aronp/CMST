@@ -77,9 +77,9 @@ class GWExplorerApp:
         self.t_center = tk.DoubleVar(value=0.0)
         self.t_width_seconds = 0.65  # Internal float variable tracking evaluated width seconds
         self.t_width_str = tk.StringVar(value="0.65")  # CHANGED: Entry-bound tracking string for decimals or fractions
-        self.f_min = tk.DoubleVar(value=10)
+        self.f_min = tk.DoubleVar(value=0)
         self.f_max = tk.DoubleVar(value=500)
-        self.pct_low = tk.DoubleVar(value=10.0)
+        self.pct_low = tk.DoubleVar(value=60.0)
         self.pct_high = tk.DoubleVar(value=99.99)
         
         sidebar = ttk.Frame(self.root, padding="10", width=300)
@@ -255,6 +255,14 @@ class GWExplorerApp:
                 key = 'strain/Strain' if 'strain/Strain' in f else 'strain/strain'
                 self.detectors[det]['raw'] = f[key][:]
                 self.dt = f[key].attrs['Xspacing']
+                
+                # NEW DETECTOR STATE: Read the true absolute GPS anchor attribute from the file meta
+                if 'meta/GPSstart' in f:
+                    self.detectors[det]['gps_start'] = f['meta/GPSstart'][()]
+                elif 'meta' in f and 'GPSstart' in f['meta'].attrs:
+                    self.detectors[det]['gps_start'] = f['meta'].attrs['GPSstart']
+                else:
+                    self.detectors[det]['gps_start'] = 0.0 # Fallback
             
             self.fs = 1.0 / self.dt
             self.total_duration = len(self.detectors[det]['raw']) * self.dt
@@ -274,6 +282,74 @@ class GWExplorerApp:
             self.root.after(0, lambda: self.hide_pbar(det))
             self.root.after(0, lambda: messagebox.showerror("Pipeline Failure", str(e)))
 
+    def render_joint_correlation(self, t_start, t_end):
+        ax = self.tabs['Joint Correlation']['ax']
+        canvas = self.tabs['Joint Correlation']['canvas']
+        ax.clear()
+        
+        active_matrices = [det for det in ['H1', 'L1', 'V1'] if self.detectors[det]['loaded'] and self.detectors[det]['active_corr'].get()]
+        if len(active_matrices) < 2:
+            ax.text(0.5, 0.5, "Load at least TWO detectors to run true cross-correlation.", ha='center', va='center')
+            canvas.draw()
+            return
+            
+        # Use the first active detector as our absolute master clock mapping reference
+        ref = active_matrices[0]
+        ref_gps = self.detectors[ref]['gps_start']
+        
+        t_ref = self.detectors[ref]['t']
+        f_ref = self.detectors[ref]['f']
+        
+        t_mask_ref = (t_ref >= t_start) & (t_ref <= t_end)
+        f_mask_ref = (f_ref >= self.f_min.get()) & (f_ref <= self.f_max.get())
+        
+        if not np.any(t_mask_ref) or not np.any(f_mask_ref): return
+        
+        # Initialize our clean joint product matrix map
+        joint_product = np.ones((np.sum(f_mask_ref), np.sum(t_mask_ref)))
+        
+        # Loop through detectors and interpolate their data onto our master clock mapping reference
+        for det in active_matrices:
+            det_gps = self.detectors[det]['gps_start']
+            time_offset = ref_gps - det_gps # Calculate relative physical displacement window
+            
+            # Translate current display boundaries into the secondary detector's personal array timeline
+            t_det_start = t_start + time_offset
+            t_det_end = t_end + time_offset
+            
+            t_arr = self.detectors[det]['t']
+            f_arr = self.detectors[det]['f']
+            
+            t_mask_det = (t_arr >= t_det_start) & (t_arr <= t_det_end)
+            f_mask_det = (f_arr >= self.f_min.get()) & (f_arr <= self.f_max.get())
+            
+            if not np.any(t_mask_det): continue
+            
+            # Extract and normalize the sub-slice matrix frame cleanly
+            S_sub = self.detectors[det]['Sxx'][np.ix_(f_mask_det, t_mask_det)]
+            S_norm = S_sub / np.max(S_sub)
+            
+            # If the matrix sizing doesn't line up perfectly due to floating sample points, resample it
+            if S_norm.shape != joint_product.shape:
+                from scipy.interpolate import interp2d
+                t_det_actual = t_arr[t_mask_det] - time_offset
+                f_det_actual = f_arr[f_mask_det]
+                
+                # Map onto reference frame grid layout
+                interp_func = interp2d(t_det_actual, f_det_actual, S_norm, kind='linear')
+                S_norm = interp_func(t_ref[t_mask_ref], f_ref[f_mask_ref])
+                
+            joint_product *= S_norm
+            
+        vmin, vmax = np.percentile(joint_product, self.pct_low.get()), np.percentile(joint_product, self.pct_high.get())
+        levels = np.linspace(vmin, max(vmax, vmin + 1e-10), 25)
+        
+        ax.pcolormesh(t_ref[t_mask_ref], f_ref[f_mask_ref], joint_product, shading='gouraud', cmap='magma')
+        ax.contourf(t_ref[t_mask_ref], f_ref[f_mask_ref], joint_product, levels=levels, cmap='hot', extend='both')
+        ax.set_xlim(t_start, t_end)
+        ax.set_ylim(self.f_min.get(), self.f_max.get())
+        canvas.draw_idle()
+        
     def whiten_by_intervals(self, strain, fs, interval_sec, det):
         N = len(strain)
         chunk_size = int(interval_sec * fs)
@@ -354,7 +430,7 @@ class GWExplorerApp:
         
         vmin = np.percentile(Sxx_sub, self.pct_low.get())
         vmax = np.percentile(Sxx_sub, self.pct_high.get())
-        levels = np.linspace(vmin, max(vmax, vmin + 1e-10), 25)
+        levels = np.linspace(vmin, max(vmax, vmin + 1e-100), 25)
         
         ax.pcolormesh(t_sub, f_sub, Sxx_sub, shading='gouraud', cmap='viridis')
         ax.contourf(t_sub, f_sub, Sxx_sub, levels=levels, cmap='inferno', extend='both')
@@ -362,37 +438,6 @@ class GWExplorerApp:
         ax.set_ylim(self.f_min.get(), self.f_max.get())
         canvas.draw_idle()
 
-    def render_joint_correlation(self, t_start, t_end):
-        ax = self.tabs['Joint Correlation']['ax']
-        canvas = self.tabs['Joint Correlation']['canvas']
-        ax.clear()
-        
-        active_matrices = [det for det in ['H1', 'L1', 'V1'] if self.detectors[det]['loaded'] and self.detectors[det]['active_corr'].get()]
-        if not active_matrices:
-            ax.text(0.5, 0.5, "Toggle active checkboxes to map joint matrix product output.", ha='center', va='center')
-            canvas.draw()
-            return
-            
-        ref = active_matrices[0]
-        t, f = self.detectors[ref]['t'], self.detectors[ref]['f']
-        t_mask = (t >= t_start) & (t <= t_end)
-        f_mask = (f >= self.f_min.get()) & (f <= self.f_max.get())
-        
-        if not np.any(t_mask) or not np.any(f_mask): return
-        
-        joint_product = np.ones((np.sum(f_mask), np.sum(t_mask)))
-        for det in active_matrices:
-            S_sub = self.detectors[det]['Sxx'][np.ix_(f_mask, t_mask)]
-            joint_product *= (S_sub / np.max(S_sub))
-            
-        vmin, vmax = np.percentile(joint_product, self.pct_low.get()), np.percentile(joint_product, self.pct_high.get())
-        levels = np.linspace(vmin, max(vmax, vmin + 1e-10), 25)
-        
-        ax.pcolormesh(t[t_mask], f[f_mask], joint_product, shading='gouraud', cmap='magma')
-        ax.contourf(t[t_mask], f[f_mask], joint_product, levels=levels, cmap='hot', extend='both')
-        ax.set_xlim(t_start, t_end)
-        ax.set_ylim(self.f_min.get(), self.f_max.get())
-        canvas.draw_idle()
 
 if __name__ == "__main__":
     root = tk.Tk()
