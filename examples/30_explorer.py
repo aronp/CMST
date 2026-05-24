@@ -706,13 +706,30 @@ class GWExplorerApp:
         self.drag_start_x = event.x
 
     def drag_motion(self, event):
-        if not self.is_dragging or self.total_duration == 0: return
-        dx = event.x - self.drag_start_x
-        time_shift = -(dx / 100.0) * self.t_width_seconds
-        new_center = self.t_center.get() + time_shift
+        if not self.is_dragging or self.total_duration == 0: 
+            return
+        
+        # 1. Identify active tab axes
+        active_tab_name = self.notebook.tab(self.notebook.select(), "text")
+        if active_tab_name not in self.tabs: return
+        ax = self.tabs[active_tab_name]['ax']
+        
+        # 2. Convert pixel coordinates (event.x) to data coordinates
+        # inverted() translates display -> data
+        inv = ax.transData.inverted()
+        current_data_x, _ = inv.transform((event.x, event.y))
+        start_data_x, _ = inv.transform((self.drag_start_x, 0))
+        
+        # 3. Calculate the shift
+        data_shift = start_data_x - current_data_x
+        new_center = self.t_center.get() + data_shift
+        
+        # 4. Apply
         self.clamp_and_set_center(new_center)
-        self.drag_start_x = event.x
-
+        
+        # Update start position for the next drag event
+        self.drag_start_x = event.x     
+           
     def end_drag(self, event):
         self.is_dragging = False
         self.update_all_tabs()
