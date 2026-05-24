@@ -359,6 +359,8 @@ class GWExplorerApp:
         search_entry = ttk.Entry(filter_frame, textvariable=search_var)
         search_entry.pack(fill=tk.X, pady=4)
 
+        ttk.Label(filter_frame, text="4096 second samples will be very slow").pack(anchor=tk.W)
+
         results_frame = ttk.LabelFrame(win, text="Available Telemetry Configurations", padding=10)
         results_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
