@@ -684,18 +684,33 @@ class GWExplorerApp:
                 messagebox.showerror("Parsing Error", "Invalid input format detected. Please verify numerical configurations.")
                 
         ttk.Button(win, text="Apply Changes", command=save_and_eval).grid(row=5, columnspan=2, pady=10)
-
+        
     def render_canvas_frame(self, ax, canvas, Sxx, t, f, t_start, t_end):
         ax.clear()
         t_mask = (t >= t_start) & (t <= t_end)
         f_mask = (f >= self.f_min.get()) & (f <= self.f_max.get())
-        if not np.any(t_mask) or not np.any(f_mask): return
+        
+        if not np.any(t_mask) or not np.any(f_mask): 
+            return
+            
         Sxx_sub = Sxx[np.ix_(f_mask, t_mask)]
         vmin = np.percentile(Sxx_sub, self.pct_low.get())
         vmax = np.percentile(Sxx_sub, self.pct_high.get())
-        levels = np.linspace(vmin, max(vmax, vmin + 1e-100), 25)
-        ax.pcolormesh(t[t_mask], f[f_mask], Sxx_sub, shading='gouraud', cmap='viridis')
-        ax.contourf(t[t_mask], f[f_mask], Sxx_sub, levels=levels, cmap='inferno', extend='both')
+
+        # DEFENSIVE CHECK: Ensure range is significant
+        if vmax <= vmin + 1e-12:
+            vmax = vmin + 1e-9 # Force a small, detectable range
+            
+        levels = np.linspace(vmin, vmax, 25)
+        
+        # Use a try-except to catch potential contouring errors gracefully
+        try:
+            ax.pcolormesh(t[t_mask], f[f_mask], Sxx_sub, shading='gouraud', cmap='viridis')
+            ax.contourf(t[t_mask], f[f_mask], Sxx_sub, levels=levels, cmap='inferno', extend='both')
+        except ValueError:
+            # Fallback if contouring still fails (e.g., constant Z data)
+            ax.pcolormesh(t[t_mask], f[f_mask], Sxx_sub, shading='gouraud', cmap='viridis')
+            
         ax.set_xlim(t_start, t_end)
         ax.set_ylim(self.f_min.get(), self.f_max.get())
         canvas.draw_idle()
@@ -978,17 +993,55 @@ class GWExplorerApp:
         ax = self.tabs['Joint Correlation']['ax']
         canvas = self.tabs['Joint Correlation']['canvas']
         ax.clear()
-        active_matrices = [det for det in ['H1', 'L1', 'V1'] if self.detectors[det]['loaded'] and self.detectors[det]['active_corr'].get()]
+        
+        # 1. Identify valid matrices
+        active_matrices = [det for det in ['H1', 'L1', 'V1'] 
+                           if self.detectors[det]['loaded'] and self.detectors[det]['active_corr'].get()]
         if not active_matrices: return
+        
+        # 2. Use the FIRST detector as the reference clock
         ref = active_matrices[0]
         t, f = self.detectors[ref]['t'], self.detectors[ref]['f']
+        
+        # 3. Create initial mask based on time window
         t_mask = (t >= t_start) & (t <= t_end)
         f_mask = (f >= self.f_min.get()) & (f <= self.f_max.get())
         if not np.any(t_mask) or not np.any(f_mask): return
-        joint_product = np.ones((np.sum(f_mask), np.sum(t_mask)))
+        
+        # 4. Initialize the product using the reference detector's slice
+        joint_product = None
+        
         for det in active_matrices:
-            S_sub = self.detectors[det]['Sxx'][np.ix_(f_mask, t_mask)]
-            joint_product *= (S_sub / np.max(S_sub))
+            # SAFETY: Ensure we don't exceed the bounds of THIS specific detector's matrix
+            Sxx = self.detectors[det]['Sxx']
+            
+            # Create a localized mask that respects this matrix's shape
+            # Sxx.shape[1] is the time dimension
+            valid_t_mask = t_mask.copy()
+            if np.sum(valid_t_mask) > Sxx.shape[1]:
+                # If our mask is too wide, truncate it to the matrix size
+                valid_t_mask = np.zeros(len(t), dtype=bool)
+                valid_t_mask[:Sxx.shape[1]] = True
+                valid_t_mask &= (t >= t_start) & (t <= t_end)
+            
+            # Slice with safe indices
+            try:
+                S_sub = Sxx[np.ix_(f_mask, valid_t_mask)]
+                
+                # Normalize and multiply
+                norm_S = S_sub / (np.max(S_sub) + 1e-20)
+                if joint_product is None:
+                    joint_product = norm_S
+                else:
+                    # Match shapes if they differ slightly due to sample rate variations
+                    min_h = min(joint_product.shape[0], norm_S.shape[0])
+                    min_w = min(joint_product.shape[1], norm_S.shape[1])
+                    joint_product = joint_product[:min_h, :min_w] * norm_S[:min_h, :min_w]
+            except IndexError:
+                continue # Skip this detector if it's incompatible
+        
+        if joint_product is None: return
+
         vmin, vmax = np.percentile(joint_product, self.pct_low.get()), np.percentile(joint_product, self.pct_high.get())
         levels = np.linspace(vmin, max(vmax, vmin + 1e-10), 25)
         ax.pcolormesh(t[t_mask], f[f_mask], joint_product, shading='gouraud', cmap='magma')
