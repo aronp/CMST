@@ -7,16 +7,15 @@ import requests
 from scipy import signal
 from scipy.signal import spectrogram
 from scipy.interpolate import interp1d
-
 import tkinter as tk
 from tkinter import messagebox, filedialog, ttk
-
 import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from gwosc.locate import get_event_urls
+
+matplotlib.use('TkAgg')
 
 class GWExplorerApp:
     def __init__(self, root):
@@ -188,7 +187,8 @@ class GWExplorerApp:
         
         ttk.Label(sidebar, text="Correlation Mask Switches:", font=('Helvetica', 10, 'bold')).pack(anchor=tk.W, pady=5)
         for det in ['H1', 'L1', 'V1']:
-            ttk.Checkbutton(sidebar, text=f"Include {det} in Joint Product", variable=self.detectors[det]['active_corr'], command=self.update_all_tabs).pack(anchor=tk.W, pady=2)
+            ttk.Checkbutton(sidebar, text=f"Include {det} in Joint Product", variable=self.detectors[det]['active_corr'],
+                command=self.update_all_tabs).pack(anchor=tk.W, pady=2)
 
         right_panel = ttk.Frame(self.root, padding="5")
         right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
@@ -249,15 +249,15 @@ class GWExplorerApp:
         btn_layout = ttk.Frame(controls_bar)
         btn_layout.pack(fill=tk.X, pady=(5, 0))
 
-        ttk.Button(btn_layout, text="◀◀ Rev 2x", command=lambda: self.set_play(direction=-1, speed=2.0)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_layout, text="◀ Rev 1x", command=lambda: self.set_play(direction=-1, speed=1.0)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_layout, text="◂ Rev 0.5x", command=lambda: self.set_play(direction=-1, speed=0.5)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_layout, text=" Frame Rev (1/5)", command=lambda: self.step_frame(direction=-1)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_layout, text="█ Stop", command=self.stop_play).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_layout, text="Frame Fwd (1/5) ", command=lambda: self.step_frame(direction=1)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_layout, text="Play 0.5x ▸", command=lambda: self.set_play(direction=1, speed=0.5)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_layout, text="Play 1x ▶", command=lambda: self.set_play(direction=1, speed=1.0)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_layout, text="Play 2x ▶▶", command=lambda: self.set_play(direction=1, speed=2.0)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_layout, text="◀◀ 2x", command=lambda: self.set_play(direction=-1, speed=2.0)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_layout, text="◀ 1x", command=lambda: self.set_play(direction=-1, speed=1.0)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_layout, text="◂ 0.5x", command=lambda: self.set_play(direction=-1, speed=0.5)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_layout, text="◂ Step", command=lambda: self.step_frame(direction=-1)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_layout, text="█", command=self.stop_play).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_layout, text="▸ Step", command=lambda: self.step_frame(direction=1)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_layout, text="0.5x ▸", command=lambda: self.set_play(direction=1, speed=0.5)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_layout, text="1x ▶", command=lambda: self.set_play(direction=1, speed=1.0)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_layout, text="2x ▶▶", command=lambda: self.set_play(direction=1, speed=2.0)).pack(side=tk.LEFT, padx=2)
 
         # Quick Jump Time Coordinate Entry Field
         jump_frame = ttk.Frame(btn_layout)
@@ -546,7 +546,8 @@ class GWExplorerApp:
             chosen_duration = str(row_values[1])
             chosen_rate = str(row_values[2])
             
-            record = next((r for r in self.master_records if str(r['event']) == chosen_event and str(r['duration']) == chosen_duration and str(r['rate']) == chosen_rate), None)
+            record = next((r for r in self.master_records if str(r['event']) == chosen_event 
+                and str(r['duration']) == chosen_duration and str(r['rate']) == chosen_rate), None)
             
             if not record: return
             
@@ -789,7 +790,8 @@ class GWExplorerApp:
             
         except requests.exceptions.Timeout:
             self.root.after(0, lambda: self.global_status.config(text="System: Idle (Download Timeout)"))
-            self.root.after(0, lambda: messagebox.showerror("Network Timeout", f"The server took too long to respond for {det}. It might be under heavy load."))
+            self.root.after(0, lambda: 
+                messagebox.showerror("Network Timeout", f"The server took too long to respond for {det}. It might be under heavy load."))
         except Exception as e:
             self.root.after(0, lambda: self.global_status.config(text="System: Idle (Download Failed)"))
             self.root.after(0, lambda: messagebox.showerror("Network Crash", f"Failed to fetch {det}:\n{str(e)}"))
@@ -878,6 +880,7 @@ class GWExplorerApp:
         except Exception as e:
             self.root.after(0, lambda: self.hide_pbar(det))
             self.root.after(0, lambda: messagebox.showerror("Pipeline Failure", str(e)))
+            
     def whiten_by_intervals(self, strain, fs, interval_sec, det):
         N = len(strain)
         chunk_size = int(interval_sec * fs)
@@ -986,7 +989,8 @@ class GWExplorerApp:
         t_start, t_end = max(0.0, t_center - t_width/2), min(self.total_duration, t_center + t_width/2)
         for det in ['H1', 'L1', 'V1']:
             if self.detectors[det]['loaded']:
-                self.render_canvas_frame(self.tabs[det]['ax'], self.tabs[det]['canvas'], self.detectors[det]['Sxx'], self.detectors[det]['t'], self.detectors[det]['f'], t_start, t_end)
+                self.render_canvas_frame(self.tabs[det]['ax'], self.tabs[det]['canvas'], self.detectors[det]['Sxx'], self.detectors[det]['t'],
+                     self.detectors[det]['f'], t_start, t_end)
         self.render_joint_correlation(t_start, t_end)
 
     def render_joint_correlation(self, t_start, t_end):
