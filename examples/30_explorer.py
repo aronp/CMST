@@ -95,18 +95,34 @@ class GWExplorerApp:
         self.root.bind_all("<Control-c>", lambda event: self.safe_exit())
         
         # Check for the specific H1 file and auto-load if present
-        startup_file = 'H-H1_GWOSC_16KHZ_R1-1126259447-32.hdf5'
-        if os.path.exists(startup_file):
-            # 1. Explicitly set metadata to ensure centering logic works
+        startup_files = {
+            "H1": "H-H1_GWOSC_16KHZ_R1-1126259447-32.hdf5",
+            "L1": "L-L1_GWOSC_16KHZ_R1-1126259447-32.hdf5",
+        }        
+                
+
+        available_startup_files = {
+            det: filename
+            for det, filename in startup_files.items()
+            if os.path.exists(filename)
+        }
+        
+        if available_startup_files:
             self.current_event_name = "GW150914"
-            # Hardcoded GPS merger time for this specific file to match your metadata needs
-            self.cached_target_gps = "1126259462" 
-            
-            # 2. Trigger the load
-            # We call the worker directly. Note: process_pipeline_worker 
-            # already handles its own threading for file I/O.
-            self.root.after(1000, lambda: self.process_pipeline_worker(startup_file, 'H1'))            
-            
+            self.current_file_duration = "32 Seconds"
+            self.current_file_rate = "16384 Hz"
+            self.cached_target_gps = "1126259462"
+        
+            def load_startup_suite():
+                for det, filename in available_startup_files.items():
+                    threading.Thread(
+                        target=self.process_pipeline_worker,
+                        args=(filename, det),
+                        kwargs={"add_to_recent": False},
+                        daemon=True
+                    ).start()
+        
+            self.root.after(1000, load_startup_suite)            
            
 
     def load_recent_files(self):
