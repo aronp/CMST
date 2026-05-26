@@ -672,8 +672,11 @@ class GWExplorerApp:
 
     def pull_exact_detector_suite(self, event_name, duration_val, rate_val, gps_merger, files_dict):
         try:
-            self.current_file_duration = f"{duration_val} Seconds"
-            self.current_event_name = event_name
+        
+            for det in ["H1", "L1", "V1"]:
+                self.root.after(0, lambda d=det: self.clear_detector(d))        
+                self.current_file_duration = f"{duration_val} Seconds"
+                self.current_event_name = event_name
     
             target_hz = 16384 if "16" in rate_val else 4096
             self.current_file_rate = f"{target_hz} Hz"
@@ -987,7 +990,32 @@ class GWExplorerApp:
         self.tree.bind("<Double-1>", lambda event: load_selected_record())
 
         query_api(force_download=False)    
+
+
+    def clear_detector(self, det):
+        self.detectors[det]["raw"] = None
+        self.detectors[det]["whitened"] = None
+        self.detectors[det]["Sxx"] = None
+        self.detectors[det]["t"] = None
+        self.detectors[det]["f"] = None
+        self.detectors[det]["loaded"] = False
     
+        self.current_filenames[det] = "N/A"
+    
+        if hasattr(self, "file_labels"):
+            self.file_labels[det].config(text=f"{det} File: N/A")
+    
+        if "status_lbl" in self.detectors[det]:
+            self.detectors[det]["status_lbl"].config(
+                text="Status: Empty",
+                foreground="gray"
+            )
+    
+        if det in self.tabs:
+            ax = self.tabs[det]["ax"]
+            canvas = self.tabs[det]["canvas"]
+            ax.clear()
+            canvas.draw_idle()    
 
     def on_slider_move(self, val):
         if self.total_duration == 0 or self.is_dragging: return
