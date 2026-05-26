@@ -128,47 +128,92 @@ class GWExplorerApp:
             print("Recent save error:", e)
 
 
-    def add_recent_file(self, filepath, det):
+    def add_recent_catalog_entry(self, event_name, duration_val, rate_val, gps_merger, files_dict):
         entry = {
-            "path": filepath,
-            "det": det
+            "source": "catalog",
+            "event": event_name,
+            "duration": str(duration_val),
+            "rate": str(rate_val),
+            "gps": str(gps_merger),
+            "files_dict": files_dict
         }
-
+    
         self.recent_files = [
             x for x in self.recent_files
             if not (
-                x["path"] == filepath
-                and x["det"] == det
+                x.get("source") == "catalog"
+                and x.get("event") == entry["event"]
+                and x.get("duration") == entry["duration"]
+                and x.get("rate") == entry["rate"]
             )
         ]
-
+    
         self.recent_files.insert(0, entry)
-
         self.save_recent_files()
         self.refresh_recent_menu()
 
+
+    def add_recent_file(self, filepath, det):
+        entry = {
+            "source": "local",
+            "path": filepath,
+            "det": det
+        }
+    
+        self.recent_files = [
+            x for x in self.recent_files
+            if not (
+                x.get("source") == "local"
+                and x.get("path") == filepath
+                and x.get("det") == det
+            )
+        ]
+    
+        self.recent_files.insert(0, entry)
+    
+        self.save_recent_files()
+        self.refresh_recent_menu()
 
     def refresh_recent_menu(self):
         self.recent_menu.delete(0, tk.END)
 
         if not self.recent_files:
-            self.recent_menu.add_command(
-                label="(Empty)",
-                state=tk.DISABLED
-            )
+            self.recent_menu.add_command(label="(Empty)", state=tk.DISABLED)
             return
 
         for item in self.recent_files[:20]:
-            path = item["path"]
-            det = item["det"]
+            if item.get("source") == "catalog":
+                label = f"{item['event']} | {item['rate']} | {item['duration']}s"
+                self.recent_menu.add_command(
+                    label=label,
+                    command=lambda x=item: self.load_recent_catalog_entry(x)
+                )
+            else:
+                # Backward compatibility with old file-based recents
+                path = item.get("path", "")
+                det = item.get("det", "?")
+                label = f"{det}: {os.path.basename(path)}"
+                self.recent_menu.add_command(
+                    label=label,
+                    command=lambda p=path, d=det: self.load_recent_direct(p, d)
+                )
 
-            label = f"{det}: {os.path.basename(path)}"
-
-            self.recent_menu.add_command(
-                label=label,
-                command=lambda p=path, d=det:
-                    self.load_recent_direct(p, d)
-            )
+    def load_recent_catalog_entry(self, item):
+        self.global_status.config(
+            text=f"Loading recent catalog entry {item['event']}..."
+        )
+    
+        threading.Thread(
+            target=self.pull_exact_detector_suite,
+            args=(
+                item["event"],
+                item["duration"],
+                item["rate"],
+                item["gps"],
+                item["files_dict"]
+            ),
+            daemon=True
+        ).start()
 
 
     def load_recent_direct(self, filepath, det):
@@ -224,6 +269,7 @@ class GWExplorerApp:
         menubar.add_cascade(label="Parameters", menu=param_menu)
         
         self.root.config(menu=menubar)
+        self.refresh_recent_menu()
 
     def copy_to_clipboard(self, text, name):
         if text and text not in ["N/A", "Unknown", "Unknown / Local"]:
@@ -324,8 +370,8 @@ class GWExplorerApp:
             
             # Shift + Left Drag = Zoom Box
             canvas_widget.bind("<Shift-ButtonPress-1>", self.start_zoom_drag)
+            canvas_widget.bind("<Shift-B1-Motion>", self.zoom_drag_motion)
             canvas_widget.bind("<Shift-ButtonRelease-1>", self.end_zoom_drag)
-
             # Normal Left Drag = Pan
             canvas_widget.bind("<ButtonPress-1>", self.start_drag)
             canvas_widget.bind("<B1-Motion>", self.drag_motion)
@@ -474,6 +520,11 @@ class GWExplorerApp:
         jump_frame = ttk.Frame(btn_layout)
         jump_frame.pack(side=tk.RIGHT, padx=10)
         
+        ttk.Button(
+			btn_layout,
+			text="Reset Zoom",
+			command=self.reset_view).pack(side=tk.LEFT, padx=10)
+        
         ttk.Label(jump_frame, text="Jump to Time (s):").pack(side=tk.LEFT, padx=2)
         self.jump_var = tk.StringVar()
         jump_ent = ttk.Entry(jump_frame, textvariable=self.jump_var, width=8)
@@ -506,52 +557,44 @@ class GWExplorerApp:
         print("button:", event.num, "state:", event.state)
 
 
-
-
-
-    def end_zoom_drag(self, event):
+    def zoom_drag_motion(self, event):
         if not getattr(self, "zoom_dragging", False):
             return
-
-        self.zoom_dragging = False
-
+    
         active_tab_name = self.notebook.tab(self.notebook.select(), "text")
         if active_tab_name not in self.tabs:
             return
-
+    
         tab = self.tabs[active_tab_name]
         ax = tab["ax"]
-
+        canvas = tab["canvas"]
+    
+        canvas_height = canvas.get_tk_widget().winfo_height()
         inv = ax.transData.inverted()
-
+    
         x0, y0 = self.zoom_start_data
-        x1, y1 = inv.transform((event.x, event.y))
-
+        x1, y1 = inv.transform((event.x, canvas_height - event.y))
+    
         xmin, xmax = sorted([x0, x1])
         ymin, ymax = sorted([y0, y1])
-
+    
         if hasattr(self, "zoom_rect") and self.zoom_rect is not None:
             try:
                 self.zoom_rect.remove()
             except Exception:
                 pass
 
-            self.zoom_rect = None
-
-        if abs(xmax - xmin) < 0.01 or abs(ymax - ymin) < 1.0:
-            self.update_all_tabs()
-            return
-
-        self.t_width_seconds = xmax - xmin
-        self.t_width_str.set(f"{self.t_width_seconds:.4f}")
-
-        self.t_center.set((xmin + xmax) / 2.0)
-
-        self.f_min.set(max(0.0, ymin))
-        self.f_max.set(max(self.f_min.get() + 1.0, ymax))
-
-        self.clamp_and_set_center(self.t_center.get())
-
+        self.zoom_rect = matplotlib.patches.Rectangle(
+            (xmin, ymin),
+            xmax - xmin,
+            ymax - ymin,
+            fill=False,
+            linewidth=1.5,
+            linestyle="--",
+            edgecolor="white")
+    
+        ax.add_patch(self.zoom_rect)
+        canvas.draw_idle()
 
     def end_zoom_drag(self, event):
         if not getattr(self, "zoom_dragging", False):
@@ -601,6 +644,21 @@ class GWExplorerApp:
 
         self.clamp_and_set_center(self.t_center.get())
 
+
+    def reset_view(self):
+        self.stop_play()
+    
+        self.t_width_seconds = 0.5
+        self.t_width_str.set("0.5")
+    
+        self.f_min.set(0)
+        self.f_max.set(500)
+    
+        self.pct_low.set(50.0)
+        self.pct_high.set(99.99)
+    
+        self.update_all_tabs()
+
     def execute_time_jump(self):
         if self.total_duration == 0: return
         try:
@@ -613,27 +671,33 @@ class GWExplorerApp:
     # --- Live GWOSC Catalog Window with Meta Reporting ---
 
     def pull_exact_detector_suite(self, event_name, duration_val, rate_val, gps_merger, files_dict):
-    
         try:
             self.current_file_duration = f"{duration_val} Seconds"
             self.current_event_name = event_name
-            
-            # Standardize the target sampling matrix definition
+    
             target_hz = 16384 if "16" in rate_val else 4096
             self.current_file_rate = f"{target_hz} Hz"
             self.cached_target_gps = gps_merger
-            
+    
             if not files_dict:
-                self.root.after(0, lambda: messagebox.showwarning("Empty Matrix", f"No verified URLs found in the cache map for {event_name}."))
+                self.root.after(0, lambda: messagebox.showwarning(
+                    "Empty Matrix",
+                    f"No verified URLs found in the cache map for {event_name}."
+                ))
                 return
-                
-            # Loop exclusively through the URLs confirmed natively by the API cache
+    
             for det_key, data in files_dict.items():
-                exact_url = data['url']
-                threading.Thread(target=self.download_and_ingest, args=(exact_url, det_key), daemon=True).start()
-                    
+                exact_url = data["url"]
+                threading.Thread(
+                target=self.download_and_ingest,
+                args=(exact_url, det_key, False),
+                daemon=True).start()
+                
         except Exception as e:
-            self.root.after(0, lambda err=e: messagebox.showerror("Pipeline Loader Error", str(err)))
+            self.root.after(0, lambda err=e: messagebox.showerror(
+                "Pipeline Loader Error",
+                str(err)))
+
 
     # --- Transportation/Playback Engine Mechanics ---
     def set_play(self, direction, speed):
@@ -891,6 +955,15 @@ class GWExplorerApp:
             
             win.destroy()
             self.global_status.config(text=f"Initiating direct mapped download for {chosen_event}...")
+
+
+            self.add_recent_catalog_entry(
+                chosen_event,
+                record["duration"],
+                record["rate"],
+                gps_merger,
+                record["files_dict"]
+            )
             
             threading.Thread(target=self.pull_exact_detector_suite, 
                              args=(chosen_event, record['duration'], record['rate'], gps_merger, record['files_dict']), 
@@ -963,8 +1036,9 @@ class GWExplorerApp:
             self.root.after(0, self.update_all_tabs)
             self.root.after(0, lambda: self.global_status.config(text="System: Idle"))
         except Exception as e:
+            err = str(e)
             self.root.after(0, lambda: self.hide_pbar(det))
-            self.root.after(0, lambda: messagebox.showerror("Re-Whitening Error", str(e)))
+            self.root.after(0, lambda err=err: messagebox.showerror("Re-Whitening Error", err))
             
     def open_fft_dialog(self):
         win = tk.Toplevel(self.root)
@@ -1088,9 +1162,13 @@ class GWExplorerApp:
             self.current_file_rate = "Extracting..."
             self.cached_target_gps = "N/A"
             self.global_status.config(text=f"Ingesting local array for {det}...")
-            threading.Thread(target=self.process_pipeline_worker, args=(filename, det), daemon=True).start()
+            threading.Thread(
+            target=self.process_pipeline_worker,
+                args=(filename, det),
+                kwargs={"add_to_recent": True},
+                daemon=True).start()
             
-    def download_and_ingest(self, url, det):
+    def download_and_ingest(self, url, det, add_to_recent=False):
         try:
             local_name = url.split("/")[-1]
             
@@ -1117,15 +1195,19 @@ class GWExplorerApp:
             self.root.after(0, lambda: self.global_status.config(text=f"Download complete. Ingesting {det} array..."))
             
             # 4. Safely hand off to the processing worker
-            self.process_pipeline_worker(local_name, det)
-            
+            self.process_pipeline_worker(
+                local_name,
+                det,
+                add_to_recent=add_to_recent
+            )
         except requests.exceptions.Timeout:
             self.root.after(0, lambda: self.global_status.config(text="System: Idle (Download Timeout)"))
             self.root.after(0, lambda: 
                 messagebox.showerror("Network Timeout", f"The server took too long to respond for {det}. It might be under heavy load."))
         except Exception as e:
+            err = str(e)
             self.root.after(0, lambda: self.global_status.config(text="System: Idle (Download Failed)"))
-            self.root.after(0, lambda: messagebox.showerror("Network Crash", f"Failed to fetch {det}:\n{str(e)}"))
+            self.root.after(0, lambda err=err, det=det: messagebox.showerror("Network Crash", f"Failed to fetch {det}:\n{err}"))
 
     def show_pbar(self, det):
         self.tabs[det]['pbar'].pack(fill=tk.X, padx=20, pady=5, before=self.tabs[det]['canvas'].get_tk_widget())
@@ -1138,17 +1220,18 @@ class GWExplorerApp:
         self.tabs[det]['pbar'].pack_forget()
 
     # --- Worker Core Processing Chain Layout ---
-    def process_pipeline_worker(self, filepath, det):
+    def process_pipeline_worker(self, filepath, det, add_to_recent=True):
         try:
             self.root.after(0, lambda: self.notebook.select(self.notebook.tabs()[['H1', 'L1', 'V1'].index(det)]))
             self.root.after(0, lambda: self.show_pbar(det))
             
             # Extract filename dynamically and update the corresponding clickable label
             filename_only = os.path.basename(filepath)
-
-            self.root.after(0, lambda fp=filepath, d=det: self.add_recent_file(fp, d))
-
             self.current_filenames[det] = filename_only
+
+            if add_to_recent:
+                self.root.after(0, lambda fp=filepath, d=det: self.add_recent_file(fp, d))
+
             if hasattr(self, "detector_offsets_ms"):
                 for d in ["L1", "V1"]:
                     self.detector_offsets_ms[d].set(0)
@@ -1216,8 +1299,9 @@ class GWExplorerApp:
             self.root.after(0, lambda: self.global_status.config(text="System: Idle"))
 
         except Exception as e:
+            err = str(e)
             self.root.after(0, lambda: self.hide_pbar(det))
-            self.root.after(0, lambda: messagebox.showerror("Pipeline Failure", str(e)))
+            self.root.after(0, lambda err=err: messagebox.showerror("Pipeline Failure", err))
             
     def whiten_by_intervals(self, strain, fs, interval_sec, det):
         N = len(strain)
@@ -1317,7 +1401,7 @@ class GWExplorerApp:
 
         except Exception as e:
             self.lbl_offset_result.config(text=f"Error: {str(e)}", foreground="red")
-            ƒprint(f"Correlation Error: {e}")
+            print(f"Correlation Error: {e}")
 
 
 
