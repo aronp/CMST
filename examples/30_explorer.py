@@ -10,12 +10,23 @@ from scipy.interpolate import interp1d
 import tkinter as tk
 from tkinter import messagebox, filedialog, ttk
 import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from gwosc.locate import get_event_urls
+import matplotlib.patches
 
-matplotlib.use('TkAgg')
+
+
+C_LIGHT = 299792458.0
+
+DETECTOR_ECEF = {
+            "H1": np.array([-2161414.926, -3834695.178, 4600350.226]),
+            "L1": np.array([  -74276.044, -5496283.719, 3224257.017]),
+            "V1": np.array([ 4546374.099,   842989.697, 4378576.963]),
+         }
+
 
 class GWExplorerApp:
     def __init__(self, root):
@@ -47,6 +58,9 @@ class GWExplorerApp:
             'L1': {'raw': None, 'whitened': None, 'Sxx': None, 't': None, 'f': None, 'loaded': False, 'active_corr': tk.BooleanVar(value=True)},
             'V1': {'raw': None, 'whitened': None, 'Sxx': None, 't': None, 'f': None, 'loaded': False, 'active_corr': tk.BooleanVar(value=False)}
         }
+
+
+
         self.dt = None
         self.fs = None
         self.total_duration = 0.0
@@ -213,25 +227,127 @@ class GWExplorerApp:
             canvas_widget = canvas.get_tk_widget()
             canvas_widget.pack(fill=tk.BOTH, expand=True)
             
+            # Shift + Left Drag = Zoom Box
+            canvas_widget.bind("<Shift-ButtonPress-1>", self.start_zoom_drag)
+            canvas_widget.bind("<Shift-ButtonRelease-1>", self.end_zoom_drag)
+
+            # Normal Left Drag = Pan
             canvas_widget.bind("<ButtonPress-1>", self.start_drag)
             canvas_widget.bind("<B1-Motion>", self.drag_motion)
             canvas_widget.bind("<ButtonRelease-1>", self.end_drag)
+
             
             self.tabs[tab_name] = {'fig': fig, 'ax': ax, 'canvas': canvas, 'pbar': pbar}
             
         self.notebook.bind("<<NotebookTabChanged>>", lambda e: self.update_all_tabs())
 
+        self.detector_offsets_ms = {
+            "H1": tk.IntVar(value=0),
+            "L1": tk.IntVar(value=0),
+            "V1": tk.IntVar(value=0),}
+
+
         # --- Cross-Correlation Control Panel ---
         self.corr_frame = ttk.LabelFrame(right_panel, text="Interferometer Time Delay Analysis", padding=10)
-#        self.corr_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
+        self.corr_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
 
-        self.btn_correlate = ttk.Button(self.corr_frame, text="Correlate Current Frame", command=self.trigger_frame_correlation)
+ #        self.btn_correlate = ttk.Button(self.corr_frame, text="Correlate Current Frame", command=self.trigger_frame_correlation)
+ #       self.btn_correlate.pack(side=tk.LEFT, padx=5)
+
+
+
+        self.sky_result_text = tk.StringVar(value="Sky: Waiting...")
+
+        self.lbl_offset_result = ttk.Label(
+    self.corr_frame,
+    textvariable=self.sky_result_text,
+    font=('Courier', 10, 'bold'),
+    foreground="blue",
+    cursor="hand2"
+)
+
+        self.lbl_offset_result.pack(side=tk.LEFT, padx=15)
+
+        self.lbl_offset_result.bind(
+    "<Button-1>",
+    lambda e: self.copy_to_clipboard(
+        self.sky_result_text.get(),
+        "Sky Location"
+    )
+)
+
+        # --- Cross-Correlation Control Panel ---
+        self.corr_frame = ttk.LabelFrame(
+            right_panel,
+            text="Interferometer Time Delay Analysis",
+            padding=10
+        )
+
+        self.corr_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
+
+        # TOP ROW
+        top_row = ttk.Frame(self.corr_frame)
+        top_row.pack(fill=tk.X, pady=(0, 6))
+
+        self.btn_correlate = ttk.Button(
+            top_row,
+            text="Correlate Current Frame",
+            command=self.trigger_frame_correlation
+        )
+
         self.btn_correlate.pack(side=tk.LEFT, padx=5)
 
-        self.lbl_offset_result = ttk.Label(self.corr_frame, text="Time Offset: Waiting for input...", font=('Courier', 10, 'bold'), foreground="blue")
+        self.sky_result_text = tk.StringVar(value="Sky: Waiting...")
+
+        self.lbl_offset_result = ttk.Label(
+            top_row,
+            textvariable=self.sky_result_text,
+            font=('Courier', 10, 'bold'),
+            foreground="blue",
+            cursor="hand2"
+        )
+
         self.lbl_offset_result.pack(side=tk.LEFT, padx=15)
-        # ---------------------------------------
-        # ---------------------------------------
+
+        self.lbl_offset_result.bind(
+            "<Button-1>",
+            lambda e: self.copy_to_clipboard(
+                self.sky_result_text.get(),
+                "Sky Location"
+            )
+        )
+
+        # BOTTOM ROW
+        bottom_row = ttk.Frame(self.corr_frame)
+        bottom_row.pack(fill=tk.X)
+
+        ttk.Label(
+            bottom_row,
+            text="Offsets ms:"
+        ).pack(side=tk.LEFT, padx=(5, 4))
+
+        for det in ["L1", "V1"]:
+            ttk.Label(
+                bottom_row,
+                text=f"{det}:"
+            ).pack(side=tk.LEFT, padx=(8, 2))
+
+            ttk.Spinbox(
+                bottom_row,
+                from_=-30,
+                to=30,
+                width=5,
+                textvariable=self.detector_offsets_ms[det],
+                command=self.update_all_tabs
+            ).pack(side=tk.LEFT)
+
+        ttk.Button(
+            bottom_row,
+            text="Sky Location",
+            command=self.estimate_sky_location
+        ).pack(side=tk.LEFT, padx=10)
+
+
 
         # Integrated Control Console Layout
         controls_bar = ttk.LabelFrame(right_panel, text="Playback Control Desk & Global Positioning Timeline", padding="10")
@@ -269,6 +385,126 @@ class GWExplorerApp:
         jump_ent.pack(side=tk.LEFT, padx=2)
         jump_ent.bind("<Return>", lambda e: self.execute_time_jump())
         ttk.Button(jump_frame, text="Go", command=self.execute_time_jump, width=4).pack(side=tk.LEFT, padx=2)
+
+
+
+    def start_zoom_drag(self, event):
+        self.zoom_dragging = True
+
+        active_tab_name = self.notebook.tab(self.notebook.select(), "text")
+        if active_tab_name not in self.tabs:
+            return
+
+        tab = self.tabs[active_tab_name]
+        ax = tab["ax"]
+        canvas = tab["canvas"]
+
+        canvas_height = canvas.get_tk_widget().winfo_height()
+
+        inv = ax.transData.inverted()
+        self.zoom_start_data = inv.transform(
+            (event.x, canvas_height - event.y)
+        )
+
+
+    def debug_mouse_button(self, event):
+        print("button:", event.num, "state:", event.state)
+
+
+
+
+
+    def end_zoom_drag(self, event):
+        if not getattr(self, "zoom_dragging", False):
+            return
+
+        self.zoom_dragging = False
+
+        active_tab_name = self.notebook.tab(self.notebook.select(), "text")
+        if active_tab_name not in self.tabs:
+            return
+
+        tab = self.tabs[active_tab_name]
+        ax = tab["ax"]
+
+        inv = ax.transData.inverted()
+
+        x0, y0 = self.zoom_start_data
+        x1, y1 = inv.transform((event.x, event.y))
+
+        xmin, xmax = sorted([x0, x1])
+        ymin, ymax = sorted([y0, y1])
+
+        if hasattr(self, "zoom_rect") and self.zoom_rect is not None:
+            try:
+                self.zoom_rect.remove()
+            except Exception:
+                pass
+
+            self.zoom_rect = None
+
+        if abs(xmax - xmin) < 0.01 or abs(ymax - ymin) < 1.0:
+            self.update_all_tabs()
+            return
+
+        self.t_width_seconds = xmax - xmin
+        self.t_width_str.set(f"{self.t_width_seconds:.4f}")
+
+        self.t_center.set((xmin + xmax) / 2.0)
+
+        self.f_min.set(max(0.0, ymin))
+        self.f_max.set(max(self.f_min.get() + 1.0, ymax))
+
+        self.clamp_and_set_center(self.t_center.get())
+
+
+    def end_zoom_drag(self, event):
+        if not getattr(self, "zoom_dragging", False):
+            return
+
+        self.zoom_dragging = False
+
+        active_tab_name = self.notebook.tab(self.notebook.select(), "text")
+        if active_tab_name not in self.tabs:
+            return
+
+        tab = self.tabs[active_tab_name]
+        ax = tab["ax"]
+        canvas = tab["canvas"]
+
+        canvas_height = canvas.get_tk_widget().winfo_height()
+
+        inv = ax.transData.inverted()
+
+        x0, y0 = self.zoom_start_data
+        x1, y1 = inv.transform(
+            (event.x, canvas_height - event.y)
+        )
+
+        xmin, xmax = sorted([x0, x1])
+        ymin, ymax = sorted([y0, y1])
+
+        if hasattr(self, "zoom_rect") and self.zoom_rect is not None:
+            try:
+                self.zoom_rect.remove()
+            except Exception:
+                pass
+
+            self.zoom_rect = None
+
+        if abs(xmax - xmin) < 0.01 or abs(ymax - ymin) < 1.0:
+            self.update_all_tabs()
+            return
+
+        self.t_width_seconds = xmax - xmin
+        self.t_width_str.set(f"{self.t_width_seconds:.4f}")
+
+        self.t_center.set((xmin + xmax) / 2.0)
+
+        self.f_min.set(max(0.0, ymin))
+        self.f_max.set(max(self.f_min.get() + 1.0, ymax))
+
+        self.clamp_and_set_center(self.t_center.get())
 
     def execute_time_jump(self):
         if self.total_duration == 0: return
@@ -815,6 +1051,10 @@ class GWExplorerApp:
             # Extract filename dynamically and update the corresponding clickable label
             filename_only = os.path.basename(filepath)
             self.current_filenames[det] = filename_only
+            if hasattr(self, "detector_offsets_ms"):
+                for d in ["L1", "V1"]:
+                    self.detector_offsets_ms[d].set(0)
+
             self.root.after(0, lambda d=det, fn=filename_only: self.file_labels[d].config(text=f"{d} File: {fn}"))
 
             with h5py.File(filepath, 'r') as f:
@@ -924,45 +1164,160 @@ class GWExplorerApp:
     def trigger_frame_correlation(self):
         self.lbl_offset_result.config(text="Calculating...", foreground="orange")
         self.root.update_idletasks()
-        
+
         try:
-            # 1. Access whitened strain data
-            h1_data = self.detectors['H1']['whitened']
-            l1_data = self.detectors['L1']['whitened']
-            
-            # 2. Slice to the UI window (Crucial to match the spectrogram view)
+            if not self.detectors["H1"]["loaded"]:
+                raise ValueError("H1 must be loaded as the reference detector.")
+
+            h1_data = self.detectors["H1"]["whitened"]
+
             t_center = self.t_center.get()
             t_width = self.t_width_seconds
-            t_start, t_end = max(0.0, t_center - t_width/2), min(self.total_duration, t_center + t_width/2)
-            
+            t_start = max(0.0, t_center - t_width / 2)
+            t_end = min(self.total_duration, t_center + t_width / 2)
+
             idx_min = int(t_start * self.fs)
             idx_max = int(t_end * self.fs)
-            
+
             h1_slice = h1_data[idx_min:idx_max]
-            l1_slice = l1_data[idx_min:idx_max]
-            
-            # 3. Compute FFTs on the fly
-            h1_fft = np.fft.rfft(h1_slice)
-            l1_fft = np.fft.rfft(l1_slice)
-            freqs = np.fft.rfftfreq(len(h1_slice), 1/self.fs)
-            
-            # 4. Call the alignment method
-            offset_ms, lead_text = self.calculate_delay_from_existing_ffts(
-                h1_fft, 
-                l1_fft, 
-                freqs, 
-                max(0.1, self.f_min.get()), 
-                self.f_max.get()
+
+            results = []
+
+            for det in ["L1", "V1"]:
+                if not self.detectors[det]["loaded"]:
+                    continue
+
+                other_data = self.detectors[det]["whitened"]
+                other_slice = other_data[idx_min:idx_max]
+
+                offset_ms, lead_text = self.calculate_delay_xcorr(
+                    h1_slice,
+                    other_slice,
+                self.fs,
+                max(35.0, self.f_min.get()),
+                self.f_max.get(),
+                max_delay_ms=30.0
             )
-            
+                signed_ms = -offset_ms if "leads H1" in lead_text else offset_ms
+                rounded_ms = int(round(signed_ms))
+
+            # Update manual offset box if present
+                if hasattr(self, "detector_offsets_ms"):
+                    self.detector_offsets_ms[det].set(rounded_ms)
+
+                results.append(f"{det}: {rounded_ms:+d} ms")
+
+            if not results:
+                raise ValueError("No L1 or V1 detector loaded.")
+
             self.lbl_offset_result.config(
-                text=f"Time Offset: {offset_ms:.2f} ms ({lead_text})", 
+                text="Offsets: " + " | ".join(results),
                 foreground="green"
             )
-            
+
+            self.update_all_tabs()
+
         except Exception as e:
             self.lbl_offset_result.config(text=f"Error: {str(e)}", foreground="red")
-            print(f"Correlation Error: {e}")
+            ƒprint(f"Correlation Error: {e}")
+
+
+
+    def gps_to_gmst(self, gps_time):
+        jd = 2444244.5 + float(gps_time) / 86400.0
+        d = jd - 2451545.0
+        gmst_deg = 280.46061837 + 360.98564736629 * d
+        return np.deg2rad(gmst_deg % 360.0)
+
+
+    def radec_to_ecef_unit(self, ra, dec, gmst):
+        x = np.cos(dec) * np.cos(ra)
+        y = np.cos(dec) * np.sin(ra)
+        z = np.sin(dec)
+
+        x_ecef = np.cos(gmst) * x + np.sin(gmst) * y
+        y_ecef = -np.sin(gmst) * x + np.cos(gmst) * y
+        z_ecef = z
+
+        return np.array([x_ecef, y_ecef, z_ecef])
+
+
+    def estimate_sky_location(self):
+        try:
+            if not (
+                self.detectors["H1"]["loaded"]
+                and self.detectors["L1"]["loaded"]
+                and self.detectors["V1"]["loaded"]
+            ):
+                raise ValueError("H1, L1 and V1 must all be loaded.")
+
+            gps_time = float(self.cached_target_gps)
+
+            observed = {
+                "L1": self.detector_offsets_ms["L1"].get(),
+                "V1": self.detector_offsets_ms["V1"].get(),
+            }
+
+            gmst = self.gps_to_gmst(gps_time)
+
+            best_err = np.inf
+            best_ra = None
+            best_dec = None
+            best_model = None
+
+            for dec_deg in np.linspace(-90, 90, 181):
+                dec = np.deg2rad(dec_deg)
+
+                for ra_deg in np.linspace(0, 360, 361, endpoint=False):
+                    ra = np.deg2rad(ra_deg)
+
+                    n = self.radec_to_ecef_unit(ra, dec, gmst)
+
+                    model = {}
+
+                    for det in ["L1", "V1"]:
+                        baseline = (
+                            DETECTOR_ECEF[det]
+                            - DETECTOR_ECEF["H1"]
+                        )
+
+                        dt = -np.dot(n, baseline) / C_LIGHT
+                        model[det] = dt * 1000.0
+
+                    err = (
+                        (model["L1"] - observed["L1"]) ** 2
+                        + (model["V1"] - observed["V1"]) ** 2
+                    )
+
+                    if err < best_err:
+                        best_err = err
+                        best_ra = ra_deg
+                        best_dec = dec_deg
+                        best_model = dict(model)
+
+
+            result_text = (
+                f"RA={best_ra:.1f} deg, "
+                f"DEC={best_dec:+.1f} deg, "
+                f"L1={best_model['L1']:+.1f} ms, "
+                f"V1={best_model['V1']:+.1f} ms"
+            )
+
+            self.sky_result_text.set(result_text)
+
+            self.lbl_offset_result.config(
+                foreground="purple"
+            )
+
+        except Exception as e:
+            self.lbl_offset_result.config(
+                text=f"Sky Error: {str(e)}",
+                foreground="red"
+            )
+
+            print(f"Sky Location Error: {e}")
+
+
 
     def compute_complete_spectrogram(self, det):
         nperseg = self.nperseg.get()
@@ -993,66 +1348,120 @@ class GWExplorerApp:
                      self.detectors[det]['f'], t_start, t_end)
         self.render_joint_correlation(t_start, t_end)
 
+
     def render_joint_correlation(self, t_start, t_end):
         ax = self.tabs['Joint Correlation']['ax']
         canvas = self.tabs['Joint Correlation']['canvas']
         ax.clear()
-        
-        # 1. Identify valid matrices
-        active_matrices = [det for det in ['H1', 'L1', 'V1'] 
-                           if self.detectors[det]['loaded'] and self.detectors[det]['active_corr'].get()]
-        if not active_matrices: return
-        
-        # 2. Use the FIRST detector as the reference clock
-        ref = active_matrices[0]
-        t, f = self.detectors[ref]['t'], self.detectors[ref]['f']
-        
-        # 3. Create initial mask based on time window
-        t_mask = (t >= t_start) & (t <= t_end)
-        f_mask = (f >= self.f_min.get()) & (f <= self.f_max.get())
-        if not np.any(t_mask) or not np.any(f_mask): return
-        
-        # 4. Initialize the product using the reference detector's slice
-        joint_product = None
-        
-        for det in active_matrices:
-            # SAFETY: Ensure we don't exceed the bounds of THIS specific detector's matrix
-            Sxx = self.detectors[det]['Sxx']
-            
-            # Create a localized mask that respects this matrix's shape
-            # Sxx.shape[1] is the time dimension
-            valid_t_mask = t_mask.copy()
-            if np.sum(valid_t_mask) > Sxx.shape[1]:
-                # If our mask is too wide, truncate it to the matrix size
-                valid_t_mask = np.zeros(len(t), dtype=bool)
-                valid_t_mask[:Sxx.shape[1]] = True
-                valid_t_mask &= (t >= t_start) & (t <= t_end)
-            
-            # Slice with safe indices
-            try:
-                S_sub = Sxx[np.ix_(f_mask, valid_t_mask)]
-                
-                # Normalize and multiply
-                norm_S = S_sub / (np.max(S_sub) + 1e-20)
-                if joint_product is None:
-                    joint_product = norm_S
-                else:
-                    # Match shapes if they differ slightly due to sample rate variations
-                    min_h = min(joint_product.shape[0], norm_S.shape[0])
-                    min_w = min(joint_product.shape[1], norm_S.shape[1])
-                    joint_product = joint_product[:min_h, :min_w] * norm_S[:min_h, :min_w]
-            except IndexError:
-                continue # Skip this detector if it's incompatible
-        
-        if joint_product is None: return
 
-        vmin, vmax = np.percentile(joint_product, self.pct_low.get()), np.percentile(joint_product, self.pct_high.get())
+        active_matrices = [
+            det for det in ['H1', 'L1', 'V1']
+            if self.detectors[det]['loaded'] and self.detectors[det]['active_corr'].get()
+        ]
+
+        if not active_matrices:
+            canvas.draw_idle()
+            return
+
+        ref = active_matrices[0]
+        ref_t = self.detectors[ref]['t']
+        ref_f = self.detectors[ref]['f']
+
+        t_mask = (ref_t >= t_start) & (ref_t <= t_end)
+        f_mask = (ref_f >= self.f_min.get()) & (ref_f <= self.f_max.get())
+
+        if not np.any(t_mask) or not np.any(f_mask):
+            canvas.draw_idle()
+            return
+
+        ref_t_window = ref_t[t_mask]
+        ref_f_window = ref_f[f_mask]
+
+        joint_product = None
+
+        for det in active_matrices:
+            Sxx = self.detectors[det]['Sxx']
+            det_t = self.detectors[det]['t']
+            det_f = self.detectors[det]['f']
+
+            offset_sec = self.detector_offsets_ms[det].get() / 1000.0
+
+            # Positive offset means: shift this detector later in time.
+            # So when drawing against the reference clock, sample from earlier detector time.
+            sample_t = ref_t_window - offset_sec
+
+            det_f_mask = (det_f >= self.f_min.get()) & (det_f <= self.f_max.get())
+            S_freq = Sxx[det_f_mask, :]
+
+            if S_freq.shape[0] == 0:
+                continue
+
+            shifted_rows = []
+
+            for row in S_freq:
+                shifted = np.interp(
+                    sample_t,
+                    det_t,
+                    row,
+                    left=0.0,
+                    right=0.0
+                )
+
+                shifted_rows.append(shifted)
+
+            S_shifted = np.array(shifted_rows)
+
+            norm_S = S_shifted / (np.max(S_shifted) + 1e-20)
+
+            if joint_product is None:
+                joint_product = norm_S
+            else:
+                min_h = min(joint_product.shape[0], norm_S.shape[0])
+                min_w = min(joint_product.shape[1], norm_S.shape[1])
+                joint_product = joint_product[:min_h, :min_w] * norm_S[:min_h, :min_w]
+
+        if joint_product is None:
+            canvas.draw_idle()
+            return
+
+        vmin = np.percentile(joint_product, self.pct_low.get())
+        vmax = np.percentile(joint_product, self.pct_high.get())
         levels = np.linspace(vmin, max(vmax, vmin + 1e-10), 25)
-        ax.pcolormesh(t[t_mask], f[f_mask], joint_product, shading='gouraud', cmap='magma')
-        ax.contourf(t[t_mask], f[f_mask], joint_product, levels=levels, cmap='hot', extend='both')
+
+        ax.pcolormesh(
+        ref_t_window,
+        ref_f_window[:joint_product.shape[0]],
+        joint_product,
+        shading='gouraud',
+        cmap='magma'
+    )
+
+        ax.contourf(
+        ref_t_window,
+        ref_f_window[:joint_product.shape[0]],
+        joint_product,
+        levels=levels,
+        cmap='hot',
+        extend='both'
+    )
+
         ax.set_xlim(t_start, t_end)
         ax.set_ylim(self.f_min.get(), self.f_max.get())
+
+        title_parts = [
+        f"{det} {self.detector_offsets_ms[det].get():+d} ms"
+        for det in active_matrices
+        if det != "H1"
+    ]
+
+        ax.set_title("Joint Correlation " + " | ".join(title_parts))
+
         canvas.draw_idle()
+
+
+
+
+
 
     def calculate_frame_correlation(self, h1_strain, l1_strain, time_array, sample_rate, current_t_min, current_t_max, f_min, f_max):
         # 1. Slice to the UI window
@@ -1086,14 +1495,135 @@ class GWExplorerApp:
     
         return abs(tau * 1000), ("L1 leads H1" if tau > 0 else "H1 leads L1")        
 
+    def calculate_delay_gcc_phat(self, h1_slice, l1_slice, fs, f_min, f_max, max_delay_ms=15.0):
+        h1_slice = np.asarray(h1_slice)
+        l1_slice = np.asarray(l1_slice)
 
-    def calculate_delay_from_existing_ffts(self, H1_fft, L1_fft, freqs, f_min, f_max):
-        mask = (freqs >= max(0.1, f_min)) & (freqs <= f_max)
-        cross_spectrum = H1_fft[mask] * np.conj(L1_fft[mask])
-        phase = np.unwrap(np.angle(cross_spectrum))
-        slope, _ = np.polyfit(freqs[mask], phase, 1)
-        tau = slope / (2 * np.pi)
-        return abs(tau * 1000), ("L1 leads H1" if tau > 0 else "H1 leads L1")
+        n = min(len(h1_slice), len(l1_slice))
+        h1_slice = h1_slice[:n]
+        l1_slice = l1_slice[:n]
+
+        if n < 8:
+            raise ValueError("Window too short for correlation")
+
+        # Bandpass the current frame
+        low = max(0.1, float(f_min))
+        high = min(float(f_max), fs / 2.0 - 1.0)
+
+        if high <= low:
+            raise ValueError("Invalid frequency band")
+
+        sos = signal.butter(
+            4,
+            [low, high],
+            btype="bandpass",
+            fs=fs,
+            output="sos")
+
+        h1 = signal.sosfiltfilt(sos, h1_slice)
+        l1 = signal.sosfiltfilt(sos, l1_slice)
+
+        # Taper to reduce frame-edge artefacts
+        win = signal.windows.tukey(n, alpha=0.25)
+        h1 *= win
+        l1 *= win
+
+        # GCC-PHAT
+        nfft = 1
+        while nfft < 2 * n:
+            nfft *= 2
+
+        H1 = np.fft.rfft(h1, n=nfft)
+        L1 = np.fft.rfft(l1, n=nfft)
+
+        cross = H1 * np.conj(L1)
+        cross /= np.abs(cross) + 1e-20
+
+        corr = np.fft.irfft(cross, n=nfft)
+        corr = np.concatenate((corr[-(nfft // 2):], corr[:nfft // 2]))
+
+        lags = np.arange(-nfft // 2, nfft // 2) / fs
+
+        max_delay = max_delay_ms / 1000.0
+        mask = np.abs(lags) <= max_delay
+
+        if not np.any(mask):
+            raise ValueError("No valid lag range")
+ 
+        local_corr = corr[mask]
+        local_lags = lags[mask]
+
+        best = np.argmax(np.abs(local_corr))
+        tau = local_lags[best]
+
+        # Convention matching your existing display
+        lead_text = "L1 leads H1" if tau > 0 else "H1 leads L1"
+
+        return abs(tau * 1000.0), lead_text
+
+    def calculate_delay_xcorr(self, h1_slice, l1_slice, fs, f_min, f_max, max_delay_ms=15.0):
+        h1 = np.asarray(h1_slice, dtype=float)
+        l1 = np.asarray(l1_slice, dtype=float)
+
+        n = min(len(h1), len(l1))
+        h1 = h1[:n]
+        l1 = l1[:n]
+
+        if n < 32:
+            raise ValueError("Frame too short")
+
+        low = max(20.0, float(f_min))
+        high = min(float(f_max), fs / 2.0 - 1.0)
+
+        if high <= low:
+            raise ValueError("Invalid bandpass range")
+
+        sos = signal.butter(4, [low, high], btype="bandpass", fs=fs, output="sos")
+
+        h1 = signal.sosfiltfilt(sos, h1)
+        l1 = signal.sosfiltfilt(sos, l1)
+
+        h1 -= np.mean(h1)
+        l1 -= np.mean(l1)
+
+        win = signal.windows.tukey(n, alpha=0.25)
+        h1 *= win
+        l1 *= win
+
+        h1_norm = np.linalg.norm(h1)
+        l1_norm = np.linalg.norm(l1)
+
+        if h1_norm < 1e-20 or l1_norm < 1e-20:
+            raise ValueError("Signal energy too small")
+
+        h1 /= h1_norm
+        l1 /= l1_norm
+
+        corr = signal.correlate(l1, h1, mode="full", method="fft")
+        lags = signal.correlation_lags(len(l1), len(h1), mode="full")
+
+        max_lag = int((max_delay_ms / 1000.0) * fs)
+        mask = np.abs(lags) <= max_lag
+
+        corr_m = corr[mask]
+        lags_m = lags[mask]
+
+        peak = np.argmax(np.abs(corr_m))
+        lag_samples = float(lags_m[peak])
+
+        if 0 < peak < len(corr_m) - 1:
+            y0, y1, y2 = corr_m[peak - 1], corr_m[peak], corr_m[peak + 1]
+            denom = y0 - 2 * y1 + y2
+            if abs(denom) > 1e-20:
+                lag_samples += 0.5 * (y0 - y2) / denom
+
+        tau_ms = 1000.0 * lag_samples / fs
+
+        lead_text = "other leads H1" if tau_ms < 0 else "other lags H1"
+
+        return abs(tau_ms), lead_text
+
+
             
 if __name__ == "__main__":
     root = tk.Tk(className="GWExplorer")
