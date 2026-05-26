@@ -16,7 +16,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from gwosc.locate import get_event_urls
 import matplotlib.patches
-
+import json
 
 
 C_LIGHT = 299792458.0
@@ -33,6 +33,10 @@ class GWExplorerApp:
         self.root = root
         self.root.title("Multi-Detector CMST Transient Explorer")
         self.root.geometry("1450x950")
+
+
+        self.recent_files_path = "recent_files.json"
+        self.recent_files = self.load_recent_files()
 
         try:
             script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -103,7 +107,88 @@ class GWExplorerApp:
             # already handles its own threading for file I/O.
             self.root.after(1000, lambda: self.process_pipeline_worker(startup_file, 'H1'))            
             
-            
+           
+
+    def load_recent_files(self):
+        try:
+            if os.path.exists(self.recent_files_path):
+                with open(self.recent_files_path, "r") as f:
+                    return json.load(f)
+        except Exception:
+            pass
+
+        return []
+
+
+    def save_recent_files(self):
+        try:
+            with open(self.recent_files_path, "w") as f:
+                json.dump(self.recent_files[:20], f, indent=2)
+        except Exception as e:
+            print("Recent save error:", e)
+
+
+    def add_recent_file(self, filepath, det):
+        entry = {
+            "path": filepath,
+            "det": det
+        }
+
+        self.recent_files = [
+            x for x in self.recent_files
+            if not (
+                x["path"] == filepath
+                and x["det"] == det
+            )
+        ]
+
+        self.recent_files.insert(0, entry)
+
+        self.save_recent_files()
+        self.refresh_recent_menu()
+
+
+    def refresh_recent_menu(self):
+        self.recent_menu.delete(0, tk.END)
+
+        if not self.recent_files:
+            self.recent_menu.add_command(
+                label="(Empty)",
+                state=tk.DISABLED
+            )
+            return
+
+        for item in self.recent_files[:20]:
+            path = item["path"]
+            det = item["det"]
+
+            label = f"{det}: {os.path.basename(path)}"
+
+            self.recent_menu.add_command(
+                label=label,
+                command=lambda p=path, d=det:
+                    self.load_recent_direct(p, d)
+            )
+
+
+    def load_recent_direct(self, filepath, det):
+        if not os.path.exists(filepath):
+            messagebox.showerror(
+                "Missing File",
+                f"Could not locate:\n{filepath}"
+            )
+            return
+
+        self.global_status.config(
+            text=f"Loading recent {det} file..."
+        )
+
+        threading.Thread(
+            target=self.process_pipeline_worker,
+            args=(filepath, det),
+            daemon=True
+        ).start()
+ 
     def safe_exit(self):
         self.is_playing = False
         try:
@@ -116,8 +201,18 @@ class GWExplorerApp:
 
     def create_menu(self):
         menubar = tk.Menu(self.root)
+
+
         file_menu = tk.Menu(menubar, tearoff=0)
+
+        self.recent_menu = tk.Menu(file_menu, tearoff=0)
+
         file_menu.add_command(label="GWOSC Event Query Catalog...", command=self.open_gwosc_catalog_browser)
+        file_menu.add_cascade(
+            label="Recent Files",
+            menu=self.recent_menu
+        )
+
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.safe_exit)
         menubar.add_cascade(label="File", menu=file_menu)
@@ -249,7 +344,7 @@ class GWExplorerApp:
 
         # --- Cross-Correlation Control Panel ---
         self.corr_frame = ttk.LabelFrame(right_panel, text="Interferometer Time Delay Analysis", padding=10)
-        self.corr_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
+ #       self.corr_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
 
  #        self.btn_correlate = ttk.Button(self.corr_frame, text="Correlate Current Frame", command=self.trigger_frame_correlation)
  #       self.btn_correlate.pack(side=tk.LEFT, padx=5)
@@ -1050,6 +1145,9 @@ class GWExplorerApp:
             
             # Extract filename dynamically and update the corresponding clickable label
             filename_only = os.path.basename(filepath)
+
+            self.root.after(0, lambda fp=filepath, d=det: self.add_recent_file(fp, d))
+
             self.current_filenames[det] = filename_only
             if hasattr(self, "detector_offsets_ms"):
                 for d in ["L1", "V1"]:
