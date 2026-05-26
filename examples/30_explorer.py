@@ -719,17 +719,29 @@ class GWExplorerApp:
         self.clamp_and_set_center(new_center)
 
     def play_step(self):
-        if not self.is_playing: return
-        step_increment = self.play_direction * (1.0 / self.base_fps) * self.play_speed
+        if not self.is_playing:
+            return
+    
+        step_increment = (
+            self.play_direction
+            * self.t_width_seconds
+            * 0.06
+            * self.play_speed
+        )
+    
         new_center = self.t_center.get() + step_increment
-        
-        if new_center <= (self.t_width_seconds / 2.0) or new_center >= (self.total_duration - self.t_width_seconds / 2.0):
+    
+        if (
+            new_center <= self.t_width_seconds / 2.0
+            or new_center >= self.total_duration - self.t_width_seconds / 2.0
+        ):
             self.is_playing = False
             return
-            
+    
         self.clamp_and_set_center(new_center)
         self.root.after(int(1000 / self.base_fps), self.play_step)
-
+        
+        
     # --- Accelerated & Cached GWOSC Catalog Window ---
     def open_gwosc_catalog_browser(self):
         import json
