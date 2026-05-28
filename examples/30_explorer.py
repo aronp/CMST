@@ -17,7 +17,6 @@ from gwosc.locate import get_event_urls
 import matplotlib.patches
 import json
 import webbrowser
-from urllib.parse import quote
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlencode
 
@@ -29,6 +28,153 @@ DETECTOR_ECEF = {
             "L1": np.array([  -74276.044, -5496283.719, 3224257.017]),
             "V1": np.array([ 4546374.099,   842989.697, 4378576.963]),
          }
+
+
+class RangeSlider(tk.Canvas):
+    """Simple two-handle horizontal range slider for Tkinter."""
+
+    def __init__(
+        self,
+        master,
+        from_,
+        to,
+        low_var,
+        high_var,
+        command=None,
+        width=190,
+        height=42,
+        min_gap=0.0,
+        decimals=1,
+        **kwargs
+    ):
+        super().__init__(
+            master,
+            width=width,
+            height=height,
+            highlightthickness=0,
+            **kwargs
+        )
+        self.from_ = float(from_)
+        self.to = float(to)
+        self.low_var = low_var
+        self.high_var = high_var
+        self.command = command
+        self.slider_width = int(width)
+        self.slider_height = int(height)
+        self.pad = 14
+        self.handle_radius = 6
+        self.min_gap = float(min_gap)
+        self.decimals = int(decimals)
+        self.active_handle = None
+
+        self.bind("<Configure>", lambda event: self.redraw())
+        self.bind("<Button-1>", self._on_press)
+        self.bind("<B1-Motion>", self._on_drag)
+        self.bind("<ButtonRelease-1>", self._on_release)
+
+        try:
+            self.low_var.trace_add("write", lambda *_: self.redraw())
+            self.high_var.trace_add("write", lambda *_: self.redraw())
+        except Exception:
+            pass
+
+        self.redraw()
+
+    def _track_bounds(self):
+        width = max(self.slider_width, self.winfo_width())
+        return self.pad, max(self.pad + 1, width - self.pad)
+
+    def _clip(self, value):
+        return max(self.from_, min(self.to, float(value)))
+
+    def _round(self, value):
+        if self.decimals <= 0:
+            return round(value)
+        return round(value, self.decimals)
+
+    def _value_to_x(self, value):
+        left, right = self._track_bounds()
+        frac = (self._clip(value) - self.from_) / (self.to - self.from_)
+        return left + frac * (right - left)
+
+    def _x_to_value(self, x):
+        left, right = self._track_bounds()
+        frac = (float(x) - left) / (right - left)
+        value = self.from_ + max(0.0, min(1.0, frac)) * (self.to - self.from_)
+        return self._round(value)
+
+    def _current_values(self):
+        try:
+            low = self._clip(float(self.low_var.get()))
+        except Exception:
+            low = self.from_
+        try:
+            high = self._clip(float(self.high_var.get()))
+        except Exception:
+            high = self.to
+
+        if high < low:
+            low, high = high, low
+        if high - low < self.min_gap:
+            high = min(self.to, low + self.min_gap)
+            low = max(self.from_, high - self.min_gap)
+        return low, high
+
+    def redraw(self):
+        self.delete("all")
+        low, high = self._current_values()
+        left, right = self._track_bounds()
+        y = max(10, self.winfo_height() // 2)
+
+        low_x = self._value_to_x(low)
+        high_x = self._value_to_x(high)
+
+        self.create_line(left, y, right, y, width=4)
+        self.create_line(low_x, y, high_x, y, width=6)
+
+        for x in (low_x, high_x):
+            self.create_oval(
+                x - self.handle_radius,
+                y - self.handle_radius,
+                x + self.handle_radius,
+                y + self.handle_radius,
+                width=2,
+                fill=self.cget("background") or "SystemButtonFace"
+            )
+
+    def _on_press(self, event):
+        low, high = self._current_values()
+        low_x = self._value_to_x(low)
+        high_x = self._value_to_x(high)
+        self.active_handle = "low" if abs(event.x - low_x) <= abs(event.x - high_x) else "high"
+        self._set_from_x(event.x)
+
+    def _on_drag(self, event):
+        self._set_from_x(event.x)
+
+    def _on_release(self, event):
+        self._set_from_x(event.x)
+        self.active_handle = None
+
+    def _set_from_x(self, x):
+        if self.active_handle is None:
+            return
+
+        value = self._clip(self._x_to_value(x))
+        low, high = self._current_values()
+
+        if self.active_handle == "low":
+            value = min(value, high - self.min_gap)
+            value = self._clip(value)
+            self.low_var.set(value)
+        else:
+            value = max(value, low + self.min_gap)
+            value = self._clip(value)
+            self.high_var.set(value)
+
+        self.redraw()
+        if self.command is not None:
+            self.command()
 
 
 class GWExplorerApp:
@@ -315,6 +461,13 @@ class GWExplorerApp:
         self.f_max = tk.DoubleVar(value=500)
         self.pct_low = tk.DoubleVar(value=50.0)
         self.pct_high = tk.DoubleVar(value=99.99)
+        self.time_window_log = tk.DoubleVar(value=np.log10(self.t_width_seconds))
+        self.show_grid = tk.BooleanVar(value=False)
+        self.show_contours = tk.BooleanVar(value=True)
+        self.contour_count = tk.IntVar(value=25)
+        self.colormap_name = tk.StringVar(value="viridis")
+        self.display_control_update_job = None
+        self.display_controls_recenter = False
         
         sidebar = ttk.Frame(self.root, padding="10", width=340)
         sidebar.pack(side=tk.LEFT, fill=tk.Y)
@@ -367,8 +520,13 @@ class GWExplorerApp:
         right_panel = ttk.Frame(self.root, padding="5")
         right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-        self.notebook = ttk.Notebook(right_panel)
-        self.notebook.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        chart_area = ttk.Frame(right_panel)
+        chart_area.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        self.notebook = ttk.Notebook(chart_area)
+        self.notebook.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self.build_display_side_controls(chart_area)
         
         self.tabs = {}
         for tab_name in ['H1', 'L1', 'V1', 'Joint Correlation']:
@@ -502,12 +660,15 @@ class GWExplorerApp:
                 bottom_row,
                 from_=-30,
                 to=30,
-                width=5,
+                width=6,
                 textvariable=self.detector_offsets_ms[det],
-                command=self.update_all_tabs
+                command=self.on_offset_spinbox_changed
             )
         
             spin.pack(side=tk.LEFT)
+            spin.bind("<KeyRelease>", self.on_offset_spinbox_changed)
+            spin.bind("<Return>", self.on_offset_spinbox_changed)
+            spin.bind("<FocusOut>", self.on_offset_spinbox_changed)
         
             self.offset_spinboxes[det] = spin
 
@@ -518,6 +679,9 @@ class GWExplorerApp:
         ).pack(side=tk.LEFT, padx=10)
         
         self.sky_link_url = None
+        self.last_sky_ra_deg = None
+        self.last_sky_dec_deg = None
+        self.sky_recompute_job = None
         self.sky_link_text = tk.StringVar(value="N/A")
         
         self.lbl_sky_link = ttk.Label(
@@ -578,6 +742,245 @@ class GWExplorerApp:
         ttk.Button(jump_frame, text="Go", command=self.execute_time_jump, width=4).pack(side=tk.LEFT, padx=2)
 
 
+
+
+    def build_display_side_controls(self, parent):
+        panel = ttk.LabelFrame(parent, text="Display Controls", padding=8)
+        panel.pack(side=tk.RIGHT, fill=tk.Y, padx=(8, 0))
+        panel.pack_propagate(False)
+        panel.configure(width=230)
+
+        ttk.Label(panel, text="Intensity percentiles").pack(anchor=tk.W)
+        self.pct_range_label = ttk.Label(panel, text="")
+        self.pct_range_label.pack(anchor=tk.W, pady=(0, 2))
+        self.pct_slider = RangeSlider(
+            panel,
+            0,
+            100,
+            self.pct_low,
+            self.pct_high,
+            command=self.on_display_control_changed,
+            width=200,
+            min_gap=0.1,
+            decimals=2
+        )
+        self.pct_slider.pack(fill=tk.X, pady=(0, 10))
+
+        ttk.Label(panel, text="Time window, seconds").pack(anchor=tk.W)
+        self.time_window_label = ttk.Label(panel, text="")
+        self.time_window_label.pack(anchor=tk.W, pady=(0, 2))
+        self.time_window_slider = ttk.Scale(
+            panel,
+            from_=-1.0,
+            to=1.0,
+            orient=tk.HORIZONTAL,
+            variable=self.time_window_log,
+            command=self.on_time_window_slider_changed
+        )
+        self.time_window_slider.pack(fill=tk.X, pady=(0, 10))
+
+        ttk.Label(panel, text="Frequency range, Hz").pack(anchor=tk.W)
+        self.freq_range_label = ttk.Label(panel, text="")
+        self.freq_range_label.pack(anchor=tk.W, pady=(0, 2))
+        self.freq_slider = RangeSlider(
+            panel,
+            0,
+            1000,
+            self.f_min,
+            self.f_max,
+            command=self.on_display_control_changed,
+            width=200,
+            min_gap=1.0,
+            decimals=0
+        )
+        self.freq_slider.pack(fill=tk.X, pady=(0, 10))
+
+        ttk.Checkbutton(
+            panel,
+            text="Grid",
+            variable=self.show_grid,
+            command=self.on_display_control_changed
+        ).pack(anchor=tk.W, pady=(2, 2))
+
+        contour_row = ttk.Frame(panel)
+        contour_row.pack(fill=tk.X, pady=(2, 4))
+        ttk.Checkbutton(
+            contour_row,
+            text="Contour lines",
+            variable=self.show_contours,
+            command=self.on_display_control_changed
+        ).pack(side=tk.LEFT)
+
+        contour_count_row = ttk.Frame(panel)
+        contour_count_row.pack(fill=tk.X, pady=(0, 10))
+        ttk.Label(contour_count_row, text="Line count:").pack(side=tk.LEFT)
+        contour_entry = ttk.Entry(
+            contour_count_row,
+            textvariable=self.contour_count,
+            width=6
+        )
+        contour_entry.pack(side=tk.LEFT, padx=(6, 0))
+        contour_entry.bind("<Return>", self.on_display_control_changed)
+        contour_entry.bind("<FocusOut>", self.on_display_control_changed)
+
+        ttk.Label(panel, text="Colour scheme").pack(anchor=tk.W)
+        self.colormap_combo = ttk.Combobox(
+            panel,
+            textvariable=self.colormap_name,
+            values=(
+                "viridis",
+                "inferno",
+                "magma",
+                "plasma",
+                "cividis",
+                "turbo",
+                "gray",
+                "hot"
+            ),
+            state="readonly",
+            width=16
+        )
+        self.colormap_combo.pack(fill=tk.X, pady=(2, 10))
+        self.colormap_combo.bind("<<ComboboxSelected>>", self.on_display_control_changed)
+
+        ttk.Button(
+            panel,
+            text="Reset display",
+            command=self.reset_display_controls
+        ).pack(fill=tk.X, pady=(8, 0))
+
+        self.update_display_control_labels()
+
+    def get_percentile_limits(self):
+        try:
+            low = float(self.pct_low.get())
+            high = float(self.pct_high.get())
+        except Exception:
+            low, high = 50.0, 99.99
+
+        low = max(0.0, min(100.0, low))
+        high = max(0.0, min(100.0, high))
+
+        if high <= low:
+            high = min(100.0, low + 0.1)
+            low = max(0.0, high - 0.1)
+
+        return low, high
+
+    def get_frequency_limits(self):
+        try:
+            low = float(self.f_min.get())
+            high = float(self.f_max.get())
+        except Exception:
+            low, high = 0.0, 500.0
+
+        low = max(0.0, min(1000.0, low))
+        high = max(0.0, min(1000.0, high))
+
+        if high <= low:
+            high = min(1000.0, low + 1.0)
+            low = max(0.0, high - 1.0)
+
+        return low, high
+
+    def get_contour_level_count(self):
+        try:
+            count = int(self.contour_count.get())
+        except Exception:
+            count = 25
+        return max(2, min(100, count))
+
+    def get_colormap_name(self):
+        try:
+            cmap = str(self.colormap_name.get()).strip()
+        except Exception:
+            cmap = "viridis"
+        return cmap or "viridis"
+
+    def update_display_control_labels(self):
+        if not hasattr(self, "pct_range_label"):
+            return
+
+        pct_low, pct_high = self.get_percentile_limits()
+        f_low, f_high = self.get_frequency_limits()
+
+        self.pct_range_label.config(text=f"{pct_low:.2f}% to {pct_high:.2f}%")
+        self.freq_range_label.config(text=f"{f_low:.0f} Hz to {f_high:.0f} Hz")
+        self.time_window_label.config(text=f"{self.t_width_seconds:.3f} s")
+
+        if hasattr(self, "pct_slider"):
+            self.pct_slider.redraw()
+        if hasattr(self, "freq_slider"):
+            self.freq_slider.redraw()
+
+    def schedule_display_update(self, recenter=False):
+        self.update_display_control_labels()
+
+        if recenter:
+            self.display_controls_recenter = True
+
+        if getattr(self, "display_control_update_job", None) is not None:
+            try:
+                self.root.after_cancel(self.display_control_update_job)
+            except Exception:
+                pass
+
+        self.display_control_update_job = self.root.after(
+            75,
+            self.apply_display_control_update
+        )
+
+    def apply_display_control_update(self):
+        self.display_control_update_job = None
+
+        if self.total_duration > 0:
+            if self.display_controls_recenter:
+                self.display_controls_recenter = False
+                self.clamp_and_set_center(self.t_center.get())
+            else:
+                self.update_all_tabs()
+        else:
+            self.display_controls_recenter = False
+
+    def on_display_control_changed(self, event=None):
+        self.schedule_display_update(recenter=False)
+        return None
+
+    def on_time_window_slider_changed(self, event=None):
+        try:
+            log_value = float(self.time_window_log.get())
+            width_seconds = 10.0 ** log_value
+        except Exception:
+            width_seconds = 1.0
+
+        width_seconds = max(0.1, min(10.0, width_seconds))
+        self.t_width_seconds = width_seconds
+        self.t_width_str.set(f"{width_seconds:.3f}")
+        self.schedule_display_update(recenter=True)
+        return None
+
+    def sync_display_controls(self):
+        try:
+            width_seconds = max(0.1, min(10.0, float(self.t_width_seconds)))
+            self.time_window_log.set(np.log10(width_seconds))
+        except Exception:
+            self.time_window_log.set(0.0)
+
+        self.update_display_control_labels()
+
+    def reset_display_controls(self):
+        self.pct_low.set(50.0)
+        self.pct_high.set(99.99)
+        self.f_min.set(0.0)
+        self.f_max.set(500.0)
+        self.t_width_seconds = 0.5
+        self.t_width_str.set("0.5")
+        self.time_window_log.set(np.log10(self.t_width_seconds))
+        self.show_grid.set(False)
+        self.show_contours.set(True)
+        self.contour_count.set(25)
+        self.colormap_name.set("viridis")
+        self.schedule_display_update(recenter=True)
 
     def start_zoom_drag(self, event):
         self.zoom_dragging = True
@@ -686,6 +1089,7 @@ class GWExplorerApp:
 
         self.f_min.set(max(0.0, ymin))
         self.f_max.set(max(self.f_min.get() + 1.0, ymax))
+        self.sync_display_controls()
 
         self.clamp_and_set_center(self.t_center.get())
 
@@ -701,8 +1105,12 @@ class GWExplorerApp:
     
         self.pct_low.set(50.0)
         self.pct_high.set(99.99)
-    
-        self.update_all_tabs()
+        self.sync_display_controls()
+
+        if self.total_duration > 0:
+            self.clamp_and_set_center(self.t_center.get())
+        else:
+            self.update_all_tabs()
 
     def execute_time_jump(self):
         if self.total_duration == 0: return
@@ -717,11 +1125,13 @@ class GWExplorerApp:
 
     def pull_exact_detector_suite(self, event_name, duration_val, rate_val, gps_merger, files_dict):
         try:
-        
+            self.root.after(0, self.clear_sky_solution)
+
             for det in ["H1", "L1", "V1"]:
-                self.root.after(0, lambda d=det: self.clear_detector(d))        
-                self.current_file_duration = f"{duration_val} Seconds"
-                self.current_event_name = event_name
+                self.root.after(0, lambda d=det: self.clear_detector(d))
+
+            self.current_file_duration = f"{duration_val} Seconds"
+            self.current_event_name = event_name
     
             target_hz = 16384 if "16" in rate_val else 4096
             self.current_file_rate = f"{target_hz} Hz"
@@ -790,6 +1200,9 @@ class GWExplorerApp:
         self.root.after(int(1000 / self.base_fps), self.play_step)
         
     def open_sky_link(self):
+        if not self.sky_link_url:
+            self.recompute_sky_from_offsets(show_errors=False)
+
         if self.sky_link_url:
             webbrowser.open(self.sky_link_url)
  
@@ -1064,16 +1477,33 @@ class GWExplorerApp:
             ax = self.tabs[det]["ax"]
             canvas = self.tabs[det]["canvas"]
             ax.clear()
-            canvas.draw_idle()    
+            canvas.draw_idle()
+
+    def clear_sky_solution(self):
+        self.sky_link_url = None
+        self.last_sky_ra_deg = None
+        self.last_sky_dec_deg = None
+
+        if hasattr(self, "sky_link_text"):
+            self.sky_link_text.set("N/A")
+
+        if hasattr(self, "sky_result_text"):
+            self.sky_result_text.set("Sky: Waiting...")
 
     def on_slider_move(self, val):
         if self.total_duration == 0 or self.is_dragging: return
         self.clamp_and_set_center(float(val), update_slider_ui=False)
 
     def clamp_and_set_center(self, target_center, update_slider_ui=True):
-        min_c = self.t_width_seconds / 2.0
-        max_c = self.total_duration - min_c
-        clamped = max(min_c, min(target_center, max_c))
+        if self.total_duration <= 0:
+            return
+
+        if self.total_duration <= self.t_width_seconds:
+            clamped = self.total_duration / 2.0
+        else:
+            min_c = self.t_width_seconds / 2.0
+            max_c = self.total_duration - min_c
+            clamped = max(min_c, min(target_center, max_c))
         
         self.t_center.set(clamped)
         self.time_lbl.config(text=f"Current Window Center: {clamped:.2f}s")
@@ -1174,7 +1604,11 @@ class GWExplorerApp:
                 float(self.f_max.get())
                 
                 win.destroy()
-                self.update_all_tabs()
+                self.sync_display_controls()
+                if self.total_duration > 0:
+                    self.clamp_and_set_center(self.t_center.get())
+                else:
+                    self.update_all_tabs()
             except Exception:
                 messagebox.showerror("Parsing Error", "Invalid input format detected. Please verify numerical configurations.")
                 
@@ -1182,32 +1616,59 @@ class GWExplorerApp:
         
     def render_canvas_frame(self, ax, canvas, Sxx, t, f, t_start, t_end):
         ax.clear()
+
+        f_low, f_high = self.get_frequency_limits()
+        pct_low, pct_high = self.get_percentile_limits()
+
         t_mask = (t >= t_start) & (t <= t_end)
-        f_mask = (f >= self.f_min.get()) & (f <= self.f_max.get())
+        f_mask = (f >= f_low) & (f <= f_high)
         
         if not np.any(t_mask) or not np.any(f_mask): 
+            canvas.draw_idle()
             return
             
         Sxx_sub = Sxx[np.ix_(f_mask, t_mask)]
-        vmin = np.percentile(Sxx_sub, self.pct_low.get())
-        vmax = np.percentile(Sxx_sub, self.pct_high.get())
+        vmin = np.percentile(Sxx_sub, pct_low)
+        vmax = np.percentile(Sxx_sub, pct_high)
 
-        # DEFENSIVE CHECK: Ensure range is significant
         if vmax <= vmin + 1e-12:
-            vmax = vmin + 1e-9 # Force a small, detectable range
+            vmax = vmin + 1e-9
             
-        levels = np.linspace(vmin, vmax, 25)
+        contour_count = self.get_contour_level_count()
+        levels = np.linspace(vmin, vmax, contour_count)
+        cmap = self.get_colormap_name()
         
-        # Use a try-except to catch potential contouring errors gracefully
         try:
-            ax.pcolormesh(t[t_mask], f[f_mask], Sxx_sub, shading='gouraud', cmap='viridis')
-            ax.contourf(t[t_mask], f[f_mask], Sxx_sub, levels=levels, cmap='inferno', extend='both')
-        except ValueError:
-            # Fallback if contouring still fails (e.g., constant Z data)
-            ax.pcolormesh(t[t_mask], f[f_mask], Sxx_sub, shading='gouraud', cmap='viridis')
+            ax.pcolormesh(
+                t[t_mask],
+                f[f_mask],
+                Sxx_sub,
+                shading='gouraud',
+                cmap=cmap,
+                vmin=vmin,
+                vmax=vmax
+            )
+
+            if self.show_contours.get() and Sxx_sub.shape[0] >= 2 and Sxx_sub.shape[1] >= 2:
+                ax.contour(
+                    t[t_mask],
+                    f[f_mask],
+                    Sxx_sub,
+                    levels=levels,
+                    linewidths=0.5
+                )
+        except Exception:
+            ax.pcolormesh(
+                t[t_mask],
+                f[f_mask],
+                Sxx_sub,
+                shading='gouraud',
+                cmap='viridis'
+            )
             
         ax.set_xlim(t_start, t_end)
-        ax.set_ylim(self.f_min.get(), self.f_max.get())
+        ax.set_ylim(f_low, f_high)
+        ax.grid(bool(self.show_grid.get()))
         canvas.draw_idle()
         
     def start_drag(self, event):
@@ -1440,6 +1901,25 @@ class GWExplorerApp:
         except Exception:
             return 0.0
 
+    def on_offset_spinbox_changed(self, event=None):
+        if self.total_duration > 0:
+            self.update_all_tabs()
+
+        self.schedule_sky_recompute()
+        return None
+
+    def schedule_sky_recompute(self, event=None):
+        if getattr(self, "sky_recompute_job", None) is not None:
+            try:
+                self.root.after_cancel(self.sky_recompute_job)
+            except Exception:
+                pass
+
+        self.sky_recompute_job = self.root.after(
+            200,
+            lambda: self.recompute_sky_from_offsets(show_errors=False)
+        )
+
         
     def trigger_frame_correlation(self):
         self.lbl_offset_result.config(text="Calculating...", foreground="orange")
@@ -1496,6 +1976,7 @@ class GWExplorerApp:
             )
 
             self.update_all_tabs()
+            self.schedule_sky_recompute()
 
         except Exception as e:
             self.lbl_offset_result.config(text=f"Error: {str(e)}", foreground="red")
@@ -1523,13 +2004,21 @@ class GWExplorerApp:
 
 
     def estimate_sky_location(self):
+        self.recompute_sky_from_offsets(show_errors=True)
+
+
+    def recompute_sky_from_offsets(self, show_errors=False):
+        self.sky_recompute_job = None
+
         try:
             if not (
                 self.detectors["H1"]["loaded"]
                 and self.detectors["L1"]["loaded"]
                 and self.detectors["V1"]["loaded"]
             ):
-                raise ValueError("H1, L1 and V1 must all be loaded.")
+                if show_errors:
+                    raise ValueError("H1, L1 and V1 must all be loaded.")
+                return None
 
             gps_time = float(self.cached_target_gps)
 
@@ -1537,6 +2026,7 @@ class GWExplorerApp:
                 "L1": self.get_detector_offset_ms("L1"),
                 "V1": self.get_detector_offset_ms("V1"),
             }
+
             gmst = self.gps_to_gmst(gps_time)
 
             best_err = np.inf
@@ -1574,6 +2064,15 @@ class GWExplorerApp:
                         best_dec = dec_deg
                         best_model = dict(model)
 
+            if best_ra is None or best_dec is None or best_model is None:
+                raise ValueError("Could not solve sky position from current offsets.")
+
+            self.last_sky_ra_deg = float(best_ra)
+            self.last_sky_dec_deg = float(best_dec)
+            self.sky_link_url = self.build_sky_url(
+                self.last_sky_ra_deg,
+                self.last_sky_dec_deg
+            )
 
             result_text = (
                 f"RA={best_ra:.1f} deg, "
@@ -1581,26 +2080,27 @@ class GWExplorerApp:
                 f"L1={best_model['L1']:+.1f} ms, "
                 f"V1={best_model['V1']:+.1f} ms"
             )
-            
-            target = f"{best_ra:.6f} {best_dec:.6f}"
-
-            self.sky_link_url = self.build_sky_url(best_ra, best_dec)
-            
-            self.sky_link_text.set("Open Link")            
 
             self.sky_result_text.set(result_text)
 
-            self.lbl_offset_result.config(
-                foreground="purple"
-            )
+            if hasattr(self, "sky_link_text"):
+                self.sky_link_text.set("Open Link")
+
+            if hasattr(self, "lbl_offset_result"):
+                self.lbl_offset_result.config(foreground="purple")
+
+            return self.last_sky_ra_deg, self.last_sky_dec_deg
 
         except Exception as e:
-            self.lbl_offset_result.config(
-                text=f"Sky Error: {str(e)}",
-                foreground="red"
-            )
+            if show_errors:
+                self.lbl_offset_result.config(
+                    text=f"Sky Error: {str(e)}",
+                    foreground="red"
+                )
 
-            print(f"Sky Location Error: {e}")
+                print(f"Sky Location Error: {e}")
+
+            return None
 
 
     def build_sky_url(self, ra_deg, dec_deg):
@@ -1613,7 +2113,7 @@ class GWExplorerApp:
             "no_cookie": 1,
             "latitude": 51.51,
             "longitude": -0.13,
-            "timezone": 0.00,
+            "timezone": "0.00",
     
             "year": event_dt.year,
             "month": event_dt.month,
@@ -1622,11 +2122,12 @@ class GWExplorerApp:
             "min": event_dt.minute,
     
             "PLlimitmag": 2,
-            "zoom": 80,
+            "zoom": 188,
     
             # In-The-Sky wants RA in hours, not degrees.
             "ra": f"{ra_deg / 15.0:.5f}",
             "dec": f"{dec_deg:.5f}",
+
         }
 
         return "https://in-the-sky.org/skymap.php?" + urlencode(params)
@@ -1675,12 +2176,15 @@ class GWExplorerApp:
             canvas.draw_idle()
             return
 
+        f_low, f_high = self.get_frequency_limits()
+        pct_low, pct_high = self.get_percentile_limits()
+
         ref = active_matrices[0]
         ref_t = self.detectors[ref]['t']
         ref_f = self.detectors[ref]['f']
 
         t_mask = (ref_t >= t_start) & (ref_t <= t_end)
-        f_mask = (ref_f >= self.f_min.get()) & (ref_f <= self.f_max.get())
+        f_mask = (ref_f >= f_low) & (ref_f <= f_high)
 
         if not np.any(t_mask) or not np.any(f_mask):
             canvas.draw_idle()
@@ -1696,13 +2200,13 @@ class GWExplorerApp:
             det_t = self.detectors[det]['t']
             det_f = self.detectors[det]['f']
 
-            offset_sec = self.detector_offsets_ms[det].get() / 1000.0
+            offset_sec = self.get_detector_offset_ms(det) / 1000.0
 
             # Positive offset means: shift this detector later in time.
             # So when drawing against the reference clock, sample from earlier detector time.
             sample_t = ref_t_window - offset_sec
 
-            det_f_mask = (det_f >= self.f_min.get()) & (det_f <= self.f_max.get())
+            det_f_mask = (det_f >= f_low) & (det_f <= f_high)
             S_freq = Sxx[det_f_mask, :]
 
             if S_freq.shape[0] == 0:
@@ -1736,32 +2240,43 @@ class GWExplorerApp:
             canvas.draw_idle()
             return
 
-        vmin = np.percentile(joint_product, self.pct_low.get())
-        vmax = np.percentile(joint_product, self.pct_high.get())
-        levels = np.linspace(vmin, max(vmax, vmin + 1e-10), 25)
+        vmin = np.percentile(joint_product, pct_low)
+        vmax = np.percentile(joint_product, pct_high)
+        if vmax <= vmin + 1e-12:
+            vmax = vmin + 1e-9
+
+        contour_count = self.get_contour_level_count()
+        levels = np.linspace(vmin, vmax, contour_count)
+        cmap = self.get_colormap_name()
 
         ax.pcolormesh(
-        ref_t_window,
-        ref_f_window[:joint_product.shape[0]],
-        joint_product,
-        shading='gouraud',
-        cmap='magma'
-    )
+            ref_t_window,
+            ref_f_window[:joint_product.shape[0]],
+            joint_product,
+            shading='gouraud',
+            cmap=cmap,
+            vmin=vmin,
+            vmax=vmax
+        )
 
-        ax.contourf(
-        ref_t_window,
-        ref_f_window[:joint_product.shape[0]],
-        joint_product,
-        levels=levels,
-        cmap='hot',
-        extend='both'
-    )
+        if self.show_contours.get() and joint_product.shape[0] >= 2 and joint_product.shape[1] >= 2:
+            try:
+                ax.contour(
+                    ref_t_window,
+                    ref_f_window[:joint_product.shape[0]],
+                    joint_product,
+                    levels=levels,
+                    linewidths=0.5
+                )
+            except Exception:
+                pass
 
         ax.set_xlim(t_start, t_end)
-        ax.set_ylim(self.f_min.get(), self.f_max.get())
+        ax.set_ylim(f_low, f_high)
+        ax.grid(bool(self.show_grid.get()))
 
         title_parts = [
-            f"{det} {float(self.detector_offsets_ms[det].get()):+.1f} ms"
+            f"{det} {self.get_detector_offset_ms(det):+.1f} ms"
             for det in active_matrices
             if det != "H1"
         ]
