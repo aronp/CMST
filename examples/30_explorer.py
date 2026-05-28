@@ -463,9 +463,9 @@ class GWExplorerApp:
         self.pct_high = tk.DoubleVar(value=99.99)
         self.time_window_log = tk.DoubleVar(value=np.log10(self.t_width_seconds))
         self.show_grid = tk.BooleanVar(value=False)
-        self.show_contours = tk.BooleanVar(value=True)
+        self.show_contours = tk.BooleanVar(value=False)
         self.contour_count = tk.IntVar(value=25)
-        self.colormap_name = tk.StringVar(value="viridis")
+        self.colormap_name = tk.StringVar(value="inferno")
         self.display_control_update_job = None
         self.display_controls_recenter = False
         
@@ -896,6 +896,18 @@ class GWExplorerApp:
         except Exception:
             cmap = "viridis"
         return cmap or "viridis"
+
+    def apply_chart_grid(self, ax):
+        show = bool(self.show_grid.get())
+
+        if show:
+            # Draw the grid as the top axis layer so contour lines do not hide it.
+            # Matplotlib draws grid lines as part of the Axis artist, so
+            # set_axisbelow(False) is more reliable than only changing zorder.
+            ax.set_axisbelow(False)
+            ax.grid(True, which="major", linewidth=0.6, alpha=0.85)
+        else:
+            ax.grid(False)
 
     def update_display_control_labels(self):
         if not hasattr(self, "pct_range_label"):
@@ -1655,7 +1667,9 @@ class GWExplorerApp:
                     f[f_mask],
                     Sxx_sub,
                     levels=levels,
-                    linewidths=0.5
+                    colors="white",
+                    linewidths=0.25,alpha=0.5,
+                    zorder=2
                 )
         except Exception:
             ax.pcolormesh(
@@ -1668,7 +1682,7 @@ class GWExplorerApp:
             
         ax.set_xlim(t_start, t_end)
         ax.set_ylim(f_low, f_high)
-        ax.grid(bool(self.show_grid.get()))
+        self.apply_chart_grid(ax)
         canvas.draw_idle()
         
     def start_drag(self, event):
@@ -2122,7 +2136,7 @@ class GWExplorerApp:
             "min": event_dt.minute,
     
             "PLlimitmag": 2,
-            "zoom": 188,
+            "zoom": 5,
     
             # In-The-Sky wants RA in hours, not degrees.
             "ra": f"{ra_deg / 15.0:.5f}",
@@ -2266,14 +2280,16 @@ class GWExplorerApp:
                     ref_f_window[:joint_product.shape[0]],
                     joint_product,
                     levels=levels,
-                    linewidths=0.5
+                    colors="white",
+                    linewidths=0.25,alpha = 0.5,
+                    zorder=2
                 )
             except Exception:
                 pass
 
         ax.set_xlim(t_start, t_end)
         ax.set_ylim(f_low, f_high)
-        ax.grid(bool(self.show_grid.get()))
+        self.apply_chart_grid(ax)
 
         title_parts = [
             f"{det} {self.get_detector_offset_ms(det):+.1f} ms"
