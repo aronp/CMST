@@ -13,10 +13,13 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
 from gwosc.locate import get_event_urls
 import matplotlib.patches
 import json
+import webbrowser
+from urllib.parse import quote
+from datetime import datetime, timezone, timedelta
+from urllib.parse import urlencode
 
 
 C_LIGHT = 299792458.0
@@ -483,27 +486,53 @@ class GWExplorerApp:
             text="Offsets ms:"
         ).pack(side=tk.LEFT, padx=(5, 4))
 
+
+        self.offset_spinboxes = {}
+        
         for det in ["L1", "V1"]:
+        
+            self.detector_offsets_ms[det] = tk.DoubleVar(value=0.0)
+        
             ttk.Label(
                 bottom_row,
                 text=f"{det}:"
             ).pack(side=tk.LEFT, padx=(8, 2))
-
-            ttk.Spinbox(
+        
+            spin = ttk.Spinbox(
                 bottom_row,
                 from_=-30,
                 to=30,
                 width=5,
                 textvariable=self.detector_offsets_ms[det],
                 command=self.update_all_tabs
-            ).pack(side=tk.LEFT)
+            )
+        
+            spin.pack(side=tk.LEFT)
+        
+            self.offset_spinboxes[det] = spin
 
         ttk.Button(
             bottom_row,
             text="Sky Location",
             command=self.estimate_sky_location
         ).pack(side=tk.LEFT, padx=10)
-
+        
+        self.sky_link_url = None
+        self.sky_link_text = tk.StringVar(value="N/A")
+        
+        self.lbl_sky_link = ttk.Label(
+            bottom_row,
+            textvariable=self.sky_link_text,
+            font=("Courier", 10, "bold"),
+            foreground="purple",
+            cursor="hand2"
+        )
+        self.lbl_sky_link.pack(side=tk.LEFT, padx=10)
+        
+        self.lbl_sky_link.bind(
+            "<Button-1>",
+            lambda e: self.open_sky_link()
+        )
 
 
         # Integrated Control Console Layout
@@ -760,6 +789,10 @@ class GWExplorerApp:
         self.clamp_and_set_center(new_center)
         self.root.after(int(1000 / self.base_fps), self.play_step)
         
+    def open_sky_link(self):
+        if self.sky_link_url:
+            webbrowser.open(self.sky_link_url)
+ 
         
     # --- Accelerated & Cached GWOSC Catalog Window ---
     def open_gwosc_catalog_browser(self):
@@ -1398,6 +1431,15 @@ class GWExplorerApp:
             whitened = np.where(window_sum > 1e-10, whitened / window_sum, 0.0)
             
         return whitened
+
+    def get_detector_offset_ms(self, det):
+        try:
+            if hasattr(self, "offset_spinboxes") and det in self.offset_spinboxes:
+                return float(self.offset_spinboxes[det].get())
+            return float(self.detector_offsets_ms[det].get())
+        except Exception:
+            return 0.0
+
         
     def trigger_frame_correlation(self):
         self.lbl_offset_result.config(text="Calculating...", foreground="orange")
@@ -1492,10 +1534,9 @@ class GWExplorerApp:
             gps_time = float(self.cached_target_gps)
 
             observed = {
-                "L1": self.detector_offsets_ms["L1"].get(),
-                "V1": self.detector_offsets_ms["V1"].get(),
+                "L1": self.get_detector_offset_ms("L1"),
+                "V1": self.get_detector_offset_ms("V1"),
             }
-
             gmst = self.gps_to_gmst(gps_time)
 
             best_err = np.inf
@@ -1540,6 +1581,12 @@ class GWExplorerApp:
                 f"L1={best_model['L1']:+.1f} ms, "
                 f"V1={best_model['V1']:+.1f} ms"
             )
+            
+            target = f"{best_ra:.6f} {best_dec:.6f}"
+
+            self.sky_link_url = self.build_sky_url(best_ra, best_dec)
+            
+            self.sky_link_text.set("Open Link")            
 
             self.sky_result_text.set(result_text)
 
@@ -1556,6 +1603,33 @@ class GWExplorerApp:
             print(f"Sky Location Error: {e}")
 
 
+    def build_sky_url(self, ra_deg, dec_deg):
+        try:
+            event_dt = self.gps_to_utc_datetime(float(self.cached_target_gps))
+        except Exception:
+            event_dt = datetime.now(timezone.utc)
+    
+        params = {
+            "no_cookie": 1,
+            "latitude": 51.51,
+            "longitude": -0.13,
+            "timezone": 0.00,
+    
+            "year": event_dt.year,
+            "month": event_dt.month,
+            "day": event_dt.day,
+            "hour": event_dt.hour,
+            "min": event_dt.minute,
+    
+            "PLlimitmag": 2,
+            "zoom": 80,
+    
+            # In-The-Sky wants RA in hours, not degrees.
+            "ra": f"{ra_deg / 15.0:.5f}",
+            "dec": f"{dec_deg:.5f}",
+        }
+
+        return "https://in-the-sky.org/skymap.php?" + urlencode(params)
 
     def compute_complete_spectrogram(self, det):
         nperseg = self.nperseg.get()
@@ -1687,11 +1761,10 @@ class GWExplorerApp:
         ax.set_ylim(self.f_min.get(), self.f_max.get())
 
         title_parts = [
-        f"{det} {self.detector_offsets_ms[det].get():+d} ms"
-        for det in active_matrices
-        if det != "H1"
-    ]
-
+            f"{det} {float(self.detector_offsets_ms[det].get()):+.1f} ms"
+            for det in active_matrices
+            if det != "H1"
+        ]
         ax.set_title("Joint Correlation " + " | ".join(title_parts))
 
         canvas.draw_idle()
@@ -1861,6 +1934,16 @@ class GWExplorerApp:
 
         return abs(tau_ms), lead_text
 
+
+    def gps_to_utc_datetime(self, gps_time):
+        gps_epoch = datetime(1980, 1, 6, tzinfo=timezone.utc)
+    
+        # GPS is ahead of UTC by 18 seconds for modern GW events.
+        # Good for all current LIGO/Virgo catalog events.
+        leap_seconds = 18
+    
+        return gps_epoch + timedelta(seconds=float(gps_time) - leap_seconds)
+    
 
             
 if __name__ == "__main__":
