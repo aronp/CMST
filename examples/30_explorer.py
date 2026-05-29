@@ -2295,95 +2295,6 @@ class GWExplorerApp:
         self.render_joint_correlation(t_start, t_end)
         self.render_whitened_waveforms(t_start, t_end)
 
-    def render_whitened_waveforms(self, t_start, t_end):
-        if "Whitened Waveforms" not in self.tabs or not hasattr(self, 'fs') or self.fs is None:
-            return
-
-        axs = self.tabs["Whitened Waveforms"]['ax']
-        canvas = self.tabs["Whitened Waveforms"]['canvas']
-
-        # Clear existing lines
-        for ax in axs:
-            ax.clear()
-
-        # 1. Get frequency limits from the UI controls
-        f_low, f_high = self.get_frequency_limits()
-
-        # Ensure valid bandpass frequencies (avoiding 0 Hz and staying below Nyquist)
-        nyquist = self.fs / 2.0
-        low = max(1.0, float(f_low))
-        high = min(float(f_high), nyquist - 1.0)
-
-        # Create the filter if the range is valid
-        apply_filter = False
-        if high > low:
-            apply_filter = True
-            sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
-
-        colors = {'H1': 'red', 'L1': 'green', 'V1': 'purple'}
-        detectors = ['H1', 'L1', 'V1']
-        combined_ax = axs[3]
-
-        for i, det in enumerate(detectors):
-            if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
-                # Calculate exact slice indices
-                idx_start = int(max(0, t_start * self.fs))
-                idx_end = int(min(len(self.detectors[det]['whitened']), t_end * self.fs))
-
-                if idx_start >= idx_end:
-                    continue
-
-                # Generate exact time array and get the data slice
-                t_arr = np.arange(idx_start, idx_end) / self.fs
-                data = self.detectors[det]['whitened'][idx_start:idx_end]
-
-                # 2. Apply the zero-phase bandpass filter
-                if apply_filter and len(data) > 33:
-                    try:
-                        data = signal.sosfiltfilt(sos, data)
-                    except ValueError:
-                        # Fallback to unfiltered if the time window is zoomed in too tightly
-                        pass
-
-                        # 3. Plot individual chart (always true to the raw polarity)
-                axs[i].plot(t_arr, data, color=colors[det], label=det, linewidth=0.8)
-                axs[i].set_ylabel("Strain")
-                axs[i].grid(True, alpha=0.5)
-                axs[i].legend(loc="upper right")
-
-                # 4. Plot combined chart with offset alignment AND potential polarity flip
-                offset_sec = self.get_detector_offset_ms(det) / 1000.0
-                shifted_t_arr = t_arr - offset_sec
-
-                # Check if the user has requested to invert this specific signal
-                is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
-                plot_data = -data if is_flipped else data
-                flip_text = " [Inverted]" if is_flipped else ""
-
-                combined_ax.plot(
-                    shifted_t_arr,
-                    plot_data,
-                    color=colors[det],
-                    label=f"{det} ({offset_sec * 1000:+.1f}ms){flip_text}",
-                    linewidth=0.6,
-                    alpha=0.8
-                )
-
-        # Format the combined axis and label it with the active filter frequencies
-        filter_text = f"Aligned (BP: {low:.0f}-{high:.0f} Hz)" if apply_filter else "Aligned"
-        combined_ax.set_ylabel(filter_text)
-        combined_ax.set_xlabel("Time (s)")
-        combined_ax.grid(True, alpha=0.5)
-        combined_ax.set_xlim(t_start, t_end)
-
-        # Avoid empty legend warnings
-        handles, labels = combined_ax.get_legend_handles_labels()
-        if handles:
-            combined_ax.legend(loc="upper right")
-
-        canvas.draw_idle()
-
-        
     def render_joint_correlation(self, t_start, t_end):
         ax = self.tabs['Joint Correlation']['ax']
         canvas = self.tabs['Joint Correlation']['canvas']
@@ -2489,7 +2400,7 @@ class GWExplorerApp:
                     joint_product,
                     levels=levels,
                     colors="white",
-                    linewidths=0.25,alpha = 0.5,
+                    linewidths=0.25, alpha=0.5,
                     zorder=2
                 )
             except Exception:
@@ -2508,6 +2419,185 @@ class GWExplorerApp:
 
         canvas.draw_idle()
 
+
+
+    def render_whitened_waveforms(self, t_start, t_end):
+        if "Whitened Waveforms" not in self.tabs or not hasattr(self, 'fs') or self.fs is None:
+            return
+
+        axs = self.tabs["Whitened Waveforms"]['ax']
+        canvas = self.tabs["Whitened Waveforms"]['canvas']
+
+        # Clear existing lines
+        for ax in axs:
+            ax.clear()
+
+        # 1. Get frequency limits from the UI controls
+        f_low, f_high = self.get_frequency_limits()
+
+        # Ensure valid bandpass frequencies (avoiding 0 Hz and staying below Nyquist)
+        nyquist = self.fs / 2.0
+        low = max(1.0, float(f_low))
+        high = min(float(f_high), nyquist - 1.0)
+
+        # Create the filter if the range is valid
+        apply_filter = False
+        if high > low:
+            apply_filter = True
+            sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
+
+        colors = {'H1': 'red', 'L1': 'green', 'V1': 'purple'}
+        detectors = ['H1', 'L1', 'V1']
+        combined_ax = axs[3]
+
+        for i, det in enumerate(detectors):
+            if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
+                # Calculate exact slice indices
+                idx_start = int(max(0, t_start * self.fs))
+                idx_end = int(min(len(self.detectors[det]['whitened']), t_end * self.fs))
+
+                if idx_start >= idx_end:
+                    continue
+
+                # Generate exact time array and get the data slice
+                t_arr = np.arange(idx_start, idx_end) / self.fs
+                data = self.detectors[det]['whitened'][idx_start:idx_end]
+
+                # 2. Apply the zero-phase bandpass filter
+                if apply_filter and len(data) > 33:
+                    try:
+                        data = signal.sosfiltfilt(sos, data)
+                    except ValueError:
+                        # Fallback to unfiltered if the time window is zoomed in too tightly
+                        pass
+
+                        # 3. Plot individual chart (always true to the raw polarity)
+                axs[i].plot(t_arr, data, color=colors[det], label=det, linewidth=0.8)
+                axs[i].set_ylabel("Strain")
+                axs[i].grid(True, alpha=0.5)
+                axs[i].legend(loc="upper right")
+
+                # 4. Plot combined chart with offset alignment AND potential polarity flip
+                offset_sec = self.get_detector_offset_ms(det) / 1000.0
+                shifted_t_arr = t_arr - offset_sec
+
+                # Check if the user has requested to invert this specific signal
+                is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
+                plot_data = -data if is_flipped else data
+                flip_text = " [Inverted]" if is_flipped else ""
+
+                combined_ax.plot(
+                    shifted_t_arr,
+                    plot_data,
+                    color=colors[det],
+                    label=f"{det} ({offset_sec * 1000:+.1f}ms){flip_text}",
+                    linewidth=0.6,
+                    alpha=0.8
+                )
+
+        # Format the combined axis and label it with the active filter frequencies
+        filter_text = f"Aligned (BP: {low:.0f}-{high:.0f} Hz)" if apply_filter else "Aligned"
+        combined_ax.set_ylabel(filter_text)
+        combined_ax.set_xlabel("Time (s)")
+        combined_ax.grid(True, alpha=0.5)
+        combined_ax.set_xlim(t_start, t_end)
+
+        # Avoid empty legend warnings
+        handles, labels = combined_ax.get_legend_handles_labels()
+        if handles:
+            combined_ax.legend(loc="upper right")
+
+        canvas.draw_idle()
+
+    def render_whitened_waveforms(self, t_start, t_end):
+        if "Whitened Waveforms" not in self.tabs or not hasattr(self, 'fs') or self.fs is None:
+            return
+
+        axs = self.tabs["Whitened Waveforms"]['ax']
+        canvas = self.tabs["Whitened Waveforms"]['canvas']
+
+        # Clear existing lines
+        for ax in axs:
+            ax.clear()
+
+        # 1. Get frequency limits from the UI controls
+        f_low, f_high = self.get_frequency_limits()
+
+        # Ensure valid bandpass frequencies (avoiding 0 Hz and staying below Nyquist)
+        nyquist = self.fs / 2.0
+        low = max(1.0, float(f_low))
+        high = min(float(f_high), nyquist - 1.0)
+
+        # Create the filter if the range is valid
+        apply_filter = False
+        if high > low:
+            apply_filter = True
+            sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
+
+        colors = {'H1': 'red', 'L1': 'green', 'V1': 'purple'}
+        detectors = ['H1', 'L1', 'V1']
+        combined_ax = axs[3]
+
+        for i, det in enumerate(detectors):
+            if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
+                # Calculate exact slice indices
+                idx_start = int(max(0, t_start * self.fs))
+                idx_end = int(min(len(self.detectors[det]['whitened']), t_end * self.fs))
+
+                if idx_start >= idx_end:
+                    continue
+
+                # Generate exact time array and get the data slice
+                t_arr = np.arange(idx_start, idx_end) / self.fs
+                data = self.detectors[det]['whitened'][idx_start:idx_end]
+
+                # 2. Apply the zero-phase bandpass filter
+                if apply_filter and len(data) > 33:
+                    try:
+                        data = signal.sosfiltfilt(sos, data)
+                    except ValueError:
+                        # Fallback to unfiltered if the time window is zoomed in too tightly
+                        pass
+
+                        # 3. Plot individual chart (always true to the raw polarity)
+                axs[i].plot(t_arr, data, color=colors[det], label=det, linewidth=0.8)
+                axs[i].set_ylabel("Strain")
+                axs[i].grid(True, alpha=0.5)
+                # CHANGED: Moved legend to upper left
+                axs[i].legend(loc="upper left")
+
+                # 4. Plot combined chart with offset alignment AND potential polarity flip
+                offset_sec = self.get_detector_offset_ms(det) / 1000.0
+                shifted_t_arr = t_arr - offset_sec
+
+                # Check if the user has requested to invert this specific signal
+                is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
+                plot_data = -data if is_flipped else data
+                flip_text = " [Inverted]" if is_flipped else ""
+
+                combined_ax.plot(
+                    shifted_t_arr,
+                    plot_data,
+                    color=colors[det],
+                    label=f"{det} ({offset_sec * 1000:+.1f}ms){flip_text}",
+                    linewidth=0.6,
+                    alpha=0.8
+                )
+
+        # Format the combined axis and label it with the active filter frequencies
+        filter_text = f"Aligned (BP: {low:.0f}-{high:.0f} Hz)" if apply_filter else "Aligned"
+        combined_ax.set_ylabel(filter_text)
+        combined_ax.set_xlabel("Time (s)")
+        combined_ax.grid(True, alpha=0.5)
+        combined_ax.set_xlim(t_start, t_end)
+
+        # Avoid empty legend warnings
+        handles, labels = combined_ax.get_legend_handles_labels()
+        if handles:
+            # CHANGED: Moved legend to upper left
+            combined_ax.legend(loc="upper left")
+
+        canvas.draw_idle()
 
 
 
