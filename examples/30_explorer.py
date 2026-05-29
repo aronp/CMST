@@ -72,6 +72,7 @@ class RangeSlider(tk.Canvas):
         self.bind("<B1-Motion>", self._on_drag)
         self.bind("<ButtonRelease-1>", self._on_release)
 
+
         try:
             self.low_var.trace_add("write", lambda *_: self.redraw())
             self.high_var.trace_add("write", lambda *_: self.redraw())
@@ -142,6 +143,10 @@ class RangeSlider(tk.Canvas):
                 fill=self.cget("background") or "SystemButtonFace"
             )
 
+    
+    
+
+
     def _on_press(self, event):
         low, high = self._current_values()
         low_x = self._value_to_x(low)
@@ -183,7 +188,7 @@ class GWExplorerApp:
         self.root.title("Multi-Detector CMST Transient Explorer")
         self.root.geometry("1450x950")
 
-
+        self.display_defaults_path = "display_defaults.json"
         self.recent_files_path = "recent_files.json"
         self.recent_files = self.load_recent_files()
 
@@ -248,6 +253,7 @@ class GWExplorerApp:
             "H1": "H-H1_GWOSC_16KHZ_R1-1126259447-32.hdf5",
             "L1": "L-L1_GWOSC_16KHZ_R1-1126259447-32.hdf5",
         }        
+
                 
 
         available_startup_files = {
@@ -272,6 +278,41 @@ class GWExplorerApp:
                     ).start()
         
             self.root.after(1000, load_startup_suite)            
+
+
+    def load_display_defaults(self):
+        defaults = {
+            "pct_low": 50.0,
+            "pct_high": 99.99,
+            "f_min": 0.0,
+            "f_max": 500.0,
+            "t_width_seconds": 0.5,
+            "show_grid": False,
+            "show_contours": False,
+            "contour_count": 25,
+            "colormap_name": "inferno",
+        }
+    
+        try:
+            if os.path.exists(self.display_defaults_path):
+                with open(self.display_defaults_path, "r") as f:
+                    saved = json.load(f)
+                defaults.update(saved)
+        except Exception as e:
+            print("Display defaults load error:", e)
+    
+        return defaults
+
+    def save_display_defaults(self):
+        self.display_defaults = self.get_current_display_settings()
+    
+        try:
+            with open(self.display_defaults_path, "w") as f:
+                json.dump(self.display_defaults, f, indent=2)
+            self.global_status.config(text="Saved display settings as default.")
+        except Exception as e:
+            messagebox.showerror("Save Error", f"Could not save display defaults:\n{e}")
+
            
 
     def load_recent_files(self):
@@ -455,7 +496,7 @@ class GWExplorerApp:
         self.overlap_pct = tk.DoubleVar(value=85.0)
         
         self.t_center = tk.DoubleVar(value=0.0)
-        self.t_width_seconds = 1.00
+        self.t_width_seconds = 0.2
         self.t_width_str = tk.StringVar(value="0.65")
         self.f_min = tk.DoubleVar(value=0)
         self.f_max = tk.DoubleVar(value=500)
@@ -468,6 +509,22 @@ class GWExplorerApp:
         self.colormap_name = tk.StringVar(value="inferno")
         self.display_control_update_job = None
         self.display_controls_recenter = False
+
+
+        self.display_defaults = self.load_display_defaults()
+        
+        self.pct_low.set(self.display_defaults["pct_low"])
+        self.pct_high.set(self.display_defaults["pct_high"])
+        self.f_min.set(self.display_defaults["f_min"])
+        self.f_max.set(self.display_defaults["f_max"])
+        self.t_width_seconds = self.display_defaults["t_width_seconds"]
+        self.t_width_str.set(f"{self.t_width_seconds:.3f}")
+        self.time_window_log.set(np.log10(self.t_width_seconds))
+        self.show_grid.set(self.display_defaults["show_grid"])
+        self.show_contours.set(self.display_defaults["show_contours"])
+        self.contour_count.set(self.display_defaults["contour_count"])
+        self.colormap_name.set(self.display_defaults["colormap_name"])
+
         
         sidebar = ttk.Frame(self.root, padding="10", width=340)
         sidebar.pack(side=tk.LEFT, fill=tk.Y)
@@ -564,6 +621,7 @@ class GWExplorerApp:
             "L1": tk.IntVar(value=0),
             "V1": tk.IntVar(value=0),}
 
+        self.display_defaults = self.get_current_display_settings()
 
         # --- Cross-Correlation Control Panel ---
         self.corr_frame = ttk.LabelFrame(right_panel, text="Interferometer Time Delay Analysis", padding=10)
@@ -742,7 +800,19 @@ class GWExplorerApp:
         ttk.Button(jump_frame, text="Go", command=self.execute_time_jump, width=4).pack(side=tk.LEFT, padx=2)
 
 
-
+    def get_current_display_settings(self):
+        return {
+            "pct_low": float(self.pct_low.get()),
+            "pct_high": float(self.pct_high.get()),
+            "f_min": float(self.f_min.get()),
+            "f_max": float(self.f_max.get()),
+            "t_width_seconds": float(self.t_width_seconds),
+            "show_grid": bool(self.show_grid.get()),
+            "show_contours": bool(self.show_contours.get()),
+            "contour_count": int(self.contour_count.get()),
+            "colormap_name": str(self.colormap_name.get()),
+        }
+    
 
     def build_display_side_controls(self, parent):
         panel = ttk.LabelFrame(parent, text="Display Controls", padding=8)
@@ -848,6 +918,12 @@ class GWExplorerApp:
             text="Reset display",
             command=self.reset_display_controls
         ).pack(fill=tk.X, pady=(8, 0))
+        
+        ttk.Button(
+            panel,
+            text="Save as default",
+            command=self.save_display_defaults
+        ).pack(fill=tk.X, pady=(4, 0))        
 
         self.update_display_control_labels()
 
@@ -980,19 +1056,39 @@ class GWExplorerApp:
 
         self.update_display_control_labels()
 
+
     def reset_display_controls(self):
-        self.pct_low.set(50.0)
-        self.pct_high.set(99.99)
-        self.f_min.set(0.0)
-        self.f_max.set(500.0)
-        self.t_width_seconds = 0.5
-        self.t_width_str.set("0.5")
+        defaults = getattr(self, "display_defaults", None)
+    
+        if defaults is None:
+            defaults = {
+                "pct_low": 50.0,
+                "pct_high": 99.99,
+                "f_min": 0.0,
+                "f_max": 500.0,
+                "t_width_seconds": 0.5,
+                "show_grid": False,
+                "show_contours": False,
+                "contour_count": 25,
+                "colormap_name": "inferno",
+            }
+    
+        self.pct_low.set(defaults["pct_low"])
+        self.pct_high.set(defaults["pct_high"])
+        self.f_min.set(defaults["f_min"])
+        self.f_max.set(defaults["f_max"])
+    
+        self.t_width_seconds = defaults["t_width_seconds"]
+        self.t_width_str.set(f"{self.t_width_seconds:.3f}")
         self.time_window_log.set(np.log10(self.t_width_seconds))
-        self.show_grid.set(False)
-        self.show_contours.set(True)
-        self.contour_count.set(25)
-        self.colormap_name.set("viridis")
+    
+        self.show_grid.set(defaults["show_grid"])
+        self.show_contours.set(defaults["show_contours"])
+        self.contour_count.set(defaults["contour_count"])
+        self.colormap_name.set(defaults["colormap_name"])
+    
         self.schedule_display_update(recenter=True)
+
 
     def start_zoom_drag(self, event):
         self.zoom_dragging = True
@@ -1827,7 +1923,7 @@ class GWExplorerApp:
                 
             self.root.after(0, lambda: self.lbl_meta_len.config(text=f"Sample Length: {self.current_file_duration}"))
             self.root.after(0, lambda: self.lbl_meta_rate.config(text=f"Data Rate:     {self.current_file_rate}"))
-            self.root.after(0, lambda: self.lbl_meta_evt.config(text=f"Event Offset:  {self.current_event_offset}"))
+            self.root.after(0, lambda: self.lbl_meta_evt.config(text=f"Eveßnt Offset:  {self.current_event_offset}"))
             self.root.after(0, lambda: self.lbl_meta_name.config(text=f"Event ID:      {self.current_event_name}"))
             
             self.detectors[det]['whitened'] = self.whiten_by_intervals(self.detectors[det]['raw'], self.fs, self.whiten_interval.get(), det)
@@ -1847,7 +1943,12 @@ class GWExplorerApp:
                     potential_offset = float(self.cached_target_gps) - float(gps_start)
                     # Validate: Ensure time is within valid bounds [0, total_duration]
                     if 0 <= potential_offset <= self.total_duration:
-                        target_time = potential_offset
+                        target_time = round(potential_offset, 2)
+                    
+                        # Special startup tuning for GW150914
+                        if self.current_event_name == "GW150914":
+                            target_time = 15.4
+
             except Exception:
                 pass
 
