@@ -487,14 +487,15 @@ class GWExplorerApp:
 
     def create_widgets(self):
         # 1. Pack the global status bar FIRST so it claims the entire bottom edge
-        self.global_status = ttk.Label(self.root, text="System: Idle", font=('Helvetica', 9, 'italic'), foreground="blue", padding=5)
+        self.global_status = ttk.Label(self.root, text="System: Idle", font=('Helvetica', 9, 'italic'),
+                                       foreground="blue", padding=5)
         self.global_status.pack(side=tk.BOTTOM, fill=tk.X)
 
         self.whiten_interval = tk.DoubleVar(value=5.0)
         self.nperseg = tk.IntVar(value=256)
         self.nfft = tk.IntVar(value=1024)
         self.overlap_pct = tk.DoubleVar(value=85.0)
-        
+
         self.t_center = tk.DoubleVar(value=0.0)
         self.t_width_seconds = 0.2
         self.t_width_str = tk.StringVar(value="0.65")
@@ -510,9 +511,8 @@ class GWExplorerApp:
         self.display_control_update_job = None
         self.display_controls_recenter = False
 
-
         self.display_defaults = self.load_display_defaults()
-        
+
         self.pct_low.set(self.display_defaults["pct_low"])
         self.pct_high.set(self.display_defaults["pct_high"])
         self.f_min.set(self.display_defaults["f_min"])
@@ -525,32 +525,34 @@ class GWExplorerApp:
         self.contour_count.set(self.display_defaults["contour_count"])
         self.colormap_name.set(self.display_defaults["colormap_name"])
 
-        
         sidebar = ttk.Frame(self.root, padding="10", width=340)
         sidebar.pack(side=tk.LEFT, fill=tk.Y)
         sidebar.pack_propagate(False)
-        
+
         # Global Stream Information Monitor Desk
         meta_frame = ttk.LabelFrame(sidebar, text="Active Stream Hardware Specs", padding=8)
         meta_frame.pack(fill=tk.X, pady=(0, 10))
-        
+
         self.lbl_meta_len = ttk.Label(meta_frame, text="Sample Length: N/A", font=('Courier', 9, 'bold'))
         self.lbl_meta_len.pack(anchor=tk.W, pady=2)
         self.lbl_meta_rate = ttk.Label(meta_frame, text="Data Rate:     N/A", font=('Courier', 9, 'bold'))
         self.lbl_meta_rate.pack(anchor=tk.W, pady=2)
-        
+
         # Clickable Event Offset
-        self.lbl_meta_evt = ttk.Label(meta_frame, text="Event Offset:  N/A", font=('Courier', 9, 'bold'), foreground="darkorange", cursor="hand2")
+        self.lbl_meta_evt = ttk.Label(meta_frame, text="Event Offset:  N/A", font=('Courier', 9, 'bold'),
+                                      foreground="darkorange", cursor="hand2")
         self.lbl_meta_evt.pack(anchor=tk.W, pady=2)
-        self.lbl_meta_evt.bind("<Button-1>", lambda e: self.copy_to_clipboard(self.current_event_offset, "Event Offset"))
+        self.lbl_meta_evt.bind("<Button-1>",
+                               lambda e: self.copy_to_clipboard(self.current_event_offset, "Event Offset"))
 
         ttk.Separator(meta_frame, orient='horizontal').pack(fill=tk.X, pady=5)
-        
+
         # Clickable Event Identifier
-        self.lbl_meta_name = ttk.Label(meta_frame, text="Event ID:      N/A", font=('Courier', 9, 'bold'), foreground="purple", cursor="hand2")
+        self.lbl_meta_name = ttk.Label(meta_frame, text="Event ID:      N/A", font=('Courier', 9, 'bold'),
+                                       foreground="purple", cursor="hand2")
         self.lbl_meta_name.pack(anchor=tk.W, pady=2)
         self.lbl_meta_name.bind("<Button-1>", lambda e: self.copy_to_clipboard(self.current_event_name, "Event ID"))
-        
+
         # Clickable File Names
         self.file_labels = {}
         for det in ['H1', 'L1', 'V1']:
@@ -566,13 +568,14 @@ class GWExplorerApp:
             ttk.Button(f, text="Load Local HDF5...", command=lambda d=det: self.load_local_detector(d)).pack(fill=tk.X)
             self.detectors[det]['status_lbl'] = ttk.Label(f, text="Status: Empty", foreground="gray")
             self.detectors[det]['status_lbl'].pack(anchor=tk.W)
-            
+
         ttk.Separator(sidebar, orient='horizontal').pack(fill=tk.X, pady=10)
-        
+
         ttk.Label(sidebar, text="Correlation Mask Switches:", font=('Helvetica', 10, 'bold')).pack(anchor=tk.W, pady=5)
         for det in ['H1', 'L1', 'V1']:
-            ttk.Checkbutton(sidebar, text=f"Include {det} in Joint Product", variable=self.detectors[det]['active_corr'],
-                command=self.update_all_tabs).pack(anchor=tk.W, pady=2)
+            ttk.Checkbutton(sidebar, text=f"Include {det} in Joint Product",
+                            variable=self.detectors[det]['active_corr'],
+                            command=self.update_all_tabs).pack(anchor=tk.W, pady=2)
 
         right_panel = ttk.Frame(self.root, padding="5")
         right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
@@ -584,24 +587,25 @@ class GWExplorerApp:
         self.notebook.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.build_display_side_controls(chart_area)
-        
+
         self.tabs = {}
+        # Standard Tabs
         for tab_name in ['H1', 'L1', 'V1', 'Joint Correlation']:
             frame = ttk.Frame(self.notebook)
             self.notebook.add(frame, text=tab_name)
-            
+
             container = ttk.Frame(frame)
             container.pack(fill=tk.BOTH, expand=True)
-            
+
             pbar = ttk.Progressbar(container, orient=tk.HORIZONTAL, mode='determinate')
             pbar.pack(fill=tk.X, padx=20, pady=5)
             pbar.pack_forget()
-            
+
             fig, ax = plt.subplots(figsize=(8, 5))
             canvas = FigureCanvasTkAgg(fig, master=container)
             canvas_widget = canvas.get_tk_widget()
             canvas_widget.pack(fill=tk.BOTH, expand=True)
-            
+
             # Shift + Left Drag = Zoom Box
             canvas_widget.bind("<Shift-ButtonPress-1>", self.start_zoom_drag)
             canvas_widget.bind("<Shift-B1-Motion>", self.zoom_drag_motion)
@@ -611,46 +615,34 @@ class GWExplorerApp:
             canvas_widget.bind("<B1-Motion>", self.drag_motion)
             canvas_widget.bind("<ButtonRelease-1>", self.end_drag)
 
-            
             self.tabs[tab_name] = {'fig': fig, 'ax': ax, 'canvas': canvas, 'pbar': pbar}
-            
+
+        # New Whitened Waveforms Tab
+        wave_frame = ttk.Frame(self.notebook)
+        self.notebook.add(wave_frame, text="Whitened Waveforms")
+
+        wave_fig, wave_axs = plt.subplots(4, 1, figsize=(8, 8), sharex=True)
+        wave_fig.subplots_adjust(left=0.08, right=0.95, bottom=0.10, top=0.95, hspace=0.3)
+
+        wave_canvas = FigureCanvasTkAgg(wave_fig, master=wave_frame)
+        wave_canvas_widget = wave_canvas.get_tk_widget()
+        wave_canvas_widget.pack(fill=tk.BOTH, expand=True)
+
+        self.tabs["Whitened Waveforms"] = {'fig': wave_fig, 'ax': wave_axs, 'canvas': wave_canvas, 'pbar': None}
+
         self.notebook.bind("<<NotebookTabChanged>>", lambda e: self.update_all_tabs())
 
         self.detector_offsets_ms = {
-            "H1": tk.IntVar(value=0),
-            "L1": tk.IntVar(value=0),
-            "V1": tk.IntVar(value=0),}
+            "H1": tk.DoubleVar(value=0.0),
+            "L1": tk.DoubleVar(value=0.0),
+            "V1": tk.DoubleVar(value=0.0), }
+
+        self.signal_flips = {
+            "H1": tk.BooleanVar(value=False),
+            "L1": tk.BooleanVar(value=False),
+            "V1": tk.BooleanVar(value=False), }
 
         self.display_defaults = self.get_current_display_settings()
-
-        # --- Cross-Correlation Control Panel ---
-        self.corr_frame = ttk.LabelFrame(right_panel, text="Interferometer Time Delay Analysis", padding=10)
- #       self.corr_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
-
- #        self.btn_correlate = ttk.Button(self.corr_frame, text="Correlate Current Frame", command=self.trigger_frame_correlation)
- #       self.btn_correlate.pack(side=tk.LEFT, padx=5)
-
-
-
-        self.sky_result_text = tk.StringVar(value="Sky: Waiting...")
-
-        self.lbl_offset_result = ttk.Label(
-    self.corr_frame,
-    textvariable=self.sky_result_text,
-    font=('Courier', 10, 'bold'),
-    foreground="blue",
-    cursor="hand2"
-)
-
-        self.lbl_offset_result.pack(side=tk.LEFT, padx=15)
-
-        self.lbl_offset_result.bind(
-    "<Button-1>",
-    lambda e: self.copy_to_clipboard(
-        self.sky_result_text.get(),
-        "Sky Location"
-    )
-)
 
         # --- Cross-Correlation Control Panel ---
         self.corr_frame = ttk.LabelFrame(
@@ -702,32 +694,30 @@ class GWExplorerApp:
             text="Offsets ms:"
         ).pack(side=tk.LEFT, padx=(5, 4))
 
-
         self.offset_spinboxes = {}
-        
+
         for det in ["L1", "V1"]:
-        
-            self.detector_offsets_ms[det] = tk.DoubleVar(value=0.0)
-        
             ttk.Label(
                 bottom_row,
                 text=f"{det}:"
             ).pack(side=tk.LEFT, padx=(8, 2))
-        
+
             spin = ttk.Spinbox(
                 bottom_row,
-                from_=-30,
-                to=30,
+                from_=-30.0,
+                to=30.0,
+                increment=0.1,
+                format="%.1f",
                 width=6,
                 textvariable=self.detector_offsets_ms[det],
                 command=self.on_offset_spinbox_changed
             )
-        
+
             spin.pack(side=tk.LEFT)
             spin.bind("<KeyRelease>", self.on_offset_spinbox_changed)
             spin.bind("<Return>", self.on_offset_spinbox_changed)
             spin.bind("<FocusOut>", self.on_offset_spinbox_changed)
-        
+
             self.offset_spinboxes[det] = spin
 
         ttk.Button(
@@ -735,13 +725,13 @@ class GWExplorerApp:
             text="Sky Location",
             command=self.estimate_sky_location
         ).pack(side=tk.LEFT, padx=10)
-        
+
         self.sky_link_url = None
         self.last_sky_ra_deg = None
         self.last_sky_dec_deg = None
         self.sky_recompute_job = None
         self.sky_link_text = tk.StringVar(value="N/A")
-        
+
         self.lbl_sky_link = ttk.Label(
             bottom_row,
             textvariable=self.sky_link_text,
@@ -750,48 +740,72 @@ class GWExplorerApp:
             cursor="hand2"
         )
         self.lbl_sky_link.pack(side=tk.LEFT, padx=10)
-        
+
         self.lbl_sky_link.bind(
             "<Button-1>",
             lambda e: self.open_sky_link()
         )
 
+        # FLIP POLARITY ROW
+        flip_row = ttk.Frame(self.corr_frame)
+        flip_row.pack(fill=tk.X, pady=(5, 0))
+
+        ttk.Label(
+            flip_row,
+            text="Invert Polarity (Bottom Chart):"
+        ).pack(side=tk.LEFT, padx=(5, 4))
+
+        for det in ["H1", "L1", "V1"]:
+            ttk.Checkbutton(
+                flip_row,
+                text=det,
+                variable=self.signal_flips[det],
+                command=self.update_all_tabs
+            ).pack(side=tk.LEFT, padx=5)
 
         # Integrated Control Console Layout
-        controls_bar = ttk.LabelFrame(right_panel, text="Playback Control Desk & Global Positioning Timeline", padding="10")
+        controls_bar = ttk.LabelFrame(right_panel, text="Playback Control Desk & Global Positioning Timeline",
+                                      padding="10")
         controls_bar.pack(side=tk.BOTTOM, fill=tk.X, pady=5)
 
         slider_frame = ttk.Frame(controls_bar)
         slider_frame.pack(fill=tk.X, pady=(0, 5))
-        
+
         self.time_lbl = ttk.Label(slider_frame, text="Current Window Center: 0.00s", font=('Helvetica', 9, 'bold'))
         self.time_lbl.pack(side=tk.LEFT, padx=5)
-        
-        self.timeline_slider = ttk.Scale(slider_frame, from_=0, to=100, orient=tk.HORIZONTAL, command=self.on_slider_move)
+
+        self.timeline_slider = ttk.Scale(slider_frame, from_=0, to=100, orient=tk.HORIZONTAL,
+                                         command=self.on_slider_move)
         self.timeline_slider.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
 
         btn_layout = ttk.Frame(controls_bar)
         btn_layout.pack(fill=tk.X, pady=(5, 0))
 
-        ttk.Button(btn_layout, text="◀◀ 2x", command=lambda: self.set_play(direction=-1, speed=2.0)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_layout, text="◀ 1x", command=lambda: self.set_play(direction=-1, speed=1.0)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_layout, text="◂ 0.5x", command=lambda: self.set_play(direction=-1, speed=0.5)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_layout, text="◀◀ 2x", command=lambda: self.set_play(direction=-1, speed=2.0)).pack(side=tk.LEFT,
+                                                                                                          padx=2)
+        ttk.Button(btn_layout, text="◀ 1x", command=lambda: self.set_play(direction=-1, speed=1.0)).pack(side=tk.LEFT,
+                                                                                                         padx=2)
+        ttk.Button(btn_layout, text="◂ 0.5x", command=lambda: self.set_play(direction=-1, speed=0.5)).pack(side=tk.LEFT,
+                                                                                                           padx=2)
         ttk.Button(btn_layout, text="◂ Step", command=lambda: self.step_frame(direction=-1)).pack(side=tk.LEFT, padx=2)
         ttk.Button(btn_layout, text="█", command=self.stop_play).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_layout, text="▸ Step", command=lambda: self.step_frame(direction=1)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_layout, text="0.5x ▸", command=lambda: self.set_play(direction=1, speed=0.5)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_layout, text="1x ▶", command=lambda: self.set_play(direction=1, speed=1.0)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_layout, text="2x ▶▶", command=lambda: self.set_play(direction=1, speed=2.0)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_layout, text="0.5x ▸", command=lambda: self.set_play(direction=1, speed=0.5)).pack(side=tk.LEFT,
+                                                                                                          padx=2)
+        ttk.Button(btn_layout, text="1x ▶", command=lambda: self.set_play(direction=1, speed=1.0)).pack(side=tk.LEFT,
+                                                                                                        padx=2)
+        ttk.Button(btn_layout, text="2x ▶▶", command=lambda: self.set_play(direction=1, speed=2.0)).pack(side=tk.LEFT,
+                                                                                                         padx=2)
 
         # Quick Jump Time Coordinate Entry Field
         jump_frame = ttk.Frame(btn_layout)
         jump_frame.pack(side=tk.RIGHT, padx=10)
-        
+
         ttk.Button(
-			btn_layout,
-			text="Reset Zoom",
-			command=self.reset_view).pack(side=tk.LEFT, padx=10)
-        
+            btn_layout,
+            text="Reset Zoom",
+            command=self.reset_view).pack(side=tk.LEFT, padx=10)
+
         ttk.Label(jump_frame, text="Jump to Time (s):").pack(side=tk.LEFT, padx=2)
         self.jump_var = tk.StringVar()
         jump_ent = ttk.Entry(jump_frame, textvariable=self.jump_var, width=8)
@@ -2035,7 +2049,6 @@ class GWExplorerApp:
             lambda: self.recompute_sky_from_offsets(show_errors=False)
         )
 
-        
     def trigger_frame_correlation(self):
         self.lbl_offset_result.config(text="Calculating...", foreground="orange")
         self.root.update_idletasks()
@@ -2068,19 +2081,23 @@ class GWExplorerApp:
                 offset_ms, lead_text = self.calculate_delay_xcorr(
                     h1_slice,
                     other_slice,
-                self.fs,
-                max(35.0, self.f_min.get()),
-                self.f_max.get(),
-                max_delay_ms=30.0
-            )
-                signed_ms = -offset_ms if "leads H1" in lead_text else offset_ms
-                rounded_ms = int(round(signed_ms))
+                    self.fs,
+                    max(35.0, self.f_min.get()),
+                    self.f_max.get(),
+                    max_delay_ms=30.0
+                )
 
-            # Update manual offset box if present
+                signed_ms = -offset_ms if "leads H1" in lead_text else offset_ms
+
+                # CHANGED: Round to 1 decimal place
+                rounded_ms = round(signed_ms, 1)
+
+                # Update manual offset box if present
                 if hasattr(self, "detector_offsets_ms"):
                     self.detector_offsets_ms[det].set(rounded_ms)
 
-                results.append(f"{det}: {rounded_ms:+d} ms")
+                # CHANGED: Format string to show 1 decimal place (+.1f instead of +d)
+                results.append(f"{det}: {rounded_ms:+.1f} ms")
 
             if not results:
                 raise ValueError("No L1 or V1 detector loaded.")
@@ -2269,14 +2286,104 @@ class GWExplorerApp:
         if self.total_duration == 0: return
         t_center = self.t_center.get()
         t_width = self.t_width_seconds
-        t_start, t_end = max(0.0, t_center - t_width/2), min(self.total_duration, t_center + t_width/2)
+        t_start, t_end = max(0.0, t_center - t_width / 2), min(self.total_duration, t_center + t_width / 2)
         for det in ['H1', 'L1', 'V1']:
             if self.detectors[det]['loaded']:
-                self.render_canvas_frame(self.tabs[det]['ax'], self.tabs[det]['canvas'], self.detectors[det]['Sxx'], self.detectors[det]['t'],
-                     self.detectors[det]['f'], t_start, t_end)
+                self.render_canvas_frame(self.tabs[det]['ax'], self.tabs[det]['canvas'], self.detectors[det]['Sxx'],
+                                         self.detectors[det]['t'],
+                                         self.detectors[det]['f'], t_start, t_end)
         self.render_joint_correlation(t_start, t_end)
+        self.render_whitened_waveforms(t_start, t_end)
 
+    def render_whitened_waveforms(self, t_start, t_end):
+        if "Whitened Waveforms" not in self.tabs or not hasattr(self, 'fs') or self.fs is None:
+            return
 
+        axs = self.tabs["Whitened Waveforms"]['ax']
+        canvas = self.tabs["Whitened Waveforms"]['canvas']
+
+        # Clear existing lines
+        for ax in axs:
+            ax.clear()
+
+        # 1. Get frequency limits from the UI controls
+        f_low, f_high = self.get_frequency_limits()
+
+        # Ensure valid bandpass frequencies (avoiding 0 Hz and staying below Nyquist)
+        nyquist = self.fs / 2.0
+        low = max(1.0, float(f_low))
+        high = min(float(f_high), nyquist - 1.0)
+
+        # Create the filter if the range is valid
+        apply_filter = False
+        if high > low:
+            apply_filter = True
+            sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
+
+        colors = {'H1': 'red', 'L1': 'green', 'V1': 'purple'}
+        detectors = ['H1', 'L1', 'V1']
+        combined_ax = axs[3]
+
+        for i, det in enumerate(detectors):
+            if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
+                # Calculate exact slice indices
+                idx_start = int(max(0, t_start * self.fs))
+                idx_end = int(min(len(self.detectors[det]['whitened']), t_end * self.fs))
+
+                if idx_start >= idx_end:
+                    continue
+
+                # Generate exact time array and get the data slice
+                t_arr = np.arange(idx_start, idx_end) / self.fs
+                data = self.detectors[det]['whitened'][idx_start:idx_end]
+
+                # 2. Apply the zero-phase bandpass filter
+                if apply_filter and len(data) > 33:
+                    try:
+                        data = signal.sosfiltfilt(sos, data)
+                    except ValueError:
+                        # Fallback to unfiltered if the time window is zoomed in too tightly
+                        pass
+
+                        # 3. Plot individual chart (always true to the raw polarity)
+                axs[i].plot(t_arr, data, color=colors[det], label=det, linewidth=0.8)
+                axs[i].set_ylabel("Strain")
+                axs[i].grid(True, alpha=0.5)
+                axs[i].legend(loc="upper right")
+
+                # 4. Plot combined chart with offset alignment AND potential polarity flip
+                offset_sec = self.get_detector_offset_ms(det) / 1000.0
+                shifted_t_arr = t_arr - offset_sec
+
+                # Check if the user has requested to invert this specific signal
+                is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
+                plot_data = -data if is_flipped else data
+                flip_text = " [Inverted]" if is_flipped else ""
+
+                combined_ax.plot(
+                    shifted_t_arr,
+                    plot_data,
+                    color=colors[det],
+                    label=f"{det} ({offset_sec * 1000:+.1f}ms){flip_text}",
+                    linewidth=0.6,
+                    alpha=0.8
+                )
+
+        # Format the combined axis and label it with the active filter frequencies
+        filter_text = f"Aligned (BP: {low:.0f}-{high:.0f} Hz)" if apply_filter else "Aligned"
+        combined_ax.set_ylabel(filter_text)
+        combined_ax.set_xlabel("Time (s)")
+        combined_ax.grid(True, alpha=0.5)
+        combined_ax.set_xlim(t_start, t_end)
+
+        # Avoid empty legend warnings
+        handles, labels = combined_ax.get_legend_handles_labels()
+        if handles:
+            combined_ax.legend(loc="upper right")
+
+        canvas.draw_idle()
+
+        
     def render_joint_correlation(self, t_start, t_end):
         ax = self.tabs['Joint Correlation']['ax']
         canvas = self.tabs['Joint Correlation']['canvas']
