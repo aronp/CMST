@@ -2037,14 +2037,19 @@ class GWExplorerApp:
         axs = self.tabs["Whitened Waveforms"]['ax']
         canvas = self.tabs["Whitened Waveforms"]['canvas']
 
+        # Clear existing lines
         for ax in axs:
             ax.clear()
 
+        # 1. Get frequency limits from the UI controls
         f_low, f_high = self.get_frequency_limits()
+
+        # Ensure valid bandpass frequencies (avoiding 0 Hz and staying below Nyquist)
         nyquist = self.fs / 2.0
         low = max(1.0, float(f_low))
         high = min(float(f_high), nyquist - 1.0)
 
+        # Create the filter if the range is valid
         apply_filter = False
         if high > low:
             apply_filter = True
@@ -2056,29 +2061,41 @@ class GWExplorerApp:
 
         for i, det in enumerate(detectors):
             if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
+                # Calculate exact slice indices
                 idx_start = int(max(0, t_start * self.fs))
                 idx_end = int(min(len(self.detectors[det]['whitened']), t_end * self.fs))
 
                 if idx_start >= idx_end:
                     continue
 
+                # Generate exact time array and get the data slice
                 t_arr = np.arange(idx_start, idx_end) / self.fs
                 data = self.detectors[det]['whitened'][idx_start:idx_end]
 
+                # 2. Apply the zero-phase bandpass filter
                 if apply_filter and len(data) > 33:
                     try:
                         data = signal.sosfiltfilt(sos, data)
                     except ValueError:
                         pass
 
+                        # 3. Normalize the data strictly to a [-1, 1] scale based on the max absolute peak in the window
+                max_amp = np.max(np.abs(data))
+                if max_amp > 1e-20:
+                    data = data / max_amp
+
+                # 4. Plot individual chart
                 axs[i].plot(t_arr, data, color=colors[det], label=det, linewidth=0.8)
-                axs[i].set_ylabel("Strain")
+                axs[i].set_ylabel("Norm")
+                axs[i].set_ylim(-1.1, 1.1)
                 axs[i].grid(True, alpha=0.5)
                 axs[i].legend(loc="upper left")
 
+                # 5. Plot combined chart with offset alignment AND potential polarity flip
                 offset_sec = self.get_detector_offset_ms(det) / 1000.0
                 shifted_t_arr = t_arr - offset_sec
 
+                # Check if the user has requested to invert this specific signal
                 is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
                 plot_data = -data if is_flipped else data
                 flip_text = " [Inverted]" if is_flipped else ""
@@ -2092,18 +2109,21 @@ class GWExplorerApp:
                     alpha=0.8
                 )
 
-        filter_text = f"Aligned (BP: {low:.0f}-{high:.0f} Hz)" if apply_filter else "Aligned"
+        # Format the combined axis
+        filter_text = f"Aligned Norm (BP: {low:.0f}-{high:.0f} Hz)" if apply_filter else "Aligned Norm"
         combined_ax.set_ylabel(filter_text)
+        combined_ax.set_ylim(-1.1, 1.1)
         combined_ax.set_xlabel("Time (s)")
         combined_ax.grid(True, alpha=0.5)
         combined_ax.set_xlim(t_start, t_end)
 
+        # Avoid empty legend warnings
         handles, labels = combined_ax.get_legend_handles_labels()
         if handles:
             combined_ax.legend(loc="upper left")
 
         canvas.draw_idle()
-
+        
     def calculate_delay_xcorr(self, h1_slice, l1_slice, fs, f_min, f_max, max_delay_ms=15.0):
         h1 = np.asarray(h1_slice, dtype=float)
         l1 = np.asarray(l1_slice, dtype=float)
