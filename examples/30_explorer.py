@@ -2059,6 +2059,11 @@ class GWExplorerApp:
         detectors = ['H1', 'L1', 'V1']
         combined_ax = axs[3]
 
+        # Setup common time grid for the coherent sum ("boss" line)
+        t_common = np.linspace(t_start, t_end, int((t_end - t_start) * self.fs))
+        coherent_sum = np.zeros_like(t_common)
+        active_count = 0
+
         for i, det in enumerate(detectors):
             if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
                 # Calculate exact slice indices
@@ -2079,7 +2084,7 @@ class GWExplorerApp:
                     except ValueError:
                         pass
 
-                        # 3. Normalize the data strictly to a [-1, 1] scale based on the max absolute peak in the window
+                        # 3. Normalize the data strictly to a [-1, 1] scale based on the max absolute peak
                 max_amp = np.max(np.abs(data))
                 if max_amp > 1e-20:
                     data = data / max_amp
@@ -2106,8 +2111,25 @@ class GWExplorerApp:
                     color=colors[det],
                     label=f"{det} ({offset_sec * 1000:+.1f}ms){flip_text}",
                     linewidth=0.6,
-                    alpha=0.8
+                    alpha=0.4  # Dimmed to allow the coherent sum to pop
                 )
+
+                # 6. Interpolate shifted data onto the common time grid and accumulate
+                aligned_data = np.interp(t_common, shifted_t_arr, plot_data, left=0.0, right=0.0)
+                coherent_sum += aligned_data
+                active_count += 1
+
+        # 7. Plot the Coherent Network Sum line
+        if active_count > 0:
+            coherent_sum = coherent_sum / active_count
+            combined_ax.plot(
+                t_common,
+                coherent_sum,
+                color='black',
+                label=f"Coherent Sum ({active_count} Det)",
+                linewidth=1.5,
+                zorder=10  # Ensures it draws on top of the coloured lines
+            )
 
         # Format the combined axis
         filter_text = f"Aligned Norm (BP: {low:.0f}-{high:.0f} Hz)" if apply_filter else "Aligned Norm"
