@@ -32,6 +32,38 @@ DETECTOR_ECEF = {
 }
 
 
+class ToolTip:
+    def __init__(self, widget, text_func):
+        self.widget = widget
+        self.text_func = text_func
+        self.tip_window = None
+        self.widget.bind("<Enter>", self.show_tip)
+        self.widget.bind("<Leave>", self.hide_tip)
+
+    def show_tip(self, event=None):
+        text = self.text_func()
+        if not text:
+            return
+
+        # Position the tooltip slightly offset from the mouse pointer
+        x = self.widget.winfo_rootx() + 25
+        y = self.widget.winfo_rooty() + 25
+
+        self.tip_window = tk.Toplevel(self.widget)
+        self.tip_window.wm_overrideredirect(True)  # Removes window borders/titlebar
+        self.tip_window.wm_geometry(f"+{x}+{y}")
+
+        label = tk.Label(self.tip_window, text=text, justify=tk.LEFT,
+                         background="#ffffe0", relief=tk.SOLID, borderwidth=1,
+                         font=("Courier", 9))
+        label.pack(ipadx=4, ipady=2)
+
+    def hide_tip(self, event=None):
+        if self.tip_window:
+            self.tip_window.destroy()
+        self.tip_window = None
+
+
 class RangeSlider(tk.Canvas):
     """Simple two-handle horizontal range slider for Tkinter."""
 
@@ -278,7 +310,7 @@ class GWExplorerApp:
             "t_width_seconds": 0.5,
             "show_grid": False,
             "show_contours": False,
-            "contour_count": 25,
+            "contour_count": 15,
             "colormap_name": "inferno",
         }
 
@@ -460,14 +492,19 @@ class GWExplorerApp:
         self.right_panel = ttk.Frame(self.root, padding="5")
         self.right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
+        self._build_sidebar()
+
+        # FIX: Build and pack the bottom controls FIRST so Tkinter reserves their vertical space
+        self._build_playback_controls()
+        self._build_correlation_panel()
+
+        # Build the chart area LAST so it gracefully takes only the remaining space
         self.chart_area = ttk.Frame(self.right_panel)
         self.chart_area.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        self._build_sidebar()
         self._build_notebook_tabs(self.chart_area)
         self.build_display_side_controls(self.chart_area)
-        self._build_correlation_panel()
-        self._build_playback_controls()
+
 
     def _init_ui_variables(self):
         self.whiten_interval = tk.DoubleVar(value=5.0)
@@ -498,7 +535,7 @@ class GWExplorerApp:
         self.tabs = {}
         self.offset_spinboxes = {}
 
-        self.sky_result_text = tk.StringVar(value="Sky: Waiting...")
+        self.sky_result_text = tk.StringVar(value="")
         self.sky_link_text = tk.StringVar(value="N/A")
         self.sky_link_url = None
         self.last_sky_ra_deg = None
@@ -630,14 +667,15 @@ class GWExplorerApp:
         boss_canvas_widget.bind("<B1-Motion>", self.drag_motion)
         boss_canvas_widget.bind("<ButtonRelease-1>", self.end_drag)
 
-        self.tabs["Coherent Boss Image"] = {'fig': boss_fig, 'ax': boss_ax, 'canvas': boss_canvas, 'pbar': None}
+        self.tabs["Coherent Image"] = {'fig': boss_fig, 'ax': boss_ax, 'canvas': boss_canvas, 'pbar': None}
 
         # NEW: Sky Map Tab (Polar Projection)
         sky_frame = ttk.Frame(self.notebook)
         self.notebook.add(sky_frame, text="Coherent Sky Map")
 
         sky_fig = plt.figure(figsize=(8, 8))
-        sky_fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.90)
+        sky_fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.82)
+
         sky_ax = sky_fig.add_subplot(111, projection='polar')
 
         # Configure polar plot to look like a sky map
@@ -704,8 +742,12 @@ class GWExplorerApp:
 
         self.lbl_sky_link = ttk.Label(bottom_row, textvariable=self.sky_link_text, font=("Courier", 10, "bold"),
                                       foreground="purple", cursor="hand2")
+
         self.lbl_sky_link.pack(side=tk.LEFT, padx=10)
         self.lbl_sky_link.bind("<Button-1>", lambda e: self.open_sky_link())
+
+        ToolTip(self.lbl_sky_link,
+                lambda: self.sky_link_url if self.sky_link_url else "Sky location not yet calculated.")
 
         # 4. Flip Row (Polarity)
         flip_row = ttk.Frame(self.corr_frame)
@@ -902,6 +944,19 @@ class GWExplorerApp:
                 # Overlay solid contour lines if requested
                 if self.show_contours.get():
                     ax.contour(RA, R, power_map, levels=10, colors='white', alpha=0.3, linewidths=0.5)
+
+                # NEW: Overlay the current estimated correlation coordinate as a bright 'X'
+                if getattr(self, 'last_sky_ra_deg', None) is not None and getattr(self, 'last_sky_dec_deg',
+                                                                                  None) is not None:
+                    marker_ra = np.radians(self.last_sky_ra_deg)
+                    marker_r = 90.0 - self.last_sky_dec_deg
+
+                    # Using a cyan 'X' to ensure it pops visibly against the magma/inferno colormaps
+                    ax.plot(marker_ra, marker_r, marker='x', color='blue', markersize=14, markeredgewidth=3,
+                            label='Triangulated Vector')
+
+                    # Add a small legend so we know what the X represents
+                    ax.legend(loc='upper right', bbox_to_anchor=(1.15, 1.15), fontsize=8)
 
                 ax.set_title(f"Coherent Network Power (GPS: {gps_time})\nWindow: {t_width:.3f}s", pad=20)
                 canvas.draw_idle()
@@ -1604,7 +1659,7 @@ class GWExplorerApp:
         if hasattr(self, "sky_link_text"):
             self.sky_link_text.set("N/A")
         if hasattr(self, "sky_result_text"):
-            self.sky_result_text.set("Sky: Waiting...")
+            self.sky_result_text.set("")
 
     def on_slider_move(self, val):
         if self.total_duration == 0 or self.is_dragging: return
@@ -2027,7 +2082,9 @@ class GWExplorerApp:
         self.sky_recompute_job = self.root.after(200, lambda: self.recompute_sky_from_offsets(show_errors=False))
 
     def trigger_frame_correlation(self):
-        self.lbl_offset_result.config(text="Calculating...", foreground="orange")
+        # FIX 1: Use .set() on the variable, not .config(text=...) on the label
+        self.sky_result_text.set("Calculating...")
+        self.lbl_offset_result.config(foreground="orange")
         self.root.update_idletasks()
 
         try:
@@ -2052,7 +2109,6 @@ class GWExplorerApp:
                 other_data = self.detectors[det]["whitened"]
                 other_slice = other_data[idx_min:idx_max]
 
-                # CHANGED: Unpack the new needs_inv boolean
                 offset_ms, lead_text, needs_inv = self.calculate_delay_xcorr(
                     h1_slice, other_slice, self.fs,
                     max(35.0, self.f_min.get()), self.f_max.get(), max_delay_ms=30.0
@@ -2064,7 +2120,6 @@ class GWExplorerApp:
                 if hasattr(self, "detector_offsets_ms"):
                     self.detector_offsets_ms[det].set(rounded_ms)
 
-                # CHANGED: Automatically set the polarity checkbox!
                 if hasattr(self, "signal_flips") and det in self.signal_flips:
                     self.signal_flips[det].set(needs_inv)
 
@@ -2073,12 +2128,19 @@ class GWExplorerApp:
             if not results:
                 raise ValueError("No L1 or V1 detector loaded.")
 
-            self.lbl_offset_result.config(text="Offsets: " + " | ".join(results), foreground="green")
+            # FIX 2: Preserve the binding here as well
+            self.sky_result_text.set("Offsets: " + " | ".join(results) + " (Computing Sky...)")
+            self.lbl_offset_result.config(foreground="green")
+
             self.update_all_tabs()
+
+            # This triggers the vector math ~200ms later
             self.schedule_sky_recompute()
 
         except Exception as e:
-            self.lbl_offset_result.config(text=f"Error: {str(e)}", foreground="red")
+            # FIX 3: Preserve the binding on error
+            self.sky_result_text.set(f"Error: {str(e)}")
+            self.lbl_offset_result.config(foreground="red")
             print(f"Correlation Error: {e}")
 
     def gps_to_gmst(self, gps_time):
@@ -2174,7 +2236,7 @@ class GWExplorerApp:
         params = {
             "no_cookie": 1, "latitude": 51.51, "longitude": -0.13, "timezone": "0.00",
             "year": event_dt.year, "month": event_dt.month, "day": event_dt.day,
-            "hour": event_dt.hour, "min": event_dt.minute, "PLlimitmag": 2, "zoom": 5,
+            "hour": event_dt.hour, "min": event_dt.minute, "PLlimitmag": 2, "zoom": 3,
             "ra": f"{ra_deg / 15.0:.5f}", "dec": f"{dec_deg:.5f}",
         }
         return "https://in-the-sky.org/skymap.php?" + urlencode(params)
@@ -2309,11 +2371,11 @@ class GWExplorerApp:
         canvas.draw_idle()
 
     def render_boss_image(self, t_start, t_end):
-        if "Coherent Boss Image" not in self.tabs or not hasattr(self, 'fs') or self.fs is None:
+        if "Coherent Image" not in self.tabs or not hasattr(self, 'fs') or self.fs is None:
             return
 
-        ax = self.tabs["Coherent Boss Image"]['ax']
-        canvas = self.tabs["Coherent Boss Image"]['canvas']
+        ax = self.tabs["Coherent Image"]['ax']
+        canvas = self.tabs["Coherent Image"]['canvas']
         ax.clear()
 
         f_low, f_high = self.get_frequency_limits()
