@@ -32,6 +32,71 @@ DETECTOR_ECEF = {
 }
 
 
+def cmst(N, p=2, sym=True):
+    if N <= 0:
+        return np.array([])
+    
+    # 1. Generate the time grid [-1, 1]
+    if sym:
+        # Symmetric window (filter design: start=-1, end=1)
+        # Note: If N is even, the exact center 0.0 is straddled, which is correct.
+        t = np.linspace(-1, 1, N)
+    else:
+        # Periodic window (DFT/FFT: start=-1, end=1 - 1/N)
+        # We exclude the last point because the DFT assumes the signal repeats.
+        t = np.linspace(-1, 1, N, endpoint=False)
+    
+    return cmst_window(t, width=1.0, power=p)
+
+def cmst_window(t, width=1.0, power=2):
+    # 1. Input Validation
+    t = np.asarray(t, dtype=float)
+    
+    if width <= 0:
+        raise ValueError(f"Window width must be positive. Received {width}.")
+        
+    if power % 2 != 0:
+        raise ValueError(f"Power must be an even integer. Received {power}.")
+    
+    # 2. Initialization
+    y = np.zeros_like(t)
+    
+    # 3. Normalization
+    x = t / width
+    
+    # 4. Strict Compact Support Mask
+    mask = np.abs(x) < 1.0
+    
+    if not np.any(mask):
+        return y
+        
+    # 5. Robust Computation
+    x_valid = x[mask]
+    
+    # Calculate power first
+    x_p = x_valid ** power
+    
+    # Numerical Stability Check:
+    # Floating point rounding can cause x^p to equal 1.0 even if x < 1.0.
+    # We must exclude these points to prevent DivisionByZero.
+    safe_indices = x_p < 1.0
+    x_p_safe = x_p[safe_indices]
+    
+    # 6. The Hyper-CMST Formula
+    exponent = 1.0 + x_p_safe - (1.0 / (1.0 - x_p_safe))
+    
+    # 7. Map back to full array
+    # Create a temp buffer for the masked region
+    y_masked = np.zeros_like(x_valid)
+    # Fill the safe calculated values (underflow is handled natively by exp)
+    y_masked[safe_indices] = np.exp(exponent)
+    
+    # Fill the original array
+    y[mask] = y_masked
+    
+    return y
+
+
 class ToolTip:
     def __init__(self, widget, text_func):
         self.widget = widget
@@ -826,7 +891,7 @@ class GWExplorerApp:
                     audio_data = coherent_sum
 
                 # Apply a gentle Tukey window to taper the ends to 0 to prevent harsh popping clicks
-                win = signal.windows.tukey(len(audio_data), alpha=0.1)
+                win = cmst(len(audio_data))
                 audio_data = audio_data * win
 
                 # Play asynchronously
@@ -2026,9 +2091,7 @@ class GWExplorerApp:
         window_sum = np.zeros_like(strain)
 
         t = np.linspace(-1, 1, chunk_size)
-        with np.errstate(divide='ignore', invalid='ignore'):
-            win = np.where(np.abs(t) < 1, np.exp(t ** 4 / (t ** 2 - 1)), 0.0)
-
+        win = cmst(chunk_size)
         starts = list(range(0, N, chunk_size // 2))
         total_steps = len(starts)
 
@@ -2246,8 +2309,8 @@ class GWExplorerApp:
         nfft = self.nfft.get()
         noverlap = int(nperseg * (self.overlap_pct.get() / 100.0))
         t_win = np.linspace(-1, 1, nperseg)
-        with np.errstate(divide='ignore', invalid='ignore'):
-            win_seg = np.where(np.abs(t_win) < 1, np.exp(t_win ** 4 / (t_win ** 2 - 1)), 0.0)
+
+        win_seg = cmst(nperseg)
         f, t, Sxx_power = spectrogram(self.detectors[det]['whitened'], self.fs,
                                       window=win_seg, nperseg=nperseg, nfft=nfft, noverlap=noverlap, scaling='spectrum')
         Sxx = np.sqrt(Sxx_power)
@@ -2438,7 +2501,8 @@ class GWExplorerApp:
             nperseg = self.nperseg.get()
             actual_nperseg = min(nperseg, data_length)
             noverlap = int(actual_nperseg * (self.overlap_pct.get() / 100.0))
-            win = signal.windows.tukey(actual_nperseg, alpha=0.25)
+            # win = signal.windows.tukey(actual_nperseg, alpha=0.25)
+            win = cmst(actual_nperseg)
 
             f, t_spec, Sxx_power = spectrogram(
                 coherent_sum, self.fs, window=win,
