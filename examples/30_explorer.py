@@ -602,8 +602,37 @@ class GWExplorerApp:
         wave_canvas_widget = wave_canvas.get_tk_widget()
         wave_canvas_widget.pack(fill=tk.BOTH, expand=True)
 
+        wave_canvas_widget.bind("<Shift-ButtonPress-1>", self.start_zoom_drag)
+        wave_canvas_widget.bind("<Shift-B1-Motion>", self.zoom_drag_motion)
+        wave_canvas_widget.bind("<Shift-ButtonRelease-1>", self.end_zoom_drag)
+        wave_canvas_widget.bind("<ButtonPress-1>", self.start_drag)
+        wave_canvas_widget.bind("<B1-Motion>", self.drag_motion)
+        wave_canvas_widget.bind("<ButtonRelease-1>", self.end_drag)
+
         self.tabs["Whitened Waveforms"] = {'fig': wave_fig, 'ax': wave_axs, 'canvas': wave_canvas, 'pbar': None}
+
+        # NEW: Coherent Network (Boss Image) Tab - Single Axis Layout
+        boss_frame = ttk.Frame(self.notebook)
+        self.notebook.add(boss_frame, text="Coherent Boss Image")
+
+        boss_fig, boss_ax = plt.subplots(figsize=(8, 8))
+        boss_fig.subplots_adjust(left=0.08, right=0.95, bottom=0.10, top=0.95)
+
+        boss_canvas = FigureCanvasTkAgg(boss_fig, master=boss_frame)
+        boss_canvas_widget = boss_canvas.get_tk_widget()
+        boss_canvas_widget.pack(fill=tk.BOTH, expand=True)
+
+        boss_canvas_widget.bind("<Shift-ButtonPress-1>", self.start_zoom_drag)
+        boss_canvas_widget.bind("<Shift-B1-Motion>", self.zoom_drag_motion)
+        boss_canvas_widget.bind("<Shift-ButtonRelease-1>", self.end_zoom_drag)
+        boss_canvas_widget.bind("<ButtonPress-1>", self.start_drag)
+        boss_canvas_widget.bind("<B1-Motion>", self.drag_motion)
+        boss_canvas_widget.bind("<ButtonRelease-1>", self.end_drag)
+
+        self.tabs["Coherent Boss Image"] = {'fig': boss_fig, 'ax': boss_ax, 'canvas': boss_canvas, 'pbar': None}
+
         self.notebook.bind("<<NotebookTabChanged>>", lambda e: self.update_all_tabs())
+
 
     def _build_correlation_panel(self):
         self.corr_frame = ttk.LabelFrame(self.right_panel, text="Interferometer Time Delay Analysis", padding=10)
@@ -1537,10 +1566,17 @@ class GWExplorerApp:
             return
 
         active_tab_name = self.notebook.tab(self.notebook.select(), "text")
-        if active_tab_name not in self.tabs: return
-        ax = self.tabs[active_tab_name]['ax']
+        if active_tab_name not in self.tabs:
+            return
 
-        inv = ax.transData.inverted()
+        # 1. Fetch the axis (or array of axes) for the active tab
+        tab_ax = self.tabs[active_tab_name]['ax']
+
+        # 2. THE FIX: If it's an array of subplots, grab the first one [0]
+        ax_obj = tab_ax[0] if isinstance(tab_ax, np.ndarray) else tab_ax
+
+        # 3. Perform the coordinate math safely
+        inv = ax_obj.transData.inverted()
         current_data_x, _ = inv.transform((event.x, event.y))
         start_data_x, _ = inv.transform((self.drag_start_x, 0))
 
@@ -1782,7 +1818,8 @@ class GWExplorerApp:
                 other_data = self.detectors[det]["whitened"]
                 other_slice = other_data[idx_min:idx_max]
 
-                offset_ms, lead_text = self.calculate_delay_xcorr(
+                # CHANGED: Unpack the new needs_inv boolean
+                offset_ms, lead_text, needs_inv = self.calculate_delay_xcorr(
                     h1_slice, other_slice, self.fs,
                     max(35.0, self.f_min.get()), self.f_max.get(), max_delay_ms=30.0
                 )
@@ -1792,6 +1829,10 @@ class GWExplorerApp:
 
                 if hasattr(self, "detector_offsets_ms"):
                     self.detector_offsets_ms[det].set(rounded_ms)
+
+                # CHANGED: Automatically set the polarity checkbox!
+                if hasattr(self, "signal_flips") and det in self.signal_flips:
+                    self.signal_flips[det].set(needs_inv)
 
                 results.append(f"{det}: {rounded_ms:+.1f} ms")
 
@@ -1935,6 +1976,9 @@ class GWExplorerApp:
         self.render_joint_correlation(t_start, t_end)
         self.render_whitened_waveforms(t_start, t_end)
 
+        # NEW CALL
+        self.render_boss_image(t_start, t_end)
+
     def render_joint_correlation(self, t_start, t_end):
         ax = self.tabs['Joint Correlation']['ax']
         canvas = self.tabs['Joint Correlation']['canvas']
@@ -2029,6 +2073,122 @@ class GWExplorerApp:
         title_parts = [f"{det} {self.get_detector_offset_ms(det):+.1f} ms" for det in active_matrices if det != "H1"]
         ax.set_title("Joint Correlation " + " | ".join(title_parts))
         canvas.draw_idle()
+
+    def render_boss_image(self, t_start, t_end):
+        if "Coherent Boss Image" not in self.tabs or not hasattr(self, 'fs') or self.fs is None:
+            return
+
+        ax = self.tabs["Coherent Boss Image"]['ax']
+        canvas = self.tabs["Coherent Boss Image"]['canvas']
+        ax.clear()
+
+        f_low, f_high = self.get_frequency_limits()
+        nyquist = self.fs / 2.0
+        low = max(1.0, float(f_low))
+        high = min(float(f_high), nyquist - 1.0)
+
+        apply_filter = high > low
+        if apply_filter:
+            sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
+
+        detectors = ['H1', 'L1', 'V1']
+        t_common = np.linspace(t_start, t_end, int((t_end - t_start) * self.fs))
+        coherent_sum = np.zeros_like(t_common)
+        active_count = 0
+
+        # Step 1: Build the coherent sum in memory
+        for det in detectors:
+            if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
+                idx_start = int(max(0, t_start * self.fs))
+                idx_end = int(min(len(self.detectors[det]['whitened']), t_end * self.fs))
+
+                if idx_start >= idx_end: continue
+
+                t_arr = np.arange(idx_start, idx_end) / self.fs
+                data = self.detectors[det]['whitened'][idx_start:idx_end]
+
+                if apply_filter and len(data) > 33:
+                    try:
+                        data = signal.sosfiltfilt(sos, data)
+                    except ValueError:
+                        pass
+
+                max_amp = np.max(np.abs(data))
+                if max_amp > 1e-20:
+                    data = data / max_amp
+
+                offset_sec = self.get_detector_offset_ms(det) / 1000.0
+                shifted_t_arr = t_arr - offset_sec
+
+                is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
+                plot_data = -data if is_flipped else data
+
+                aligned_data = np.interp(t_common, shifted_t_arr, plot_data, left=0.0, right=0.0)
+                coherent_sum += aligned_data
+                active_count += 1
+
+        if active_count > 0:
+            coherent_sum = coherent_sum / active_count
+
+            # Step 2: Compute and Plot the 2D Boss Image (Spectrogram)
+            data_length = len(coherent_sum)
+
+            if data_length < 8:
+                ax.text(0.5, 0.5, "Time window too short for 2D Image", ha='center', va='center',
+                        transform=ax.transAxes)
+                canvas.draw_idle()
+                return
+
+            nperseg = self.nperseg.get()
+            actual_nperseg = min(nperseg, data_length)
+            noverlap = int(actual_nperseg * (self.overlap_pct.get() / 100.0))
+            win = signal.windows.tukey(actual_nperseg, alpha=0.25)
+
+            f, t_spec, Sxx_power = spectrogram(
+                coherent_sum, self.fs, window=win,
+                nperseg=actual_nperseg, noverlap=noverlap, scaling='spectrum'
+            )
+            Sxx = np.sqrt(Sxx_power)
+            t_spec_shifted = t_spec + t_start
+
+            f_mask = (f >= f_low) & (f <= f_high)
+            Sxx_sub = Sxx[f_mask, :]
+
+            pct_low_val, pct_high_val = self.get_percentile_limits()
+            vmin = np.percentile(Sxx_sub, pct_low_val) if Sxx_sub.size > 0 else 0
+            vmax = np.percentile(Sxx_sub, pct_high_val) if Sxx_sub.size > 0 else 1
+            if vmax <= vmin + 1e-12: vmax = vmin + 1e-9
+
+            cmap = self.get_colormap_name()
+
+            ax.pcolormesh(
+                t_spec_shifted, f[f_mask], Sxx_sub,
+                shading='gouraud', cmap=cmap, vmin=vmin, vmax=vmax
+            )
+
+            if self.show_contours.get() and Sxx_sub.shape[0] >= 2 and Sxx_sub.shape[1] >= 2:
+                contour_count = self.get_contour_level_count()
+                levels = np.linspace(vmin, vmax, contour_count)
+                ax.contour(
+                    t_spec_shifted, f[f_mask], Sxx_sub,
+                    levels=levels, colors="white", linewidths=0.25, alpha=0.5
+                )
+
+            ax.set_ylabel("Frequency (Hz)")
+            ax.set_xlabel("Time (s)")
+            ax.set_xlim(t_start, t_end)
+            ax.set_ylim(f_low, f_high)
+            ax.set_title(f"Coherent Network Spectrogram ({active_count} Detectors Aligned)")
+
+            if self.show_grid.get():
+                ax.set_axisbelow(False)
+                ax.grid(True, which="major", linewidth=0.6, alpha=0.85)
+
+        else:
+            ax.text(0.5, 0.5, "No Data for Boss Image", ha='center', va='center', transform=ax.transAxes)
+
+        canvas.draw_idle()
+
 
     def render_whitened_waveforms(self, t_start, t_end):
         if "Whitened Waveforms" not in self.tabs or not hasattr(self, 'fs') or self.fs is None:
@@ -2145,7 +2305,7 @@ class GWExplorerApp:
             combined_ax.legend(loc="upper left")
 
         canvas.draw_idle()
-        
+
     def calculate_delay_xcorr(self, h1_slice, l1_slice, fs, f_min, f_max, max_delay_ms=15.0):
         h1 = np.asarray(h1_slice, dtype=float)
         l1 = np.asarray(l1_slice, dtype=float)
@@ -2193,8 +2353,14 @@ class GWExplorerApp:
         corr_m = corr[mask]
         lags_m = lags[mask]
 
+        # Find the index of the maximum absolute correlation
         peak = np.argmax(np.abs(corr_m))
         lag_samples = float(lags_m[peak])
+
+        # AUTOMATIC POLARITY DETECTION
+        # If the actual correlation value at the peak is negative, the signal is inverted
+        peak_value = corr_m[peak]
+        needs_inversion = bool(peak_value < 0)
 
         if 0 < peak < len(corr_m) - 1:
             y0, y1, y2 = corr_m[peak - 1], corr_m[peak], corr_m[peak + 1]
@@ -2205,7 +2371,7 @@ class GWExplorerApp:
         tau_ms = 1000.0 * lag_samples / fs
         lead_text = "other leads H1" if tau_ms < 0 else "other lags H1"
 
-        return abs(tau_ms), lead_text
+        return abs(tau_ms), lead_text, needs_inversion
 
     def gps_to_utc_datetime(self, gps_time):
         gps_epoch = datetime(1980, 1, 6, tzinfo=timezone.utc)
