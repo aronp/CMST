@@ -890,9 +890,12 @@ class GWExplorerApp:
                 else:
                     audio_data = coherent_sum
 
-                # Apply a gentle Tukey window to taper the ends to 0 to prevent harsh popping clicks
                 win = cmst(len(audio_data))
                 audio_data = audio_data * win
+
+                tail = np.zeros(int(0.10 * self.fs))
+                audio_data = np.concatenate([audio_data, tail])
+
 
                 # Play asynchronously
                 sd.play(audio_data, samplerate=self.fs)
@@ -2501,7 +2504,6 @@ class GWExplorerApp:
             nperseg = self.nperseg.get()
             actual_nperseg = min(nperseg, data_length)
             noverlap = int(actual_nperseg * (self.overlap_pct.get() / 100.0))
-            # win = signal.windows.tukey(actual_nperseg, alpha=0.25)
             win = cmst(actual_nperseg)
 
             f, t_spec, Sxx_power = spectrogram(
@@ -2691,7 +2693,7 @@ class GWExplorerApp:
         h1 -= np.mean(h1)
         l1 -= np.mean(l1)
 
-        win = signal.windows.tukey(n, alpha=0.25)
+        win = cmst(n)
         h1 *= win
         l1 *= win
 
