@@ -32,6 +32,24 @@ DETECTOR_ECEF = {
 }
 
 
+def pearson_corr(a, b):
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+
+    n = min(len(a), len(b))
+    if n < 4:
+        return np.nan
+
+    a = a[:n] - np.mean(a[:n])
+    b = b[:n] - np.mean(b[:n])
+
+    denom = np.linalg.norm(a) * np.linalg.norm(b)
+    if denom < 1e-20:
+        return np.nan
+
+    return float(np.dot(a, b) / denom)
+
+
 def cmst(N, p=2, sym=True):
     if N <= 0:
         return np.array([])
@@ -2552,122 +2570,215 @@ class GWExplorerApp:
         canvas.draw_idle()
 
 
+
+
     def render_whitened_waveforms(self, t_start, t_end):
         if "Whitened Waveforms" not in self.tabs or not hasattr(self, 'fs') or self.fs is None:
             return
-
+    
         axs = self.tabs["Whitened Waveforms"]['ax']
         canvas = self.tabs["Whitened Waveforms"]['canvas']
-
-        # Clear existing lines
+    
+        # Fixed intended mapping:
+        # axs[0] = H1
+        # axs[1] = L1
+        # axs[2] = V1
+        # axs[3] = coherent sum / overlay
+        detectors = ['H1', 'L1', 'V1']
+        colors = {'H1': 'red', 'L1': 'green', 'V1': 'purple'}
+    
+        detector_axes = {
+            'H1': axs[0],
+            'L1': axs[1],
+            'V1': axs[2],
+        }
+        combined_ax = axs[3]
+    
+   
+        # Clear all four axes every render
         for ax in axs:
             ax.clear()
-
-        # 1. Get frequency limits from the UI controls
+    
+        # Get frequency limits from UI
         f_low, f_high = self.get_frequency_limits()
-
-        # Ensure valid bandpass frequencies (avoiding 0 Hz and staying below Nyquist)
         nyquist = self.fs / 2.0
         low = max(1.0, float(f_low))
         high = min(float(f_high), nyquist - 1.0)
-
-        # Create the filter if the range is valid
+    
         apply_filter = False
         if high > low:
             apply_filter = True
-            sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
-
-        colors = {'H1': 'red', 'L1': 'green', 'V1': 'purple'}
-        detectors = ['H1', 'L1', 'V1']
-        combined_ax = axs[3]
-
-        # Setup common time grid for the coherent sum ("boss" line)
-        t_common = np.linspace(t_start, t_end, int((t_end - t_start) * self.fs))
+            sos = signal.butter(
+                4,
+                [low, high],
+                btype='bandpass',
+                fs=self.fs,
+                output='sos'
+            )
+    
+        # Common time grid for aligned coherent sum
+        n_common = int((t_end - t_start) * self.fs)
+        if n_common < 2:
+            canvas.draw_idle()
+            return
+    
+        t_common = np.linspace(t_start, t_end, n_common)
         coherent_sum = np.zeros_like(t_common)
+    
+        # Cache exactly what was plotted/aligned for each detector
+        aligned_cache = {}
         active_count = 0
-
-        for i, det in enumerate(detectors):
-            if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
-                # Calculate exact slice indices
-                idx_start = int(max(0, t_start * self.fs))
-                idx_end = int(min(len(self.detectors[det]['whitened']), t_end * self.fs))
-
-                if idx_start >= idx_end:
-                    continue
-
-                # Generate exact time array and get the data slice
-                t_arr = np.arange(idx_start, idx_end) / self.fs
-                data = self.detectors[det]['whitened'][idx_start:idx_end]
-
-                # 2. Apply the zero-phase bandpass filter
-                if apply_filter and len(data) > 33:
-                    try:
-                        data = signal.sosfiltfilt(sos, data)
-                    except ValueError:
-                        pass
-
-                        # 3. Normalize the data strictly to a [-1, 1] scale based on the max absolute peak
-                max_amp = np.max(np.abs(data))
-                if max_amp > 1e-20:
-                    data = data / max_amp
-
-                # 4. Plot individual chart
-                axs[i].plot(t_arr, data, color=colors[det], label=det, linewidth=0.8)
-                axs[i].set_ylabel("Norm")
-                axs[i].set_ylim(-1.1, 1.1)
-                axs[i].grid(True, alpha=0.5)
-                axs[i].legend(loc="upper left")
-
-                # 5. Plot combined chart with offset alignment AND potential polarity flip
-                offset_sec = self.get_detector_offset_ms(det) / 1000.0
-                shifted_t_arr = t_arr - offset_sec
-
-                # Check if the user has requested to invert this specific signal
-                is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
-                plot_data = -data if is_flipped else data
-                flip_text = " [Inverted]" if is_flipped else ""
-
-                combined_ax.plot(
-                    shifted_t_arr,
-                    plot_data,
-                    color=colors[det],
-                    label=f"{det} ({offset_sec * 1000:+.1f}ms){flip_text}",
-                    linewidth=0.6,
-                    alpha=0.4  # Dimmed to allow the coherent sum to pop
-                )
-
-                # 6. Interpolate shifted data onto the common time grid and accumulate
-                aligned_data = np.interp(t_common, shifted_t_arr, plot_data, left=0.0, right=0.0)
-                coherent_sum += aligned_data
-                active_count += 1
-
-        # 7. Plot the Coherent Network Sum line
+    
+        for det in detectors:
+            ax = detector_axes[det]
+            det_index = detectors.index(det)
+    
+    
+            if not (self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None):
+                ax.set_title(f"{det} not loaded")
+                ax.set_ylabel("Norm")
+                ax.set_ylim(-1.1, 1.1)
+                ax.grid(True, alpha=0.5)
+                print(f"  {det}: not loaded")
+                continue
+    
+            idx_start = int(max(0, t_start * self.fs))
+            idx_end = int(min(len(self.detectors[det]['whitened']), t_end * self.fs))
+    
+            if idx_start >= idx_end:
+                ax.set_title(f"{det} empty window")
+                ax.set_ylabel("Norm")
+                ax.set_ylim(-1.1, 1.1)
+                ax.grid(True, alpha=0.5)
+                print(f"  {det}: empty window idx_start={idx_start}, idx_end={idx_end}")
+                continue
+    
+            t_arr = np.arange(idx_start, idx_end) / self.fs
+            data = self.detectors[det]['whitened'][idx_start:idx_end]
+    
+            if apply_filter and len(data) > 33:
+                try:
+                    data = signal.sosfiltfilt(sos, data)
+                except ValueError:
+                    pass
+    
+            # Normalize individual detector trace
+            max_amp = np.max(np.abs(data))
+            if max_amp > 1e-20:
+                data = data / max_amp
+    
+            offset_sec = self.get_detector_offset_ms(det) / 1000.0
+            shifted_t_arr = t_arr - offset_sec
+    
+            is_flipped = getattr(self, 'signal_flips', {}).get(
+                det,
+                tk.BooleanVar(value=False)
+            ).get()
+    
+            plot_data = -data if is_flipped else data
+            flip_text = " [Inverted]" if is_flipped else ""
+    
+            # Align onto common grid. This is the exact vector used for correlation.
+            aligned_data = np.interp(
+                t_common,
+                shifted_t_arr,
+                plot_data,
+                left=0.0,
+                right=0.0
+            )
+    
+            aligned_cache[det] = {
+                "axis": ax,
+                "axis_index": det_index,
+                "data": aligned_data,
+                "offset_ms": offset_sec * 1000.0,
+                "flipped": is_flipped,
+            }
+    
+            coherent_sum += aligned_data
+            active_count += 1
+    
+            # Top three charts: now plot the same aligned/flipped data used for correlation
+            ax.plot(
+                t_common,
+                aligned_data,
+                color=colors[det],
+                label=f"{det} ({offset_sec * 1000:+.1f}ms){flip_text}",
+                linewidth=0.8
+            )
+            ax.set_ylabel("Norm")
+            ax.set_ylim(-1.1, 1.1)
+            ax.grid(True, alpha=0.5)
+            ax.legend(loc="upper left")
+    
+            # Bottom overlay chart
+            combined_ax.plot(
+                t_common,
+                aligned_data,
+                color=colors[det],
+                label=f"{det} ({offset_sec * 1000:+.1f}ms){flip_text}",
+                linewidth=0.6,
+                alpha=0.4
+            )
+    
+ 
         if active_count > 0:
             coherent_sum = coherent_sum / active_count
+    
+            # Write correlation titles back to the exact axis cached for that detector
+            for det in detectors:
+                if det not in aligned_cache:
+                    continue
+    
+                ax = aligned_cache[det]["axis"]
+                axis_index = aligned_cache[det]["axis_index"]
+                data = aligned_cache[det]["data"]
+    
+                corr = pearson_corr(data, coherent_sum)
+    
+   
+                if np.isfinite(corr):
+                    ax.set_title(f"{det} correlation with coherent sum: {corr:+.3f}")
+                else:
+                    ax.set_title(f"{det} correlation with coherent sum: N/A")
+    
             combined_ax.plot(
                 t_common,
                 coherent_sum,
                 color='black',
                 label=f"Coherent Sum ({active_count} Det)",
                 linewidth=1.5,
-                zorder=10  # Ensures it draws on top of the coloured lines
+                zorder=10
             )
-
-        # Format the combined axis
+        else:
+            combined_ax.text(
+                0.5,
+                0.5,
+                "No loaded detector data",
+                ha="center",
+                va="center",
+                transform=combined_ax.transAxes
+            )
+    
         filter_text = f"Aligned Norm (BP: {low:.0f}-{high:.0f} Hz)" if apply_filter else "Aligned Norm"
         combined_ax.set_ylabel(filter_text)
         combined_ax.set_ylim(-1.1, 1.1)
         combined_ax.set_xlabel("Time (s)")
         combined_ax.grid(True, alpha=0.5)
         combined_ax.set_xlim(t_start, t_end)
-
-        # Avoid empty legend warnings
+    
+        for det in detectors:
+            ax = detector_axes[det]
+            ax.set_xlim(t_start, t_end)
+    
         handles, labels = combined_ax.get_legend_handles_labels()
         if handles:
             combined_ax.legend(loc="upper left")
-
+    
         canvas.draw_idle()
-
+        
+        
+        
     def calculate_delay_xcorr(self, h1_slice, l1_slice, fs, f_min, f_max, max_delay_ms=15.0):
         h1 = np.asarray(h1_slice, dtype=float)
         l1 = np.asarray(l1_slice, dtype=float)
