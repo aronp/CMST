@@ -20,6 +20,8 @@ import json
 import webbrowser
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlencode
+import sounddevice as sd
+
 
 C_LIGHT = 299792458.0
 
@@ -657,22 +659,32 @@ class GWExplorerApp:
         self.corr_frame = ttk.LabelFrame(self.right_panel, text="Interferometer Time Delay Analysis", padding=10)
         self.corr_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
 
-        top_row = ttk.Frame(self.corr_frame)
-        top_row.pack(fill=tk.X, pady=(0, 6))
+        # 1. Dedicated Row for Action Buttons
+        button_row = ttk.Frame(self.corr_frame)
+        button_row.pack(fill=tk.X, pady=(0, 2))
 
-        self.btn_correlate = ttk.Button(top_row, text="Correlate Current Frame", command=self.trigger_frame_correlation)
+        self.btn_correlate = ttk.Button(button_row, text="Correlate Current Frame",
+                                        command=self.trigger_frame_correlation)
         self.btn_correlate.pack(side=tk.LEFT, padx=5)
 
-        # NEW BUTTON: Trigger the computationally heavy sky map
-        self.btn_sky_map = ttk.Button(top_row, text="Generate Full Sky Map", command=self.generate_sky_map)
+        self.btn_play_audio = ttk.Button(button_row, text="🔊 Play Coherent Audio", command=self.play_coherent_audio)
+        self.btn_play_audio.pack(side=tk.LEFT, padx=5)
+
+        self.btn_sky_map = ttk.Button(button_row, text="Run Sky Map", command=self.generate_sky_map)
         self.btn_sky_map.pack(side=tk.LEFT, padx=10)
 
-        self.lbl_offset_result = ttk.Label(top_row, textvariable=self.sky_result_text, font=('Courier', 10, 'bold'),
+
+        # 2. Dedicated Row for the Result Label
+        label_row = ttk.Frame(self.corr_frame)
+        label_row.pack(fill=tk.X, pady=(0, 6))
+
+        self.lbl_offset_result = ttk.Label(label_row, textvariable=self.sky_result_text, font=('Courier', 10, 'bold'),
                                            foreground="blue", cursor="hand2")
-        self.lbl_offset_result.pack(side=tk.LEFT, padx=15)
+        self.lbl_offset_result.pack(side=tk.LEFT, padx=5)
         self.lbl_offset_result.bind("<Button-1>",
                                     lambda e: self.copy_to_clipboard(self.sky_result_text.get(), "Sky Location"))
 
+        # 3. Bottom Row (Offsets)
         bottom_row = ttk.Frame(self.corr_frame)
         bottom_row.pack(fill=tk.X)
 
@@ -695,12 +707,97 @@ class GWExplorerApp:
         self.lbl_sky_link.pack(side=tk.LEFT, padx=10)
         self.lbl_sky_link.bind("<Button-1>", lambda e: self.open_sky_link())
 
+        # 4. Flip Row (Polarity)
         flip_row = ttk.Frame(self.corr_frame)
         flip_row.pack(fill=tk.X, pady=(5, 0))
         ttk.Label(flip_row, text="Invert Polarity (Bottom Chart):").pack(side=tk.LEFT, padx=(5, 4))
         for det in ["H1", "L1", "V1"]:
             ttk.Checkbutton(flip_row, text=det, variable=self.signal_flips[det], command=self.update_all_tabs).pack(
                 side=tk.LEFT, padx=5)
+
+    def play_coherent_audio(self):
+        if not (self.detectors["H1"]["loaded"] and self.fs):
+            messagebox.showwarning("No Data", "Please load detector data first.")
+            return
+
+        try:
+            self.global_status.config(text="Processing and playing audio...")
+            self.root.update_idletasks()
+
+            t_center = self.t_center.get()
+            t_width = self.t_width_seconds
+
+            # To hear the "chirp" context, we force at least a 1.0 second audio slice
+            audio_width = max(1.0, t_width)
+            t_start = max(0.0, t_center - audio_width / 2)
+            t_end = min(self.total_duration, t_center + audio_width / 2)
+
+            f_low, f_high = self.get_frequency_limits()
+            nyquist = self.fs / 2.0
+
+            # Strictly limit the low end to 20Hz to protect speakers from extreme subwoofer rumbling
+            low = max(20.0, float(f_low))
+            high = min(float(f_high), nyquist - 1.0)
+
+            apply_filter = high > low
+            if apply_filter:
+                sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
+
+            detectors = ['H1', 'L1', 'V1']
+            t_common = np.linspace(t_start, t_end, int((t_end - t_start) * self.fs))
+            coherent_sum = np.zeros_like(t_common)
+            active_count = 0
+
+            for det in detectors:
+                if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
+                    idx_start = int(max(0, t_start * self.fs))
+                    idx_end = int(min(len(self.detectors[det]['whitened']), t_end * self.fs))
+                    if idx_start >= idx_end: continue
+
+                    t_arr = np.arange(idx_start, idx_end) / self.fs
+                    data = self.detectors[det]['whitened'][idx_start:idx_end]
+
+                    if apply_filter and len(data) > 33:
+                        try:
+                            data = signal.sosfiltfilt(sos, data)
+                        except ValueError:
+                            pass
+
+                    offset_sec = self.get_detector_offset_ms(det) / 1000.0
+                    shifted_t_arr = t_arr - offset_sec
+
+                    is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
+                    plot_data = -data if is_flipped else data
+
+                    aligned_data = np.interp(t_common, shifted_t_arr, plot_data, left=0.0, right=0.0)
+                    coherent_sum += aligned_data
+                    active_count += 1
+
+            if active_count > 0:
+                coherent_sum = coherent_sum / active_count
+
+                # Normalize audio strictly between -1.0 and 1.0 to prevent audio clipping
+                max_amp = np.max(np.abs(coherent_sum))
+                if max_amp > 1e-20:
+                    audio_data = coherent_sum / max_amp
+                else:
+                    audio_data = coherent_sum
+
+                # Apply a gentle Tukey window to taper the ends to 0 to prevent harsh popping clicks
+                win = signal.windows.tukey(len(audio_data), alpha=0.1)
+                audio_data = audio_data * win
+
+                # Play asynchronously
+                sd.play(audio_data, samplerate=self.fs)
+
+                self.global_status.config(text="System: Idle (Playing Audio)")
+            else:
+                self.global_status.config(text="System: Idle (No active detectors for audio)")
+
+        except Exception as e:
+            self.global_status.config(text="System: Idle")
+            messagebox.showerror("Audio Error", f"Could not play audio:\n{str(e)}")
+
 
     def generate_sky_map(self):
         if not (self.detectors["H1"]["loaded"] and self.detectors["L1"]["loaded"] and self.detectors["V1"]["loaded"]):
@@ -815,55 +912,6 @@ class GWExplorerApp:
         except Exception as e:
             self.root.after(0, lambda err=e: self.global_status.config(text=f"Sky Map Error: {str(err)}",
                                                                        foreground="red"))
-
-
-    def _build_correlation_panel(self):
-        self.corr_frame = ttk.LabelFrame(self.right_panel, text="Interferometer Time Delay Analysis", padding=10)
-        self.corr_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
-
-        top_row = ttk.Frame(self.corr_frame)
-        top_row.pack(fill=tk.X, pady=(0, 6))
-
-        self.btn_correlate = ttk.Button(top_row, text="Correlate Current Frame", command=self.trigger_frame_correlation)
-        self.btn_correlate.pack(side=tk.LEFT, padx=5)
-
-        self.btn_sky_map = ttk.Button(top_row, text="Run Sky Map", command=self.generate_sky_map)
-        self.btn_sky_map.pack(side=tk.LEFT, padx=10)
-
-        self.lbl_offset_result = ttk.Label(top_row, textvariable=self.sky_result_text, font=('Courier', 10, 'bold'),
-                                           foreground="blue", cursor="hand2")
-        self.lbl_offset_result.pack(side=tk.LEFT, padx=15)
-        self.lbl_offset_result.bind("<Button-1>",
-                                    lambda e: self.copy_to_clipboard(self.sky_result_text.get(), "Sky Location"))
-
-        bottom_row = ttk.Frame(self.corr_frame)
-        bottom_row.pack(fill=tk.X)
-
-        ttk.Label(bottom_row, text="Offsets ms:").pack(side=tk.LEFT, padx=(5, 4))
-
-        for det in ["L1", "V1"]:
-            ttk.Label(bottom_row, text=f"{det}:").pack(side=tk.LEFT, padx=(8, 2))
-            spin = ttk.Spinbox(bottom_row, from_=-30.0, to=30.0, increment=0.1, format="%.1f", width=6,
-                               textvariable=self.detector_offsets_ms[det], command=self.on_offset_spinbox_changed)
-            spin.pack(side=tk.LEFT)
-            spin.bind("<KeyRelease>", self.on_offset_spinbox_changed)
-            spin.bind("<Return>", self.on_offset_spinbox_changed)
-            spin.bind("<FocusOut>", self.on_offset_spinbox_changed)
-            self.offset_spinboxes[det] = spin
-
-        ttk.Button(bottom_row, text="Sky Location", command=self.estimate_sky_location).pack(side=tk.LEFT, padx=10)
-
-        self.lbl_sky_link = ttk.Label(bottom_row, textvariable=self.sky_link_text, font=("Courier", 10, "bold"),
-                                      foreground="purple", cursor="hand2")
-        self.lbl_sky_link.pack(side=tk.LEFT, padx=10)
-        self.lbl_sky_link.bind("<Button-1>", lambda e: self.open_sky_link())
-
-        flip_row = ttk.Frame(self.corr_frame)
-        flip_row.pack(fill=tk.X, pady=(5, 0))
-        ttk.Label(flip_row, text="Invert Polarity (Bottom Chart):").pack(side=tk.LEFT, padx=(5, 4))
-        for det in ["H1", "L1", "V1"]:
-            ttk.Checkbutton(flip_row, text=det, variable=self.signal_flips[det], command=self.update_all_tabs).pack(
-                side=tk.LEFT, padx=5)
 
     def _build_playback_controls(self):
         controls_bar = ttk.LabelFrame(self.right_panel, text="Playback Control Desk & Global Positioning Timeline",
