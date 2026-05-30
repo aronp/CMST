@@ -611,7 +611,6 @@ class GWExplorerApp:
 
         self.tabs["Whitened Waveforms"] = {'fig': wave_fig, 'ax': wave_axs, 'canvas': wave_canvas, 'pbar': None}
 
-        # NEW: Coherent Network (Boss Image) Tab - Single Axis Layout
         boss_frame = ttk.Frame(self.notebook)
         self.notebook.add(boss_frame, text="Coherent Image")
 
@@ -631,7 +630,191 @@ class GWExplorerApp:
 
         self.tabs["Coherent Boss Image"] = {'fig': boss_fig, 'ax': boss_ax, 'canvas': boss_canvas, 'pbar': None}
 
+        # NEW: Sky Map Tab (Polar Projection)
+        sky_frame = ttk.Frame(self.notebook)
+        self.notebook.add(sky_frame, text="Coherent Sky Map")
+
+        sky_fig = plt.figure(figsize=(8, 8))
+        sky_fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.90)
+        sky_ax = sky_fig.add_subplot(111, projection='polar')
+
+        # Configure polar plot to look like a sky map
+        sky_ax.set_theta_zero_location("N")
+        sky_ax.set_theta_direction(-1)
+        sky_ax.set_rticks([30, 60, 90, 120, 150])
+        sky_ax.set_yticklabels(['60°', '30°', 'Eq', '-30°', '-60°'])
+        sky_ax.grid(True, alpha=0.5)
+
+        sky_canvas = FigureCanvasTkAgg(sky_fig, master=sky_frame)
+        sky_canvas_widget = sky_canvas.get_tk_widget()
+        sky_canvas_widget.pack(fill=tk.BOTH, expand=True)
+
+        self.tabs["Coherent Sky Map"] = {'fig': sky_fig, 'ax': sky_ax, 'canvas': sky_canvas, 'pbar': None}
+
         self.notebook.bind("<<NotebookTabChanged>>", lambda e: self.update_all_tabs())
+
+    def _build_correlation_panel(self):
+        self.corr_frame = ttk.LabelFrame(self.right_panel, text="Interferometer Time Delay Analysis", padding=10)
+        self.corr_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
+
+        top_row = ttk.Frame(self.corr_frame)
+        top_row.pack(fill=tk.X, pady=(0, 6))
+
+        self.btn_correlate = ttk.Button(top_row, text="Correlate Current Frame", command=self.trigger_frame_correlation)
+        self.btn_correlate.pack(side=tk.LEFT, padx=5)
+
+        # NEW BUTTON: Trigger the computationally heavy sky map
+        self.btn_sky_map = ttk.Button(top_row, text="Generate Full Sky Map", command=self.generate_sky_map)
+        self.btn_sky_map.pack(side=tk.LEFT, padx=10)
+
+        self.lbl_offset_result = ttk.Label(top_row, textvariable=self.sky_result_text, font=('Courier', 10, 'bold'),
+                                           foreground="blue", cursor="hand2")
+        self.lbl_offset_result.pack(side=tk.LEFT, padx=15)
+        self.lbl_offset_result.bind("<Button-1>",
+                                    lambda e: self.copy_to_clipboard(self.sky_result_text.get(), "Sky Location"))
+
+        bottom_row = ttk.Frame(self.corr_frame)
+        bottom_row.pack(fill=tk.X)
+
+        ttk.Label(bottom_row, text="Offsets ms:").pack(side=tk.LEFT, padx=(5, 4))
+
+        for det in ["L1", "V1"]:
+            ttk.Label(bottom_row, text=f"{det}:").pack(side=tk.LEFT, padx=(8, 2))
+            spin = ttk.Spinbox(bottom_row, from_=-30.0, to=30.0, increment=0.1, format="%.1f", width=6,
+                               textvariable=self.detector_offsets_ms[det], command=self.on_offset_spinbox_changed)
+            spin.pack(side=tk.LEFT)
+            spin.bind("<KeyRelease>", self.on_offset_spinbox_changed)
+            spin.bind("<Return>", self.on_offset_spinbox_changed)
+            spin.bind("<FocusOut>", self.on_offset_spinbox_changed)
+            self.offset_spinboxes[det] = spin
+
+        ttk.Button(bottom_row, text="Estimate Vector", command=self.estimate_sky_location).pack(side=tk.LEFT, padx=10)
+
+        self.lbl_sky_link = ttk.Label(bottom_row, textvariable=self.sky_link_text, font=("Courier", 10, "bold"),
+                                      foreground="purple", cursor="hand2")
+        self.lbl_sky_link.pack(side=tk.LEFT, padx=10)
+        self.lbl_sky_link.bind("<Button-1>", lambda e: self.open_sky_link())
+
+        flip_row = ttk.Frame(self.corr_frame)
+        flip_row.pack(fill=tk.X, pady=(5, 0))
+        ttk.Label(flip_row, text="Invert Polarity (Bottom Chart):").pack(side=tk.LEFT, padx=(5, 4))
+        for det in ["H1", "L1", "V1"]:
+            ttk.Checkbutton(flip_row, text=det, variable=self.signal_flips[det], command=self.update_all_tabs).pack(
+                side=tk.LEFT, padx=5)
+
+    def generate_sky_map(self):
+        if not (self.detectors["H1"]["loaded"] and self.detectors["L1"]["loaded"] and self.detectors["V1"]["loaded"]):
+            messagebox.showerror("Missing Data", "H1, L1, and V1 must all be loaded to generate a sky map.")
+            return
+
+        if self.cached_target_gps == "N/A":
+            messagebox.showerror("Missing Data", "A valid GPS time is required to compute sidereal geometry.")
+            return
+
+        self.notebook.select(self.notebook.tabs()[list(self.tabs.keys()).index("Coherent Sky Map")])
+        self.global_status.config(text="Computing Coherent Sky Map (this may take a few seconds)...")
+        self.root.update_idletasks()
+
+        # Run the heavy computation in a background thread to prevent UI freezing
+        threading.Thread(target=self._compute_and_render_sky_map, daemon=True).start()
+
+    def _compute_and_render_sky_map(self):
+        try:
+            # 1. Setup the active time window
+            t_center = self.t_center.get()
+            t_width = self.t_width_seconds
+            t_start = max(0.0, t_center - t_width / 2)
+            t_end = min(self.total_duration, t_center + t_width / 2)
+
+            idx_start = int(t_start * self.fs)
+            idx_end = int(t_end * self.fs)
+
+            # 2. Extract and bandpass the active window for all detectors
+            f_low, f_high = self.get_frequency_limits()
+            nyquist = self.fs / 2.0
+            low, high = max(1.0, float(f_low)), min(float(f_high), nyquist - 1.0)
+            sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
+
+            data_cache = {}
+            for det in ["H1", "L1", "V1"]:
+                d = self.detectors[det]['whitened'][idx_start:idx_end]
+                if len(d) > 33:
+                    d = signal.sosfiltfilt(sos, d)
+
+                # Check for requested inversion
+                is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
+                if is_flipped: d = -d
+                data_cache[det] = d
+
+            t_arr = np.linspace(t_start, t_end, idx_end - idx_start)
+            h1_data = data_cache["H1"]
+
+            # 3. Create the sky coordinate grid
+            ra_bins = 180
+            dec_bins = 90
+            ra_grid = np.linspace(0, 2 * np.pi, ra_bins)
+            dec_grid = np.linspace(-np.pi / 2, np.pi / 2, dec_bins)
+            RA, DEC = np.meshgrid(ra_grid, dec_grid)
+            power_map = np.zeros_like(RA)
+
+            gps_time = float(self.cached_target_gps)
+            gmst = self.gps_to_gmst(gps_time)
+
+            # 4. Iterate over the sky, calculate delays, interpolate, and sum power
+            for j in range(dec_bins):
+                dec = dec_grid[j]
+                for i in range(ra_bins):
+                    ra = ra_grid[i]
+                    n = self.radec_to_ecef_unit(ra, dec, gmst)
+
+                    # Calculate physical delay in seconds relative to H1
+                    dt_l1 = -np.dot(n, DETECTOR_ECEF["L1"] - DETECTOR_ECEF["H1"]) / C_LIGHT
+                    dt_v1 = -np.dot(n, DETECTOR_ECEF["V1"] - DETECTOR_ECEF["H1"]) / C_LIGHT
+
+                    # Shift L1 and V1 timelines
+                    l1_shifted = np.interp(t_arr, t_arr - dt_l1, data_cache["L1"], left=0.0, right=0.0)
+                    v1_shifted = np.interp(t_arr, t_arr - dt_v1, data_cache["V1"], left=0.0, right=0.0)
+
+                    # Coherent sum and calculate total power in the transient window
+                    coherent_sum = h1_data + l1_shifted + v1_shifted
+                    power_map[j, i] = np.sum(coherent_sum ** 2)
+
+            # 5. Normalize the power matrix for visualization
+            power_map = (power_map - np.min(power_map)) / (np.max(power_map) - np.min(power_map) + 1e-20)
+
+            # 6. Push rendering back to the main UI thread
+            def update_canvas():
+                ax = self.tabs["Coherent Sky Map"]['ax']
+                canvas = self.tabs["Coherent Sky Map"]['canvas']
+                ax.clear()
+
+                # Reconfigure polar plot properties (they reset on clear)
+                ax.set_theta_zero_location("N")
+                ax.set_theta_direction(-1)
+                ax.set_rticks([30, 60, 90, 120, 150])
+                ax.set_yticklabels(['60°', '30°', 'Eq', '-30°', '-60°'])
+
+                # Transform Declination [-90, 90] to radial distance [180, 0] where 0 is North Pole
+                R = 90.0 - np.degrees(DEC)
+
+                cmap = self.get_colormap_name()
+
+                # Plot the contour map
+                cax = ax.contourf(RA, R, power_map, levels=50, cmap=cmap)
+
+                # Overlay solid contour lines if requested
+                if self.show_contours.get():
+                    ax.contour(RA, R, power_map, levels=10, colors='white', alpha=0.3, linewidths=0.5)
+
+                ax.set_title(f"Coherent Network Power (GPS: {gps_time})\nWindow: {t_width:.3f}s", pad=20)
+                canvas.draw_idle()
+                self.global_status.config(text="System: Idle (Sky Map Generated)")
+
+            self.root.after(0, update_canvas)
+
+        except Exception as e:
+            self.root.after(0, lambda err=e: self.global_status.config(text=f"Sky Map Error: {str(err)}",
+                                                                       foreground="red"))
 
 
     def _build_correlation_panel(self):
@@ -643,6 +826,9 @@ class GWExplorerApp:
 
         self.btn_correlate = ttk.Button(top_row, text="Correlate Current Frame", command=self.trigger_frame_correlation)
         self.btn_correlate.pack(side=tk.LEFT, padx=5)
+
+        self.btn_sky_map = ttk.Button(top_row, text="Run Sky Map", command=self.generate_sky_map)
+        self.btn_sky_map.pack(side=tk.LEFT, padx=10)
 
         self.lbl_offset_result = ttk.Label(top_row, textvariable=self.sky_result_text, font=('Courier', 10, 'bold'),
                                            foreground="blue", cursor="hand2")
