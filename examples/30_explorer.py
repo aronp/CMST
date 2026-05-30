@@ -613,7 +613,7 @@ class GWExplorerApp:
 
         # NEW: Coherent Network (Boss Image) Tab - Single Axis Layout
         boss_frame = ttk.Frame(self.notebook)
-        self.notebook.add(boss_frame, text="Coherent Boss Image")
+        self.notebook.add(boss_frame, text="Coherent Image")
 
         boss_fig, boss_ax = plt.subplots(figsize=(8, 8))
         boss_fig.subplots_adjust(left=0.08, right=0.95, bottom=0.10, top=0.95)
@@ -1920,7 +1920,7 @@ class GWExplorerApp:
 
             self.sky_result_text.set(result_text)
             if hasattr(self, "sky_link_text"):
-                self.sky_link_text.set("Open Link")
+                self.sky_link_text.set("in-the-sky.org")
             if hasattr(self, "lbl_offset_result"):
                 self.lbl_offset_result.config(foreground="purple")
             return self.last_sky_ra_deg, self.last_sky_dec_deg
