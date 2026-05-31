@@ -2344,21 +2344,55 @@ class GWExplorerApp:
         self.detectors[det]['f'] = f
 
     def update_all_tabs(self):
-        if self.total_duration == 0: return
+        if self.total_duration == 0:
+            return
+    
         t_center = self.t_center.get()
         t_width = self.t_width_seconds
-        t_start, t_end = max(0.0, t_center - t_width / 2), min(self.total_duration, t_center + t_width / 2)
-        for det in ['H1', 'L1', 'V1']:
-            if self.detectors[det]['loaded']:
-                self.render_canvas_frame(self.tabs[det]['ax'], self.tabs[det]['canvas'], self.detectors[det]['Sxx'],
-                                         self.detectors[det]['t'],
-                                         self.detectors[det]['f'], t_start, t_end)
-        self.render_joint_correlation(t_start, t_end)
-        self.render_whitened_waveforms(t_start, t_end)
-
-        # NEW CALL
-        self.render_boss_image(t_start, t_end)
-
+        t_start = max(0.0, t_center - t_width / 2)
+        t_end = min(self.total_duration, t_center + t_width / 2)
+    
+        try:
+            active_tab_name = self.notebook.tab(self.notebook.select(), "text")
+        except Exception:
+            active_tab_name = None
+    
+        # Only render the active detector spectrogram tab
+        if active_tab_name in ["H1", "L1", "V1"]:
+            det = active_tab_name
+            if self.detectors[det]["loaded"]:
+                self.render_canvas_frame(
+                    self.tabs[det]["ax"],
+                    self.tabs[det]["canvas"],
+                    self.detectors[det]["Sxx"],
+                    self.detectors[det]["t"],
+                    self.detectors[det]["f"],
+                    t_start,
+                    t_end
+                )
+            return
+    
+        # Only render Joint Correlation when that tab is active
+        if active_tab_name == "Joint Correlation":
+            self.render_joint_correlation(t_start, t_end)
+            return
+    
+        # Only render Whitened Waveforms when that tab is active
+        if active_tab_name == "Whitened Waveforms":
+            self.render_whitened_waveforms(t_start, t_end)
+            return
+    
+        # Only render Coherent Image when that tab is active
+        if active_tab_name == "Coherent Image":
+            self.render_boss_image(t_start, t_end)
+            return
+    
+        # Do not regenerate the sky map automatically.
+        # That should only happen via the Run Sky Map button.
+        if active_tab_name == "Coherent Sky Map":
+            return
+            
+            
     def render_joint_correlation(self, t_start, t_end):
         ax = self.tabs['Joint Correlation']['ax']
         canvas = self.tabs['Joint Correlation']['canvas']
