@@ -1038,7 +1038,8 @@ class GWExplorerApp:
                     marker_r = 90.0 - self.last_sky_dec_deg
 
                     # Using a cyan 'X' to ensure it pops visibly against the magma/inferno colormaps
-                    ax.plot(marker_ra, marker_r, marker='x', color='blue', markersize=14, markeredgewidth=3,
+                    ax.plot(marker_ra, marker_r, marker='x', color='blue'
+                                                                   '', markersize=14, markeredgewidth=3,
                             label='Triangulated Vector')
 
                     # Add a small legend so we know what the X represents
@@ -1805,7 +1806,7 @@ class GWExplorerApp:
             self.root.after(0,
                             lambda: self.global_status.config(text=f"Re-generating 2D Spectrogram maps for {det}..."))
 
-            self.compute_complete_spectrogram(det)
+        #    self.compute_complete_spectrogram(det)
 
             self.root.after(0, lambda: self.update_pbar(det, 100))
             self.root.after(0, lambda: self.hide_pbar(det))
@@ -1872,6 +1873,46 @@ class GWExplorerApp:
                                      "Invalid input format detected. Please verify numerical configurations.")
 
         ttk.Button(win, text="Apply Changes", command=save_and_eval).grid(row=5, columnspan=2, pady=10)
+
+    def compute_window_spectrogram(self, det, t_start, t_end):
+        nperseg = self.nperseg.get()
+        nfft = self.nfft.get()
+        noverlap = int(nperseg * (self.overlap_pct.get() / 100.0))
+
+        idx_start = int(max(0, t_start * self.fs))
+        idx_end = int(min(len(self.detectors[det]["whitened"]), t_end * self.fs))
+
+        data = self.detectors[det]["whitened"][idx_start:idx_end]
+
+        if len(data) < 8:
+            return None, None, None
+
+        actual_nperseg = min(nperseg, len(data))
+        actual_noverlap = min(noverlap, actual_nperseg - 1)
+
+        win_seg = cmst(actual_nperseg)
+        t_win = np.linspace(-1, 1, actual_nperseg)
+
+        f, t, Sxx_power = spectrogram(
+            data,
+            self.fs,
+            window=win_seg,
+            nperseg=actual_nperseg,
+            nfft=nfft,
+            noverlap=actual_noverlap,
+            scaling="spectrum"
+        )
+
+        Sxx = np.sqrt(Sxx_power)
+
+        alpha = np.sum(t_win * t_win * win_seg) / np.sum(win_seg)
+        laplacian_f = np.zeros_like(Sxx)
+        laplacian_f[1:-1, :] = Sxx[2:, :] - 2 * Sxx[1:-1, :] + Sxx[0:-2, :]
+
+        Sxx_sharp = Sxx - (alpha / (nfft / actual_nperseg)) * laplacian_f
+        Sxx_sharp = np.maximum(np.nan_to_num(Sxx_sharp, nan=1e-20), 1e-20)
+
+        return f, t + t_start, Sxx_sharp
 
     def render_canvas_frame(self, ax, canvas, Sxx, t, f, t_start, t_end):
         ax.clear()
@@ -2074,7 +2115,7 @@ class GWExplorerApp:
             self.root.after(0, lambda: self.global_status.config(
                 text=f"Executing 2D Spectrogram & Laplacian Matrix loops for {det}..."))
 
-            self.compute_complete_spectrogram(det)
+        #    self.compute_complete_spectrogram(det)
 
             self.root.after(0, lambda: self.update_pbar(det, 100))
             self.detectors[det]['loaded'] = True
@@ -2358,20 +2399,23 @@ class GWExplorerApp:
             active_tab_name = None
     
         # Only render the active detector spectrogram tab
+
         if active_tab_name in ["H1", "L1", "V1"]:
             det = active_tab_name
             if self.detectors[det]["loaded"]:
-                self.render_canvas_frame(
-                    self.tabs[det]["ax"],
-                    self.tabs[det]["canvas"],
-                    self.detectors[det]["Sxx"],
-                    self.detectors[det]["t"],
-                    self.detectors[det]["f"],
-                    t_start,
-                    t_end
-                )
+                f, t, Sxx = self.compute_window_spectrogram(det, t_start, t_end)
+
+                if Sxx is not None:
+                    self.render_canvas_frame(
+                        self.tabs[det]["ax"],
+                        self.tabs[det]["canvas"],
+                        Sxx,
+                        t,
+                        f,
+                        t_start,
+                        t_end
+                    )
             return
-    
         # Only render Joint Correlation when that tab is active
         if active_tab_name == "Joint Correlation":
             self.render_joint_correlation(t_start, t_end)
@@ -2409,8 +2453,7 @@ class GWExplorerApp:
         pct_low, pct_high = self.get_percentile_limits()
 
         ref = active_matrices[0]
-        ref_t = self.detectors[ref]['t']
-        ref_f = self.detectors[ref]['f']
+        ref_f, ref_t, ref_Sxx = self.compute_window_spectrogram(ref, t_start, t_end)
 
         t_mask = (ref_t >= t_start) & (ref_t <= t_end)
         f_mask = (ref_f >= f_low) & (ref_f <= f_high)
@@ -2419,18 +2462,21 @@ class GWExplorerApp:
             canvas.draw_idle()
             return
 
-        ref_t_window = ref_t[t_mask]
-        ref_f_window = ref_f[f_mask]
+
+        if ref_Sxx is None:
+            canvas.draw_idle()
+            return
 
         joint_product = None
 
         for det in active_matrices:
-            Sxx = self.detectors[det]['Sxx']
-            det_t = self.detectors[det]['t']
-            det_f = self.detectors[det]['f']
+            det_f, det_t, Sxx = self.compute_window_spectrogram(det, t_start, t_end)
+
+            if Sxx is None:
+                continue
 
             offset_sec = self.get_detector_offset_ms(det) / 1000.0
-            sample_t = ref_t_window - offset_sec
+            sample_t = ref_t - offset_sec
 
             det_f_mask = (det_f >= f_low) & (det_f <= f_high)
             S_freq = Sxx[det_f_mask, :]
@@ -2467,7 +2513,7 @@ class GWExplorerApp:
         cmap = self.get_colormap_name()
 
         ax.pcolormesh(
-            ref_t_window, ref_f_window[:joint_product.shape[0]], joint_product,
+            ref_t, ref_f[:joint_product.shape[0]], joint_product,
             shading='gouraud', cmap=cmap, vmin=vmin, vmax=vmax
         )
 
@@ -2507,10 +2553,12 @@ class GWExplorerApp:
 
         detectors = ['H1', 'L1', 'V1']
         t_common = np.linspace(t_start, t_end, int((t_end - t_start) * self.fs))
-        coherent_sum = np.zeros_like(t_common)
+
+        # We will store the aligned time-domain data and their calculated weights
+        aligned_streams = []
+        weights = []
         active_count = 0
 
-        # Step 1: Build the coherent sum in memory
         for det in detectors:
             if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
                 idx_start = int(max(0, t_start * self.fs))
@@ -2527,9 +2575,13 @@ class GWExplorerApp:
                     except ValueError:
                         pass
 
-                max_amp = np.max(np.abs(data))
-                if max_amp > 1e-20:
-                    data = data / max_amp
+                # 1. OPTIMAL WEIGHTING: Calculate Inverse-Variance weight
+                # High variance (noise) = Low weight. Low variance (clean) = High weight.
+                variance = np.var(data)
+                weight = 1.0 / (variance + 1e-20)
+
+                # --- MAX_AMP NORMALIZATION COMPLETELY REMOVED ---
+                # We now trust the whitening process to handle the relative scaling.
 
                 offset_sec = self.get_detector_offset_ms(det) / 1000.0
                 shifted_t_arr = t_arr - offset_sec
@@ -2538,14 +2590,19 @@ class GWExplorerApp:
                 plot_data = -data if is_flipped else data
 
                 aligned_data = np.interp(t_common, shifted_t_arr, plot_data, left=0.0, right=0.0)
-                coherent_sum += aligned_data
+
+                aligned_data = aligned_data - np.mean(aligned_data)
+
+                aligned_streams.append(aligned_data)
+                weights.append(weight)
                 active_count += 1
 
         if active_count > 0:
-            coherent_sum = coherent_sum / active_count
+            # Normalize the weights so they sum perfectly to 1.0
+            weights = np.array(weights)
+            weights /= np.sum(weights)
 
-            # Step 2: Compute and Plot the 2D Boss Image (Spectrogram)
-            data_length = len(coherent_sum)
+            data_length = len(t_common)
 
             if data_length < 8:
                 ax.text(0.5, 0.5, "Time window too short for 2D Image", ha='center', va='center',
@@ -2555,14 +2612,38 @@ class GWExplorerApp:
 
             nperseg = self.nperseg.get()
             actual_nperseg = min(nperseg, data_length)
+
+            # --- NEW FIX: Bring back the nfft zero-padding ---
+            nfft_target = self.nfft.get()
+            actual_nfft = max(actual_nperseg, nfft_target)
+
             noverlap = int(actual_nperseg * (self.overlap_pct.get() / 100.0))
             win = cmst(actual_nperseg)
 
-            f, t_spec, Sxx_power = spectrogram(
-                coherent_sum, self.fs, window=win,
-                nperseg=actual_nperseg, noverlap=noverlap, scaling='spectrum'
-            )
-            Sxx = np.sqrt(Sxx_power)
+            # 2. TRUE COHERENT OVERLAP: Summing complex STFT matrices
+            Zxx_coherent = None
+
+            for stream, weight in zip(aligned_streams, weights):
+                # Use signal.stft to get the COMPLEX matrix (phase + magnitude)
+                f, t_spec, Zxx = signal.stft(
+                    stream, self.fs, window=win,
+                    nperseg=actual_nperseg,
+                    nfft=actual_nfft,  # <-- Padding restored here
+                    noverlap=noverlap,
+                    return_onesided=True,
+                    detrend='constant'
+                )
+
+                # Multiply the complex matrix by its detector's weight and accumulate
+                if Zxx_coherent is None:
+                    Zxx_coherent = Zxx * weight
+                else:
+                    Zxx_coherent += (Zxx * weight)
+
+            # Finally, calculate the power magnitude from the phase-cancelled coherent sum
+            Sxx = np.abs(Zxx_coherent) ** 2
+            # -------------------------------------------------------------------------
+
             t_spec_shifted = t_spec + t_start
 
             f_mask = (f >= f_low) & (f <= f_high)
@@ -2592,7 +2673,7 @@ class GWExplorerApp:
             ax.set_xlabel("Time (s)")
             ax.set_xlim(t_start, t_end)
             ax.set_ylim(f_low, f_high)
-            ax.set_title(f"Coherent Network Spectrogram ({active_count} Detectors Aligned)")
+            ax.set_title(f"Coherent STFT ({active_count} Detectors, Variance Weighted)")
 
             if self.show_grid.get():
                 ax.set_axisbelow(False)
@@ -2602,9 +2683,6 @@ class GWExplorerApp:
             ax.text(0.5, 0.5, "No Data for Boss Image", ha='center', va='center', transform=ax.transAxes)
 
         canvas.draw_idle()
-
-
-
 
     def render_whitened_waveforms(self, t_start, t_end):
         if "Whitened Waveforms" not in self.tabs or not hasattr(self, 'fs') or self.fs is None:
@@ -2673,7 +2751,6 @@ class GWExplorerApp:
                 ax.set_ylabel("Norm")
                 ax.set_ylim(-1.1, 1.1)
                 ax.grid(True, alpha=0.5)
-                print(f"  {det}: not loaded")
                 continue
     
             idx_start = int(max(0, t_start * self.fs))
