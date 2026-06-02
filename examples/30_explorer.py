@@ -348,12 +348,16 @@ class GWExplorerApp:
         self.play_speed = 1.0
         self.base_fps = 10
         self.current_event_name = "N/A"
+        self.show_raw_data = tk.BooleanVar(value=False)
+
+
 
         self.create_menu()
         self.create_widgets()
 
         self.root.protocol("WM_DELETE_WINDOW", self.safe_exit)
         self.root.bind_all("<Control-c>", lambda event: self.safe_exit())
+
 
         # Check for the specific H1 file and auto-load if present
         startup_files = {
@@ -866,11 +870,14 @@ class GWExplorerApp:
 
             apply_filter = high > low
             if apply_filter:
-                sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
+                # Bumping the Butterworth filter order to 8 to crush low-frequency seismic noise
+                sos = signal.butter(8, [low, high], btype='bandpass', fs=self.fs, output='sos')
 
             detectors = ['H1', 'L1', 'V1']
             t_common = np.linspace(t_start, t_end, int((t_end - t_start) * self.fs))
+
             coherent_sum = np.zeros_like(t_common)
+            weights_sum = 0.0
             active_count = 0
 
             for det in detectors:
@@ -888,6 +895,10 @@ class GWExplorerApp:
                         except ValueError:
                             pass
 
+                    # 1. OPTIMAL WEIGHTING: Inverse-variance
+                    variance = np.var(data)
+                    weight = 1.0 / (variance + 1e-20)
+
                     offset_sec = self.get_detector_offset_ms(det) / 1000.0
                     shifted_t_arr = t_arr - offset_sec
 
@@ -895,25 +906,41 @@ class GWExplorerApp:
                     plot_data = -data if is_flipped else data
 
                     aligned_data = np.interp(t_common, shifted_t_arr, plot_data, left=0.0, right=0.0)
-                    coherent_sum += aligned_data
+
+                    # 2. DETRENDING: Remove DC offset before summing
+                    aligned_data = aligned_data - np.mean(aligned_data)
+
+                    # 3. WEIGHTED SUMMATION
+                    coherent_sum += (aligned_data * weight)
+                    weights_sum += weight
                     active_count += 1
 
             if active_count > 0:
-                coherent_sum = coherent_sum / active_count
+                # Normalize the sum by the total weight
+                coherent_sum = coherent_sum / weights_sum
 
-                # Normalize audio strictly between -1.0 and 1.0 to prevent audio clipping
-                max_amp = np.max(np.abs(coherent_sum))
-                if max_amp > 1e-20:
-                    audio_data = coherent_sum / max_amp
+                # --- ROBUST AUDIO NORMALIZATION ---
+                # Final safeguard detrend to ensure absolute zero-mean
+                coherent_sum = coherent_sum - np.mean(coherent_sum)
+
+                # Use the 99.9th percentile to scale volume, ignoring transient filter spikes
+                peak = np.percentile(np.abs(coherent_sum), 99.9)
+
+                if peak > 1e-40:
+                    audio_data = coherent_sum / peak
                 else:
                     audio_data = coherent_sum
 
-                win = cmst(len(audio_data))
-                audio_data = audio_data * win
+                # Hard clip to [-1.0, 1.0] to protect the soundcard buffer
+                audio_data = np.clip(audio_data, -1.0, 1.0)
+                # ----------------------------------
+
+                # 4. CMST WINDOW & SILENCE TAIL
+                win = cmst(len(audio_data),p=4)
+                audio_data = audio_data * win * 2
 
                 tail = np.zeros(int(0.10 * self.fs))
                 audio_data = np.concatenate([audio_data, tail])
-
 
                 # Play asynchronously
                 sd.play(audio_data, samplerate=self.fs)
@@ -1147,6 +1174,11 @@ class GWExplorerApp:
         ttk.Checkbutton(panel, text="Grid", variable=self.show_grid, command=self.on_display_control_changed).pack(
             anchor=tk.W, pady=(2, 2))
 
+
+        ttk.Checkbutton(panel, text="Raw (Waveforms)", variable=self.show_raw_data,
+                        command=self.on_display_control_changed).pack(
+            anchor=tk.W, pady=(2, 2))
+
         contour_row = ttk.Frame(panel)
         contour_row.pack(fill=tk.X, pady=(2, 4))
         ttk.Checkbutton(contour_row, text="Contour lines", variable=self.show_contours,
@@ -1159,6 +1191,7 @@ class GWExplorerApp:
         contour_entry.pack(side=tk.LEFT, padx=(6, 0))
         contour_entry.bind("<Return>", self.on_display_control_changed)
         contour_entry.bind("<FocusOut>", self.on_display_control_changed)
+
 
         ttk.Label(panel, text="Colour scheme").pack(anchor=tk.W)
         self.colormap_combo = ttk.Combobox(
@@ -1826,7 +1859,18 @@ class GWExplorerApp:
         ttk.Entry(win, textvariable=self.nfft).grid(row=1, column=1, padx=10, pady=5)
         ttk.Label(win, text="Overlap Target (%):").grid(row=2, column=0, padx=10, pady=5)
         ttk.Entry(win, textvariable=self.overlap_pct).grid(row=2, column=1, padx=10, pady=5)
-        ttk.Button(win, text="Apply Changes", command=win.destroy).grid(row=3, columnspan=2, pady=10)
+
+        def apply_and_refresh():
+            win.destroy()
+            # Only trigger a refresh if data is actually loaded
+            if self.total_duration > 0:
+                self.global_status.config(text="Re-rendering views with new FFT parameters...")
+                self.root.update_idletasks()
+                self.update_all_tabs()
+                self.global_status.config(text="System: Idle")
+
+        ttk.Button(win, text="Apply Changes", command=apply_and_refresh).grid(row=3, columnspan=2, pady=10)
+
 
     def open_display_dialog(self):
         win = tk.Toplevel(self.root)
@@ -2552,7 +2596,17 @@ class GWExplorerApp:
             sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
 
         detectors = ['H1', 'L1', 'V1']
-        t_common = np.linspace(t_start, t_end, int((t_end - t_start) * self.fs))
+        # Lock the grid to absolute integer sample boundaries
+        idx_min = int(max(0, t_start * self.fs))
+        idx_max = int(min(self.total_duration * self.fs, t_end * self.fs))
+
+        if idx_min >= idx_max:
+            return
+
+        t_common = np.arange(idx_min, idx_max) / self.fs
+
+
+        #t_common = np.linspace(t_start, t_end, int((t_end - t_start) * self.fs))
 
         # We will store the aligned time-domain data and their calculated weights
         aligned_streams = []
@@ -2740,44 +2794,61 @@ class GWExplorerApp:
         # Cache exactly what was plotted/aligned for each detector
         aligned_cache = {}
         active_count = 0
-    
+
+        # --- NEW BUFFER SECONDS ---
+        buffer_sec = 0.040
+        t_start_buf = max(0.0, t_start - buffer_sec)
+        t_end_buf = min(self.total_duration, t_end + buffer_sec)
+
         for det in detectors:
             ax = detector_axes[det]
             det_index = detectors.index(det)
-    
-    
+
             if not (self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None):
                 ax.set_title(f"{det} not loaded")
                 ax.set_ylabel("Norm")
                 ax.set_ylim(-1.1, 1.1)
                 ax.grid(True, alpha=0.5)
                 continue
-    
-            idx_start = int(max(0, t_start * self.fs))
-            idx_end = int(min(len(self.detectors[det]['whitened']), t_end * self.fs))
-    
+
+            # 1. DATA SELECTION: Toggle between whitened and raw strain
+            if self.show_raw_data.get():
+                source_data = self.detectors[det]['raw']
+            else:
+                source_data = self.detectors[det]['whitened']
+
+            if source_data is None:
+                continue
+
+            # 2. BUFFERED EXTRACTION: Use the padded time limits
+            idx_start = int(max(0, t_start_buf * self.fs))
+            idx_end = int(min(len(source_data), t_end_buf * self.fs))
+
             if idx_start >= idx_end:
                 ax.set_title(f"{det} empty window")
                 ax.set_ylabel("Norm")
                 ax.set_ylim(-1.1, 1.1)
                 ax.grid(True, alpha=0.5)
-                print(f"  {det}: empty window idx_start={idx_start}, idx_end={idx_end}")
                 continue
-    
+
+            # t_arr and data are now 80ms wider than the visible screen
             t_arr = np.arange(idx_start, idx_end) / self.fs
-            data = self.detectors[det]['whitened'][idx_start:idx_end]
-    
+            data = source_data[idx_start:idx_end].copy()
+
+            # We still apply the bandpass filter to the raw data here so you
+            # can actually see it (otherwise the 0Hz DC offset makes it a flat line)
             if apply_filter and len(data) > 33:
                 try:
                     data = signal.sosfiltfilt(sos, data)
                 except ValueError:
                     pass
-    
+
             # Normalize individual detector trace
             max_amp = np.max(np.abs(data))
             if max_amp > 1e-20:
                 data = data / max_amp
-    
+
+
             offset_sec = self.get_detector_offset_ms(det) / 1000.0
             shifted_t_arr = t_arr - offset_sec
     
