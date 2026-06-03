@@ -2089,6 +2089,8 @@ class GWExplorerApp:
         self.stop_play()
         self.is_dragging = True
         self.drag_start_x = event.x
+        # Lock the initial timeline center at the moment of the click
+        self.drag_start_center = self.t_center.get()
 
     def drag_motion(self, event):
         if not self.is_dragging or self.total_duration == 0:
@@ -2098,22 +2100,22 @@ class GWExplorerApp:
         if active_tab_name not in self.tabs:
             return
 
-        # 1. Fetch the axis (or array of axes) for the active tab
-        tab_ax = self.tabs[active_tab_name]['ax']
+        # Get the actual physical pixel width of the canvas
+        canvas_widget = self.tabs[active_tab_name]['canvas'].get_tk_widget()
+        canvas_width = canvas_widget.winfo_width()
 
-        # 2. THE FIX: If it's an array of subplots, grab the first one [0]
-        ax_obj = tab_ax[0] if isinstance(tab_ax, np.ndarray) else tab_ax
+        if canvas_width <= 0:
+            return
 
-        # 3. Perform the coordinate math safely
-        inv = ax_obj.transData.inverted()
-        current_data_x, _ = inv.transform((event.x, event.y))
-        start_data_x, _ = inv.transform((self.drag_start_x, 0))
+        # Calculate the shift fraction purely based on pixels, completely ignoring Matplotlib limits
+        pixel_shift = self.drag_start_x - event.x
+        fraction_shifted = pixel_shift / canvas_width
+        time_shift = fraction_shifted * self.t_width_seconds
 
-        data_shift = start_data_x - current_data_x
-        new_center = self.t_center.get() + data_shift
+        new_center = self.drag_start_center + time_shift
 
         self.clamp_and_set_center(new_center)
-        self.drag_start_x = event.x
+
 
     def end_drag(self, event):
         self.is_dragging = False
