@@ -1,0 +1,11 @@
+{
+  "pct_low": 14.29,
+  "pct_high": 99.99,
+  "f_min": 0.0,
+  "f_max": 363.0,
+  "t_width_seconds": 0.15436977700659682,
+  "show_grid": true,
+  "show_contours": true,
+  "contour_count": 10,
+  "colormap_name": "inferno"
+}
