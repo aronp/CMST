@@ -23,12 +23,57 @@ from urllib.parse import urlencode
 import sounddevice as sd
 
 
+# -----------------------------------------------------------------------------
+# Central application configuration
+# -----------------------------------------------------------------------------
+
 C_LIGHT = 299792458.0
 
-DETECTOR_ECEF = {
-    "H1": np.array([-2161414.926, -3834695.178, 4600350.226]),
-    "L1": np.array([-74276.044, -5496283.719, 3224257.017]),
-    "V1": np.array([4546374.099, 842989.697, 4378576.963]),
+DETECTORS = ("H1", "L1", "V1")
+REFERENCE_DETECTOR = "H1"
+NON_REFERENCE_DETECTORS = tuple(det for det in DETECTORS if det != REFERENCE_DETECTOR)
+
+DETECTOR_CONFIG = {
+    "H1": {
+        "name": "Hanford H1",
+        "color": "red",
+        "ecef": np.array([-2161414.926, -3834695.178, 4600350.226]),
+        "active_corr_default": True,
+    },
+    "L1": {
+        "name": "Livingston L1",
+        "color": "green",
+        "ecef": np.array([-74276.044, -5496283.719, 3224257.017]),
+        "active_corr_default": True,
+    },
+    "V1": {
+        "name": "Virgo V1",
+        "color": "purple",
+        "ecef": np.array([4546374.099, 842989.697, 4378576.963]),
+        "active_corr_default": False,
+    },
+}
+
+DETECTOR_ECEF = {det: config["ecef"] for det, config in DETECTOR_CONFIG.items()}
+DETECTOR_COLORS = {det: config["color"] for det, config in DETECTOR_CONFIG.items()}
+
+DISPLAY_DEFAULTS = {
+    "pct_low": 50.0,
+    "pct_high": 99.99,
+    "f_min": 0.0,
+    "f_max": 500.0,
+    "t_width_seconds": 0.5,
+    "show_grid": False,
+    "show_contours": False,
+    "contour_count": 25,
+    "colormap_name": "inferno",
+}
+
+COLORMAPS = ("viridis", "inferno", "magma", "plasma", "cividis", "turbo", "gray", "hot")
+
+STARTUP_FILES = {
+    "H1": "H-H1_GWOSC_16KHZ_R1-1126259447-32.hdf5",
+    "L1": "L-L1_GWOSC_16KHZ_R1-1126259447-32.hdf5",
 }
 
 
@@ -114,6 +159,10 @@ def cmst_window(t, width=1.0, power=2):
     
     return y
 
+
+# -----------------------------------------------------------------------------
+# Tk widgets
+# -----------------------------------------------------------------------------
 
 class ToolTip:
     def __init__(self, widget, text_func):
@@ -294,6 +343,10 @@ class RangeSlider(tk.Canvas):
             self.command()
 
 
+# -----------------------------------------------------------------------------
+# Main application
+# -----------------------------------------------------------------------------
+
 class GWExplorerApp:
     def __init__(self, root):
         self.root = root
@@ -321,14 +374,19 @@ class GWExplorerApp:
         except Exception as e:
             print(f"Icon missing or failed to load: {e}")
 
-        # Core Global State Engine
+        # Core data/state for each detector. Keep the detector set in DETECTOR_CONFIG
+        # so labels, colours, ECEF positions, and defaults cannot drift apart.
         self.detectors = {
-            'H1': {'raw': None, 'whitened': None, 'Sxx': None, 't': None, 'f': None, 'loaded': False,
-                   'active_corr': tk.BooleanVar(value=True)},
-            'L1': {'raw': None, 'whitened': None, 'Sxx': None, 't': None, 'f': None, 'loaded': False,
-                   'active_corr': tk.BooleanVar(value=True)},
-            'V1': {'raw': None, 'whitened': None, 'Sxx': None, 't': None, 'f': None, 'loaded': False,
-                   'active_corr': tk.BooleanVar(value=False)}
+            det: {
+                "raw": None,
+                "whitened": None,
+                "Sxx": None,
+                "t": None,
+                "f": None,
+                "loaded": False,
+                "active_corr": tk.BooleanVar(value=DETECTOR_CONFIG[det]["active_corr_default"]),
+            }
+            for det in DETECTORS
         }
 
         self.dt = None
@@ -340,7 +398,7 @@ class GWExplorerApp:
         self.current_file_duration = "N/A"
         self.current_file_rate = "N/A"
         self.current_event_offset = "N/A"
-        self.current_filenames = {'H1': 'N/A', 'L1': 'N/A', 'V1': 'N/A'}
+        self.current_filenames = {det: 'N/A' for det in DETECTORS}
 
         # Playback Control Variables
         self.is_playing = False
@@ -348,6 +406,7 @@ class GWExplorerApp:
         self.play_speed = 1.0
         self.base_fps = 10
         self.current_event_name = "N/A"
+        self.cached_target_gps = "N/A"
         self.show_raw_data = tk.BooleanVar(value=False)
 
 
@@ -360,14 +419,9 @@ class GWExplorerApp:
 
 
         # Check for the specific H1 file and auto-load if present
-        startup_files = {
-            "H1": "H-H1_GWOSC_16KHZ_R1-1126259447-32.hdf5",
-            "L1": "L-L1_GWOSC_16KHZ_R1-1126259447-32.hdf5",
-        }
-
         available_startup_files = {
             det: filename
-            for det, filename in startup_files.items()
+            for det, filename in STARTUP_FILES.items()
             if os.path.exists(filename)
         }
 
@@ -388,18 +442,12 @@ class GWExplorerApp:
 
             self.root.after(1000, load_startup_suite)
 
+    # ------------------------------------------------------------------
+    # Persistent settings and recent-file history
+    # ------------------------------------------------------------------
+
     def load_display_defaults(self):
-        defaults = {
-            "pct_low": 50.0,
-            "pct_high": 99.99,
-            "f_min": 0.0,
-            "f_max": 500.0,
-            "t_width_seconds": 0.5,
-            "show_grid": False,
-            "show_contours": False,
-            "contour_count": 15,
-            "colormap_name": "inferno",
-        }
+        defaults = DISPLAY_DEFAULTS.copy()
 
         try:
             if os.path.exists(self.display_defaults_path):
@@ -536,6 +584,10 @@ class GWExplorerApp:
         self.root.destroy()
         sys.exit(0)
 
+    # ------------------------------------------------------------------
+    # UI construction
+    # ------------------------------------------------------------------
+
     def create_menu(self):
         menubar = tk.Menu(self.root)
         file_menu = tk.Menu(menubar, tearoff=0)
@@ -555,6 +607,10 @@ class GWExplorerApp:
 
         self.root.config(menu=menubar)
         self.refresh_recent_menu()
+
+    # ------------------------------------------------------------------
+    # Small UI helpers
+    # ------------------------------------------------------------------
 
     def copy_to_clipboard(self, text, name):
         if text and text not in ["N/A", "Unknown", "Unknown / Local"]:
@@ -611,10 +667,8 @@ class GWExplorerApp:
         self.contour_count = tk.IntVar(value=25)
         self.colormap_name = tk.StringVar(value="inferno")
 
-        self.detector_offsets_ms = {"H1": tk.DoubleVar(value=0.0), "L1": tk.DoubleVar(value=0.0),
-                                    "V1": tk.DoubleVar(value=0.0)}
-        self.signal_flips = {"H1": tk.BooleanVar(value=False), "L1": tk.BooleanVar(value=False),
-                             "V1": tk.BooleanVar(value=False)}
+        self.detector_offsets_ms = {det: tk.DoubleVar(value=0.0) for det in DETECTORS}
+        self.signal_flips = {det: tk.BooleanVar(value=False) for det in DETECTORS}
 
         self.display_control_update_job = None
         self.display_controls_recenter = False
@@ -665,7 +719,7 @@ class GWExplorerApp:
         self.lbl_meta_name.pack(anchor=tk.W, pady=2)
         self.lbl_meta_name.bind("<Button-1>", lambda e: self.copy_to_clipboard(self.current_event_name, "Event ID"))
 
-        for det in ['H1', 'L1', 'V1']:
+        for det in DETECTORS:
             lbl = ttk.Label(meta_frame, text=f"{det} File: N/A", font=('Courier', 8), cursor="hand2", foreground="blue")
             lbl.pack(anchor=tk.W, pady=1)
             lbl.bind("<Button-1>", lambda e, d=det: self.copy_to_clipboard(self.current_filenames[d], f"{d} File Name"))
@@ -673,7 +727,7 @@ class GWExplorerApp:
 
         ttk.Label(self.sidebar, text="Active Detector Loading:", font=('Helvetica', 10, 'bold')).pack(anchor=tk.W,
                                                                                                       pady=5)
-        for det in ['H1', 'L1', 'V1']:
+        for det in DETECTORS:
             f = ttk.LabelFrame(self.sidebar, text=f"Interferometer {det}", padding=5)
             f.pack(fill=tk.X, pady=4)
             ttk.Button(f, text="Load Local HDF5...", command=lambda d=det: self.load_local_detector(d)).pack(fill=tk.X)
@@ -684,7 +738,7 @@ class GWExplorerApp:
 
         ttk.Label(self.sidebar, text="Correlation Mask Switches:", font=('Helvetica', 10, 'bold')).pack(anchor=tk.W,
                                                                                                         pady=5)
-        for det in ['H1', 'L1', 'V1']:
+        for det in DETECTORS:
             ttk.Checkbutton(self.sidebar, text=f"Include {det} in Joint Product",
                             variable=self.detectors[det]['active_corr'],
                             command=self.update_all_tabs).pack(anchor=tk.W, pady=2)
@@ -693,7 +747,7 @@ class GWExplorerApp:
         self.notebook = ttk.Notebook(parent)
         self.notebook.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        for tab_name in ['H1', 'L1', 'V1', 'Joint Correlation']:
+        for tab_name in (*DETECTORS, 'Joint Correlation'):
             frame = ttk.Frame(self.notebook)
             self.notebook.add(frame, text=tab_name)
 
@@ -815,7 +869,7 @@ class GWExplorerApp:
 
         ttk.Label(bottom_row, text="Offsets ms:").pack(side=tk.LEFT, padx=(5, 4))
 
-        for det in ["L1", "V1"]:
+        for det in NON_REFERENCE_DETECTORS:
             ttk.Label(bottom_row, text=f"{det}:").pack(side=tk.LEFT, padx=(8, 2))
             spin = ttk.Spinbox(bottom_row, from_=-30.0, to=30.0, increment=0.1, format="%.1f", width=6,
                                textvariable=self.detector_offsets_ms[det], command=self.on_offset_spinbox_changed)
@@ -840,7 +894,7 @@ class GWExplorerApp:
         flip_row = ttk.Frame(self.corr_frame)
         flip_row.pack(fill=tk.X, pady=(5, 0))
         ttk.Label(flip_row, text="Invert Polarity (Bottom Chart):").pack(side=tk.LEFT, padx=(5, 4))
-        for det in ["H1", "L1", "V1"]:
+        for det in DETECTORS:
             ttk.Checkbutton(flip_row, text=det, variable=self.signal_flips[det], command=self.update_all_tabs).pack(
                 side=tk.LEFT, padx=5)
 
@@ -873,7 +927,7 @@ class GWExplorerApp:
                 # Bumping the Butterworth filter order to 8 to crush low-frequency seismic noise
                 sos = signal.butter(8, [low, high], btype='bandpass', fs=self.fs, output='sos')
 
-            detectors = ['H1', 'L1', 'V1']
+            detectors = DETECTORS
             t_common = np.linspace(t_start, t_end, int((t_end - t_start) * self.fs))
 
             coherent_sum = np.zeros_like(t_common)
@@ -988,7 +1042,7 @@ class GWExplorerApp:
             sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
 
             data_cache = {}
-            for det in ["H1", "L1", "V1"]:
+            for det in DETECTORS:
                 d = self.detectors[det]['whitened'][idx_start:idx_end]
                 if len(d) > 33:
                     d = signal.sosfiltfilt(sos, d)
@@ -1065,8 +1119,7 @@ class GWExplorerApp:
                     marker_r = 90.0 - self.last_sky_dec_deg
 
                     # Using a cyan 'X' to ensure it pops visibly against the magma/inferno colormaps
-                    ax.plot(marker_ra, marker_r, marker='x', color='blue'
-                                                                   '', markersize=14, markeredgewidth=3,
+                    ax.plot(marker_ra, marker_r, marker='x', color='blue', markersize=14, markeredgewidth=3,
                             label='Triangulated Vector')
 
                     # Add a small legend so we know what the X represents
@@ -1196,7 +1249,7 @@ class GWExplorerApp:
         ttk.Label(panel, text="Colour scheme").pack(anchor=tk.W)
         self.colormap_combo = ttk.Combobox(
             panel, textvariable=self.colormap_name,
-            values=("viridis", "inferno", "magma", "plasma", "cividis", "turbo", "gray", "hot"),
+            values=COLORMAPS,
             state="readonly", width=16
         )
         self.colormap_combo.pack(fill=tk.X, pady=(2, 10))
@@ -1321,11 +1374,7 @@ class GWExplorerApp:
     def reset_display_controls(self):
         defaults = getattr(self, "display_defaults", None)
         if defaults is None:
-            defaults = {
-                "pct_low": 50.0, "pct_high": 99.99, "f_min": 0.0, "f_max": 500.0,
-                "t_width_seconds": 0.5, "show_grid": False, "show_contours": False,
-                "contour_count": 25, "colormap_name": "inferno",
-            }
+            defaults = DISPLAY_DEFAULTS.copy()
 
         self.pct_low.set(defaults["pct_low"])
         self.pct_high.set(defaults["pct_high"])
@@ -1339,6 +1388,10 @@ class GWExplorerApp:
         self.contour_count.set(defaults["contour_count"])
         self.colormap_name.set(defaults["colormap_name"])
         self.schedule_display_update(recenter=True)
+
+    # ------------------------------------------------------------------
+    # Chart navigation and display-control event handlers
+    # ------------------------------------------------------------------
 
     def start_zoom_drag(self, event):
         self.zoom_dragging = True
@@ -1447,10 +1500,14 @@ class GWExplorerApp:
         except ValueError:
             messagebox.showerror("Format Error", "Please provide a valid numeric float coordinate value.")
 
+    # ------------------------------------------------------------------
+    # Detector loading, download, and processing pipeline
+    # ------------------------------------------------------------------
+
     def pull_exact_detector_suite(self, event_name, duration_val, rate_val, gps_merger, files_dict):
         try:
             self.root.after(0, self.clear_sky_solution)
-            for det in ["H1", "L1", "V1"]:
+            for det in DETECTORS:
                 self.root.after(0, lambda d=det: self.clear_detector(d))
 
             self.current_file_duration = f"{duration_val} Seconds"
@@ -1475,6 +1532,10 @@ class GWExplorerApp:
 
         except Exception as e:
             self.root.after(0, lambda err=e: messagebox.showerror("Pipeline Loader Error", str(err)))
+
+    # ------------------------------------------------------------------
+    # Playback and sky-link actions
+    # ------------------------------------------------------------------
 
     def set_play(self, direction, speed):
         if self.total_duration == 0: return
@@ -1512,6 +1573,10 @@ class GWExplorerApp:
             self.recompute_sky_from_offsets(show_errors=False)
         if self.sky_link_url:
             webbrowser.open(self.sky_link_url)
+
+    # ------------------------------------------------------------------
+    # GWOSC catalog browser
+    # ------------------------------------------------------------------
 
     def open_gwosc_catalog_browser(self):
         import json
@@ -1813,7 +1878,7 @@ class GWExplorerApp:
 
         def save_and_rewhiten():
             win.destroy()
-            active_detectors = [det for det in ['H1', 'L1', 'V1'] if self.detectors[det]['loaded']]
+            active_detectors = [det for det in DETECTORS if self.detectors[det]['loaded']]
 
             if not active_detectors:
                 self.global_status.config(text="Interval saved. (No active data loaded to re-whiten).")
@@ -1917,6 +1982,10 @@ class GWExplorerApp:
                                      "Invalid input format detected. Please verify numerical configurations.")
 
         ttk.Button(win, text="Apply Changes", command=save_and_eval).grid(row=5, columnspan=2, pady=10)
+
+    # ------------------------------------------------------------------
+    # Spectrogram and canvas rendering helpers
+    # ------------------------------------------------------------------
 
     def compute_window_spectrogram(self, det, t_start, t_end):
         nperseg = self.nperseg.get()
@@ -2110,7 +2179,7 @@ class GWExplorerApp:
 
     def process_pipeline_worker(self, filepath, det, add_to_recent=True):
         try:
-            self.root.after(0, lambda: self.notebook.select(self.notebook.tabs()[['H1', 'L1', 'V1'].index(det)]))
+            self.root.after(0, lambda: self.notebook.select(self.notebook.tabs()[DETECTORS.index(det)]))
             self.root.after(0, lambda: self.show_pbar(det))
 
             filename_only = os.path.basename(filepath)
@@ -2120,7 +2189,7 @@ class GWExplorerApp:
                 self.root.after(0, lambda fp=filepath, d=det: self.add_recent_file(fp, d))
 
             if hasattr(self, "detector_offsets_ms"):
-                for d in ["L1", "V1"]:
+                for d in NON_REFERENCE_DETECTORS:
                     self.detector_offsets_ms[d].set(0)
 
             self.root.after(0, lambda d=det, fn=filename_only: self.file_labels[d].config(text=f"{d} File: {fn}"))
@@ -2271,7 +2340,7 @@ class GWExplorerApp:
             h1_slice = h1_data[idx_min:idx_max]
             results = []
 
-            for det in ["L1", "V1"]:
+            for det in NON_REFERENCE_DETECTORS:
                 if not self.detectors[det]["loaded"]:
                     continue
 
@@ -2311,6 +2380,10 @@ class GWExplorerApp:
             self.sky_result_text.set(f"Error: {str(e)}")
             self.lbl_offset_result.config(foreground="red")
             print(f"Correlation Error: {e}")
+
+    # ------------------------------------------------------------------
+    # Sky-localisation math
+    # ------------------------------------------------------------------
 
     def gps_to_gmst(self, gps_time):
         jd = 2444244.5 + float(gps_time) / 86400.0
@@ -2359,7 +2432,7 @@ class GWExplorerApp:
                     n = self.radec_to_ecef_unit(ra, dec, gmst)
                     model = {}
 
-                    for det in ["L1", "V1"]:
+                    for det in NON_REFERENCE_DETECTORS:
                         baseline = DETECTOR_ECEF[det] - DETECTOR_ECEF["H1"]
                         dt = -np.dot(n, baseline) / C_LIGHT
                         model[det] = dt * 1000.0
@@ -2392,7 +2465,8 @@ class GWExplorerApp:
 
         except Exception as e:
             if show_errors:
-                self.lbl_offset_result.config(text=f"Sky Error: {str(e)}", foreground="red")
+                self.sky_result_text.set(f"Sky Error: {str(e)}")
+                self.lbl_offset_result.config(foreground="red")
                 print(f"Sky Location Error: {e}")
             return None
 
@@ -2428,6 +2502,10 @@ class GWExplorerApp:
         self.detectors[det]['t'] = t
         self.detectors[det]['f'] = f
 
+    # ------------------------------------------------------------------
+    # Tab render dispatch and tab-specific renderers
+    # ------------------------------------------------------------------
+
     def update_all_tabs(self):
         if self.total_duration == 0:
             return
@@ -2444,7 +2522,7 @@ class GWExplorerApp:
     
         # Only render the active detector spectrogram tab
 
-        if active_tab_name in ["H1", "L1", "V1"]:
+        if active_tab_name in DETECTORS:
             det = active_tab_name
             if self.detectors[det]["loaded"]:
                 f, t, Sxx = self.compute_window_spectrogram(det, t_start, t_end)
@@ -2486,7 +2564,7 @@ class GWExplorerApp:
         canvas = self.tabs['Joint Correlation']['canvas']
         ax.clear()
 
-        active_matrices = [det for det in ['H1', 'L1', 'V1'] if
+        active_matrices = [det for det in DETECTORS if
                            self.detectors[det]['loaded'] and self.detectors[det]['active_corr'].get()]
 
         if not active_matrices:
@@ -2564,7 +2642,7 @@ class GWExplorerApp:
         if self.show_contours.get() and joint_product.shape[0] >= 2 and joint_product.shape[1] >= 2:
             try:
                 ax.contour(
-                    ref_t_window, ref_f_window[:joint_product.shape[0]], joint_product,
+                    ref_t, ref_f[:joint_product.shape[0]], joint_product,
                     levels=levels, colors="white", linewidths=0.25, alpha=0.5, zorder=2
                 )
             except Exception:
@@ -2595,7 +2673,7 @@ class GWExplorerApp:
         if apply_filter:
             sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
 
-        detectors = ['H1', 'L1', 'V1']
+        detectors = DETECTORS
         # Lock the grid to absolute integer sample boundaries
         idx_min = int(max(0, t_start * self.fs))
         idx_max = int(min(self.total_duration * self.fs, t_end * self.fs))
@@ -2750,8 +2828,7 @@ class GWExplorerApp:
         # axs[1] = L1
         # axs[2] = V1
         # axs[3] = coherent sum / overlay
-        detectors = ['H1', 'L1', 'V1']
-        colors = {'H1': 'red', 'L1': 'green', 'V1': 'purple'}
+        detectors = DETECTORS
     
         detector_axes = {
             'H1': axs[0],
@@ -2884,7 +2961,7 @@ class GWExplorerApp:
             ax.plot(
                 t_common,
                 aligned_data,
-                color=colors[det],
+                color=DETECTOR_COLORS[det],
                 label=f"{det} ({offset_sec * 1000:+.1f}ms){flip_text}",
                 linewidth=0.8
             )
@@ -2897,7 +2974,7 @@ class GWExplorerApp:
             combined_ax.plot(
                 t_common,
                 aligned_data,
-                color=colors[det],
+                color=DETECTOR_COLORS[det],
                 label=f"{det} ({offset_sec * 1000:+.1f}ms){flip_text}",
                 linewidth=0.6,
                 alpha=0.4
@@ -2961,6 +3038,10 @@ class GWExplorerApp:
         
         
         
+    # ------------------------------------------------------------------
+    # Cross-correlation and time conversion
+    # ------------------------------------------------------------------
+
     def calculate_delay_xcorr(self, h1_slice, l1_slice, fs, f_min, f_max, max_delay_ms=15.0):
         h1 = np.asarray(h1_slice, dtype=float)
         l1 = np.asarray(l1_slice, dtype=float)
