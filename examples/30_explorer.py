@@ -21,7 +21,11 @@ import webbrowser
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlencode
 import sounddevice as sd
-
+import re
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import tkinter as tk
+from tkinter import ttk, messagebox
 
 # -----------------------------------------------------------------------------
 # Central application configuration
@@ -409,7 +413,12 @@ class GWExplorerApp:
         self.cached_target_gps = "N/A"
         self.show_raw_data = tk.BooleanVar(value=False)
 
-
+        self.catalog_filters = {
+            "search": "",
+            "dur": "Any",
+            "rate": "Any",
+            "det": "Any"
+        }
 
         self.create_menu()
         self.create_widgets()
@@ -1579,27 +1588,38 @@ class GWExplorerApp:
     # ------------------------------------------------------------------
 
     def open_gwosc_catalog_browser(self):
-        import json
-        import os
-        import re
-        import threading
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        import tkinter as tk
-        from tkinter import ttk, messagebox
-
         CACHE_FILE = "gwosc_catalog_cache.json"
 
         win = tk.Toplevel(self.root)
         win.title("Verified GWOSC Stream Catalog (Exact Filenames)")
-        win.geometry("1100x580")
+        win.geometry("1100x750")
 
         filter_frame = ttk.LabelFrame(win, text="Data Selection Criteria Filter", padding=10)
         filter_frame.pack(fill=tk.X, padx=10, pady=5)
 
         ttk.Label(filter_frame, text="Substring Search Filter (e.g., 'GW150914', 'GW170817'):").pack(anchor=tk.W)
-        search_var = tk.StringVar()
+
+        search_var = tk.StringVar(value=self.catalog_filters["search"])
         search_entry = ttk.Entry(filter_frame, textvariable=search_var)
         search_entry.pack(fill=tk.X, pady=4)
+
+        combo_frame = ttk.Frame(filter_frame)
+        combo_frame.pack(fill=tk.X, pady=(4, 0))
+
+        ttk.Label(combo_frame, text="Duration (s):").pack(side=tk.LEFT, padx=(0, 2))
+        dur_var = tk.StringVar(value=self.catalog_filters["dur"])
+        dur_combo = ttk.Combobox(combo_frame, textvariable=dur_var, state="readonly", width=8)
+        dur_combo.pack(side=tk.LEFT, padx=(0, 15))
+
+        ttk.Label(combo_frame, text="Sample Rate:").pack(side=tk.LEFT, padx=(0, 2))
+        rate_var = tk.StringVar(value=self.catalog_filters["rate"])
+        rate_combo = ttk.Combobox(combo_frame, textvariable=rate_var, state="readonly", width=8)
+        rate_combo.pack(side=tk.LEFT, padx=(0, 15))
+
+        ttk.Label(combo_frame, text="Detectors:").pack(side=tk.LEFT, padx=(0, 2))
+        det_var = tk.StringVar(value=self.catalog_filters["det"])
+        det_combo = ttk.Combobox(combo_frame, textvariable=det_var, state="readonly", width=8)
+        det_combo.pack(side=tk.LEFT)
 
         ttk.Label(filter_frame, text="4096 second samples will be very slow").pack(anchor=tk.W)
 
@@ -1626,9 +1646,10 @@ class GWExplorerApp:
         self.tree.config(yscrollcommand=scr.set)
 
         progress_frame = ttk.Frame(win)
-        progress_frame.pack(fill=tk.X, padx=10, pady=(0, 5))
+        progress_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(0, 5))
 
         cat_pbar = ttk.Progressbar(progress_frame, orient=tk.HORIZONTAL, mode='determinate')
+
         cat_pbar.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         cat_lbl = ttk.Label(progress_frame, text="Cache Status: Waiting...", font=('Helvetica', 9, 'italic'),
@@ -1647,6 +1668,7 @@ class GWExplorerApp:
                     with open(CACHE_FILE, 'r') as f:
                         cached_data = json.load(f)
                     self.master_records = cached_data.get('records', [])
+                    populate_combos()
                     apply_filter()
                     cat_pbar.config(value=100)
                     cat_lbl.config(text=f"Loaded {len(self.master_records)} variants from cache.")
@@ -1705,8 +1727,10 @@ class GWExplorerApp:
                     'duration': duration,
                     'rate': rate,
                     'files_dict': files_dict,
-                    'filenames_str': filenames_str
+                    'filenames_str': filenames_str,
+                    'num_detectors': len(files_dict)
                 })
+
             return event_records
 
         def download_and_compile_catalog():
@@ -1744,6 +1768,7 @@ class GWExplorerApp:
                 with open(CACHE_FILE, 'w') as f:
                     json.dump(cache_structure, f, indent=2)
 
+                self.root.after(0, populate_combos)
                 self.root.after(0, apply_filter)
                 self.root.after(0, lambda: [
                     cat_pbar.config(value=100),
@@ -1757,20 +1782,59 @@ class GWExplorerApp:
                     cat_lbl.config(text="Download failed.", foreground="red")
                 ])
 
+        def populate_combos():
+            # Extract unique values from the master records
+            unique_durs = sorted(list(set(str(r['duration']) for r in self.master_records)))
+            unique_rates = sorted(list(set(str(r['rate']) for r in self.master_records)))
+            unique_dets = sorted(
+                list(set(str(r.get('num_detectors', len(r['files_dict']))) for r in self.master_records)))
+
+            # Assign to comboboxes
+            dur_combo['values'] = ["Any"] + unique_durs
+            rate_combo['values'] = ["Any"] + unique_rates
+            det_combo['values'] = ["Any"] + unique_dets
+
         def apply_filter(*args):
             if not self.tree.winfo_exists():
                 return
             for i in self.tree.get_children(): self.tree.delete(i)
+
             query_string = search_var.get().strip().upper()
+            target_dur = dur_var.get()
+            target_rate = rate_var.get()
+            target_det = det_var.get()
+
+            # --- ADD THIS: Save current state to main app memory ---
+            self.catalog_filters["search"] = search_var.get()
+            self.catalog_filters["dur"] = target_dur
+            self.catalog_filters["rate"] = target_rate
+            self.catalog_filters["det"] = target_det
+            # -------------------------------------------------------
 
             for item in self.master_records:
-                if not query_string or query_string in item['event'].upper():
-                    self.tree.insert('', tk.END,
-                                     values=(item['event'], item['duration'], item['rate'], item['filenames_str']))
+                # 1. Text Search Filter
+                if query_string and query_string not in item['event'].upper():
+                    continue
+                # 2. Duration Filter
+                if target_dur != "Any" and str(item['duration']) != target_dur:
+                    continue
+                # 3. Rate Filter
+                if target_rate != "Any" and str(item['rate']) != target_rate:
+                    continue
+                # 4. Detector Count Filter
+                item_det_count = str(item.get('num_detectors', len(item['files_dict'])))
+                if target_det != "Any" and item_det_count != target_det:
+                    continue
+
+                self.tree.insert('', tk.END,
+                                 values=(item['event'], item['duration'], item['rate'], item['filenames_str']))
+
 
         search_var.trace_add("write", apply_filter)
-        ttk.Button(filter_frame, text="Force Clear Cache & Re-Download Server Registry",
-                   command=lambda: query_api(force_download=True)).pack(fill=tk.X, pady=5)
+        dur_combo.bind("<<ComboboxSelected>>", apply_filter)
+        rate_combo.bind("<<ComboboxSelected>>", apply_filter)
+        det_combo.bind("<<ComboboxSelected>>", apply_filter)
+
 
         def load_selected_record():
             sel = self.tree.selection()
@@ -1810,7 +1874,13 @@ class GWExplorerApp:
         btn = ttk.Button(win, text="Download Selected Stream Matrix", command=load_selected_record)
         btn.pack(fill=tk.X, padx=10, pady=10)
         self.tree.bind("<Double-1>", lambda event: load_selected_record())
+
+        ttk.Button(filter_frame, text="Force Clear Cache & Re-Download Server Registry",
+                   command=lambda: query_api(force_download=True)).pack(fill=tk.X, pady=5)
+
+
         query_api(force_download=False)
+
 
     def clear_detector(self, det):
         self.detectors[det]["raw"] = None
@@ -2636,15 +2706,18 @@ class GWExplorerApp:
         levels = np.linspace(vmin, vmax, contour_count)
         cmap = self.get_colormap_name()
 
+        # Apply f_mask so the Y-axis coordinates match the matrix bounds
+        y_coords = ref_f[f_mask][:joint_product.shape[0]]
+
         ax.pcolormesh(
-            ref_t, ref_f[:joint_product.shape[0]], joint_product,
+            ref_t, y_coords, joint_product,
             shading='gouraud', cmap=cmap, vmin=vmin, vmax=vmax
         )
 
         if self.show_contours.get() and joint_product.shape[0] >= 2 and joint_product.shape[1] >= 2:
             try:
                 ax.contour(
-                    ref_t, ref_f[:joint_product.shape[0]], joint_product,
+                    ref_t, y_coords, joint_product,
                     levels=levels, colors="white", linewidths=0.25, alpha=0.5, zorder=2
                 )
             except Exception:
