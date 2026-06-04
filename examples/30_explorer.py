@@ -413,6 +413,7 @@ class GWExplorerApp:
         self.cached_target_gps = "N/A"
         self.show_raw_data = tk.BooleanVar(value=False)
 
+        self.detector_weights = {det: 1.0 for det in DETECTORS}
         self.catalog_filters = {
             "search": "",
             "dur": "Any",
@@ -818,6 +819,23 @@ class GWExplorerApp:
         boss_canvas_widget.bind("<ButtonRelease-1>", self.end_drag)
 
         self.tabs["Coherent Image"] = {'fig': boss_fig, 'ax': boss_ax, 'canvas': boss_canvas, 'pbar': None}
+
+        # Whitening ASD Tab ---
+        asd_frame = ttk.Frame(self.notebook)
+        self.notebook.add(asd_frame, text="Whitening Filter (ASD)")
+
+        asd_fig, asd_ax = plt.subplots(figsize=(8, 5))
+        asd_fig.subplots_adjust(left=0.10, right=0.95, bottom=0.15, top=0.90)
+
+        asd_canvas = FigureCanvasTkAgg(asd_fig, master=asd_frame)
+        asd_canvas_widget = asd_canvas.get_tk_widget()
+        asd_canvas_widget.pack(fill=tk.BOTH, expand=True)
+
+        asd_canvas_widget.bind("<Shift-ButtonPress-1>", self.start_zoom_drag)
+        asd_canvas_widget.bind("<Shift-B1-Motion>", self.zoom_drag_motion)
+        asd_canvas_widget.bind("<Shift-ButtonRelease-1>", self.end_zoom_drag)
+
+        self.tabs["Whitening Filter (ASD)"] = {'fig': asd_fig, 'ax': asd_ax, 'canvas': asd_canvas, 'pbar': None}
 
         # NEW: Sky Map Tab (Polar Projection)
         sky_frame = ttk.Frame(self.notebook)
@@ -2392,7 +2410,6 @@ class GWExplorerApp:
         self.sky_recompute_job = self.root.after(200, lambda: self.recompute_sky_from_offsets(show_errors=False))
 
     def trigger_frame_correlation(self):
-        # FIX 1: Use .set() on the variable, not .config(text=...) on the label
         self.sky_result_text.set("Calculating...")
         self.lbl_offset_result.config(foreground="orange")
         self.root.update_idletasks()
@@ -2409,8 +2426,22 @@ class GWExplorerApp:
 
             idx_min = int(t_start * self.fs)
             idx_max = int(t_end * self.fs)
+
+            # --- NEW: RECALCULATE & LOCK WEIGHTS ---
+            # Calculate the inverse-variance of the specific window we are correlating
+            # and lock it into the global state so the rendering loop stops morphing.
+            for det in DETECTORS:
+                if self.detectors[det]["loaded"] and self.detectors[det]["whitened"] is not None:
+                    slice_data = self.detectors[det]["whitened"][idx_min:idx_max]
+
+                    if len(slice_data) > 0:
+                        var = np.var(slice_data)
+                        self.detector_weights[det] = 1.0 / (var + 1e-20)
+            # ---------------------------------------
+
             h1_slice = h1_data[idx_min:idx_max]
             results = []
+
 
             for det in NON_REFERENCE_DETECTORS:
                 if not self.detectors[det]["loaded"]:
@@ -2629,7 +2660,10 @@ class GWExplorerApp:
         # That should only happen via the Run Sky Map button.
         if active_tab_name == "Coherent Sky Map":
             return
-            
+
+        if active_tab_name == "Whitening Filter (ASD)":
+            self.render_asd_tab(t_start, t_end)
+            return
             
     def render_joint_correlation(self, t_start, t_end):
         ax = self.tabs['Joint Correlation']['ax']
@@ -2782,8 +2816,6 @@ class GWExplorerApp:
                     except ValueError:
                         pass
 
-                # 1. OPTIMAL WEIGHTING: Calculate Inverse-Variance weight
-                # High variance (noise) = Low weight. Low variance (clean) = High weight.
                 variance = np.var(data)
                 weight = 1.0 / (variance + 1e-20)
 
@@ -2890,6 +2922,115 @@ class GWExplorerApp:
             ax.text(0.5, 0.5, "No Data for Boss Image", ha='center', va='center', transform=ax.transAxes)
 
         canvas.draw_idle()
+
+    def render_asd_tab(self, t_start, t_end):
+        if "Whitening Filter (ASD)" not in self.tabs or not hasattr(self, 'fs') or self.fs is None:
+            return
+
+        ax = self.tabs["Whitening Filter (ASD)"]['ax']
+        canvas = self.tabs["Whitening Filter (ASD)"]['canvas']
+        ax.clear()
+
+        f_low, f_high = self.get_frequency_limits()
+        active_count = 0
+
+        is_global = (t_end - t_start) < 20.0
+        if is_global:
+            t_start_calc, t_end_calc = 0.0, self.total_duration
+            title_suffix = "(Full File Average)"
+        else:
+            t_start_calc, t_end_calc = t_start, t_end
+            title_suffix = f"(Window: {t_start:.1f}s to {t_end:.1f}s)"
+
+        target_nperseg = self.nperseg.get() * 4
+
+        for det in DETECTORS:
+            if not (self.detectors[det]['loaded'] and self.detectors[det]['raw'] is not None):
+                continue
+
+            # --- LAZY CACHING INITIALIZATION ---
+            if 'asd_cache' not in self.detectors[det]:
+                self.detectors[det]['asd_cache'] = {
+                    'nperseg': None,
+                    'f': None,
+                    'asd': None,
+                    'is_global': False,
+                    't_start': None,
+                    't_end': None
+                }
+
+            cache = self.detectors[det]['asd_cache']
+            needs_recalc = True
+
+            # --- CACHE VALIDATION ---
+            # Re-use cached arrays if the FFT window size and time boundaries haven't changed
+            if cache['nperseg'] == target_nperseg:
+                if is_global and cache['is_global']:
+                    needs_recalc = False
+                elif not is_global and cache['t_start'] == t_start and cache['t_end'] == t_end:
+                    needs_recalc = False
+
+            if needs_recalc:
+                idx_start = int(max(0, t_start_calc * self.fs))
+                idx_end = int(min(len(self.detectors[det]['raw']), t_end_calc * self.fs))
+
+                if idx_start >= idx_end:
+                    continue
+
+                raw_data = self.detectors[det]['raw'][idx_start:idx_end]
+                actual_nperseg = min(target_nperseg, len(raw_data))
+
+                if actual_nperseg < 32:
+                    continue
+
+                f, Pxx = signal.welch(
+                    raw_data,
+                    self.fs,
+                    nperseg=actual_nperseg,
+                    scaling='density'
+                )
+
+                # Store the new parameters and arrays
+                cache['f'] = f
+                cache['asd'] = np.sqrt(Pxx)
+                cache['nperseg'] = target_nperseg
+                cache['is_global'] = is_global
+                cache['t_start'] = t_start
+                cache['t_end'] = t_end
+
+            # Pull directly from memory instead of recalculating
+            f = cache['f']
+            asd = cache['asd']
+
+            # Filter to our active frequency bounds
+            f_mask = (f >= f_low) & (f <= f_high)
+            f_plot = f[f_mask]
+            asd_plot = asd[f_mask]
+
+            if len(f_plot) > 0:
+                ax.semilogy(
+                    f_plot,
+                    asd_plot,
+                    color=DETECTOR_COLORS[det],
+                    label=f"{det}",
+                    linewidth=1.2,
+                    alpha=0.8
+                )
+                active_count += 1
+
+        if active_count > 0:
+            ax.set_title(f"Amplitude Spectral Density (Inverse Whitening Profile) {title_suffix}")
+            ax.set_xlabel("Frequency (Hz)")
+            ax.set_ylabel("Strain / $\\sqrt{\\mathrm{Hz}}$")
+            ax.set_xlim(max(1.0, f_low), f_high)
+            ax.grid(True, which="both", ls="-", alpha=0.3)
+            ax.legend(loc="upper right")
+        else:
+            ax.text(0.5, 0.5, "No raw data available for ASD calculation",
+                    ha='center', va='center', transform=ax.transAxes)
+
+        canvas.draw_idle()
+
 
     def render_whitened_waveforms(self, t_start, t_end):
         if "Whitened Waveforms" not in self.tabs or not hasattr(self, 'fs') or self.fs is None:
