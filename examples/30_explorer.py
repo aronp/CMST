@@ -2076,12 +2076,18 @@ class GWExplorerApp:
     # ------------------------------------------------------------------
 
     def compute_window_spectrogram(self, det, t_start, t_end):
+        # --- DYNAMIC VISUAL BUFFER ---
+        buffer_sec = self.t_width_seconds * 0.25
+        t_start_buf = max(0.0, t_start - buffer_sec)
+        t_end_buf = min(self.total_duration, t_end + buffer_sec)
+
         nperseg = self.nperseg.get()
         nfft = self.nfft.get()
         noverlap = int(nperseg * (self.overlap_pct.get() / 100.0))
 
-        idx_start = int(max(0, t_start * self.fs))
-        idx_end = int(min(len(self.detectors[det]["whitened"]), t_end * self.fs))
+        # Slice the data using the BUFFERS
+        idx_start = int(max(0, t_start_buf * self.fs))
+        idx_end = int(min(len(self.detectors[det]["whitened"]), t_end_buf * self.fs))
 
         data = self.detectors[det]["whitened"][idx_start:idx_end]
 
@@ -2113,7 +2119,9 @@ class GWExplorerApp:
         Sxx_sharp = Sxx - (alpha / (nfft / actual_nperseg)) * laplacian_f
         Sxx_sharp = np.maximum(np.nan_to_num(Sxx_sharp, nan=1e-20), 1e-20)
 
-        return f, t + t_start, Sxx_sharp
+        # Ensure the returned time vector aligns with the buffered start
+        return f, t + t_start_buf, Sxx_sharp
+
 
     def render_canvas_frame(self, ax, canvas, Sxx, t, f, t_start, t_end):
         ax.clear()
@@ -2343,6 +2351,8 @@ class GWExplorerApp:
             self.root.after(0, lambda: self.hide_pbar(det))
             self.root.after(0, self.update_all_tabs)
             self.root.after(0, lambda: self.global_status.config(text="System: Idle"))
+
+            threading.Thread(target=self.precompute_asd_cache, args=(det,), daemon=True).start()
 
         except Exception as e:
             err = str(e)
@@ -2922,6 +2932,41 @@ class GWExplorerApp:
             ax.text(0.5, 0.5, "No Data for Boss Image", ha='center', va='center', transform=ax.transAxes)
 
         canvas.draw_idle()
+
+    def precompute_asd_cache(self, det):
+        """Silently warms the ASD cache in a background thread after a file loads."""
+        if not (self.detectors[det].get('loaded') and self.detectors[det].get('raw') is not None):
+            return
+
+        try:
+            # We must use a try/except block because background threads fail silently
+            target_nperseg = self.nperseg.get() * 4
+            raw_data = self.detectors[det]['raw']
+            actual_nperseg = min(target_nperseg, len(raw_data))
+
+            if actual_nperseg < 32:
+                return
+
+            # Perform the heavy FFT crunching
+            f, Pxx = signal.welch(
+                raw_data,
+                self.fs,
+                nperseg=actual_nperseg,
+                scaling='density'
+            )
+
+            # Lock the results directly into the dictionary
+            self.detectors[det]['asd_cache'] = {
+                'nperseg': target_nperseg,
+                'f': f,
+                'asd': np.sqrt(Pxx),
+                'is_global': True,
+                't_start': 0.0,
+                't_end': self.total_duration
+            }
+
+        except Exception as e:
+            print(f"Silent ASD caching failed for {det}: {e}")
 
     def render_asd_tab(self, t_start, t_end):
         if "Whitening Filter (ASD)" not in self.tabs or not hasattr(self, 'fs') or self.fs is None:
