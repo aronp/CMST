@@ -996,8 +996,7 @@ class GWExplorerApp:
             detectors = DETECTORS
             t_common = np.linspace(t_start, t_end, int((t_end - t_start) * self.fs))
 
-            coherent_sum = np.zeros_like(t_common)
-            weights_sum = 0.0
+            aligned_streams = []
             active_count = 0
 
             for det in detectors:
@@ -1012,9 +1011,6 @@ class GWExplorerApp:
                     if apply_filter:
                         data = cmst_bandpass(data * cmst(len(data)), self.fs, low, high)
 
-                    # 1. OPTIMAL WEIGHTING: Inverse-variance
-                    variance = np.var(data)
-                    weight = 1.0 / (variance + EPS)
 
                     offset_sec = self.get_detector_offset_ms(det) / 1000.0
                     shifted_t_arr = t_arr - offset_sec
@@ -1026,20 +1022,17 @@ class GWExplorerApp:
 
                     # 2. DETRENDING: Remove DC offset before summing
                     aligned_data = aligned_data - np.mean(aligned_data)
-
+                    aligned_streams.append(aligned_data)
                     # 3. WEIGHTED SUMMATION
-                    coherent_sum += (aligned_data * weight)
-                    weights_sum += weight
                     active_count += 1
 
             if active_count > 0:
-                # Normalize the sum by the total weight
-                coherent_sum = coherent_sum / weights_sum
-
+                weights, coherent_sum, correlations = self.correlation_weight_aligned_streams(aligned_streams)
+            
                 # --- ROBUST AUDIO NORMALIZATION ---
                 # Final safeguard detrend to ensure absolute zero-mean
                 coherent_sum = coherent_sum - np.mean(coherent_sum)
-
+    
                 # Use the 99.9th percentile to scale volume, ignoring transient filter spikes
                 peak = np.percentile(np.abs(coherent_sum), 99.9)
 
@@ -2847,7 +2840,6 @@ class GWExplorerApp:
 
         # We will store the aligned time-domain data and their calculated weights
         aligned_streams = []
-        weights = []
         active_count = 0
 
         for det in detectors:
@@ -2871,9 +2863,7 @@ class GWExplorerApp:
                     # data = signal.fftconvolve(data, fir_taps, mode='same')
 
 
-                variance = np.var(data)
-                weight = 1.0 / (variance + EPS)
-
+ 
                 # --- MAX_AMP NORMALIZATION COMPLETELY REMOVED ---
                 # We now trust the whitening process to handle the relative scaling.
 
@@ -2888,13 +2878,10 @@ class GWExplorerApp:
                 aligned_data = aligned_data - np.mean(aligned_data)
 
                 aligned_streams.append(aligned_data)
-                weights.append(weight)
                 active_count += 1
 
         if active_count > 0:
-            # Normalize the weights so they sum perfectly to 1.0
-            weights = np.array(weights)
-            weights /= np.sum(weights)
+            weights, coherent_sum, correlations = self.correlation_weight_aligned_streams(aligned_streams)
 
             data_length = len(t_common)
 
@@ -2968,6 +2955,7 @@ class GWExplorerApp:
             ax.set_xlabel("Time (s)")
             ax.set_xlim(t_start, t_end)
             ax.set_ylim(f_low, f_high)
+
             ax.set_title(f"Coherent STFT ({active_count} Detectors, Variance Weighted)")
 
             if self.show_grid.get():
@@ -2975,7 +2963,7 @@ class GWExplorerApp:
                 ax.grid(True, which="major", linewidth=0.6, alpha=0.85)
 
         else:
-            ax.text(0.5, 0.5, "No Data for Boss Image", ha='center', va='center', transform=ax.transAxes)
+            ax.text(0.5, 0.5, "No Data for Coherence Image", ha='center', va='center', transform=ax.transAxes)
 
         canvas.draw_idle()
 
@@ -3074,9 +3062,12 @@ class GWExplorerApp:
                 if actual_nperseg < 32:
                     continue
 
+                asd_win = cmst(actual_nperseg)
+                
                 f, Pxx = signal.welch(
                     raw_data,
                     self.fs,
+                    window=asd_win,
                     nperseg=actual_nperseg,
                     scaling='density'
                 )
@@ -3121,6 +3112,44 @@ class GWExplorerApp:
                     ha='center', va='center', transform=ax.transAxes)
 
         canvas.draw_idle()
+
+    def correlation_weight_aligned_streams(self, aligned_streams):
+        active_count = len(aligned_streams)
+    
+        if active_count == 0:
+            return [], None, []
+
+        if active_count == 1:
+            return np.array([1.0]), aligned_streams[0].copy(), [1.0]
+    
+        provisional_sum = np.mean(np.vstack(aligned_streams), axis=0)
+    
+        raw_weights = []
+        correlations = []
+    
+        for stream in aligned_streams:
+            corr = pearson_corr(stream, provisional_sum)
+            correlations.append(corr)
+    
+            if np.isfinite(corr):
+                raw_weights.append(max(0.0, corr))
+            else:
+                raw_weights.append(0.0)
+    
+        raw_weights = np.asarray(raw_weights, dtype=float)
+        weight_sum = np.sum(raw_weights)
+    
+        if not np.isfinite(weight_sum) or weight_sum <= EPS:
+            weights = np.ones(active_count, dtype=float) / active_count
+        else:
+            weights = raw_weights / weight_sum
+    
+        final_sum = np.zeros_like(aligned_streams[0], dtype=float)
+        for stream, weight in zip(aligned_streams, weights):
+            final_sum += weight * stream
+    
+        return weights, final_sum, correlations
+    
 
 
     def render_whitened_waveforms(self, t_start, t_end):
@@ -3253,7 +3282,6 @@ class GWExplorerApp:
                 "flipped": is_flipped,
             }
     
-            coherent_sum += aligned_data
             active_count += 1
     
             # Top three charts: now plot the same aligned/flipped data used for correlation
@@ -3278,36 +3306,29 @@ class GWExplorerApp:
                 linewidth=0.6,
                 alpha=0.4
             )
-    
- 
+
         if active_count > 0:
-            coherent_sum = coherent_sum / active_count
-    
-            # Write correlation titles back to the exact axis cached for that detector
-            for det in detectors:
-                if det not in aligned_cache:
-                    continue
-    
+            ordered_dets = [det for det in detectors if det in aligned_cache]
+            aligned_streams = [aligned_cache[det]["data"] for det in ordered_dets]
+        
+            weights, coherent_sum, correlations = self.correlation_weight_aligned_streams(aligned_streams)
+        
+            for det, weight, corr in zip(ordered_dets, weights, correlations):
                 ax = aligned_cache[det]["axis"]
-                axis_index = aligned_cache[det]["axis_index"]
-                data = aligned_cache[det]["data"]
-    
-                corr = pearson_corr(data, coherent_sum)
-    
-   
+        
                 if np.isfinite(corr):
-                    ax.set_title(f"{det} correlation with coherent sum: {corr:+.3f}")
+                    ax.set_title(f"{det} corr={corr:+.3f}, weight={weight:.3f}")
                 else:
-                    ax.set_title(f"{det} correlation with coherent sum: N/A")
-    
+                    ax.set_title(f"{det} corr=N/A, weight={weight:.3f}")
+        
             combined_ax.plot(
                 t_common,
                 coherent_sum,
                 color='black',
-                label=f"Coherent Sum ({active_count} Det)",
+                label=f"Correlation-Weighted Sum ({active_count} Det)",
                 linewidth=1.5,
                 zorder=10
-            )
+            ) 
         else:
             combined_ax.text(
                 0.5,
