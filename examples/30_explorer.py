@@ -2327,9 +2327,8 @@ class GWExplorerApp:
 
             if hasattr(self, "detector_offsets_ms"):
                 for d in NON_REFERENCE_DETECTORS:
-                    self.detector_offsets_ms[d].set(0)
-
-            self.root.after(0, lambda d=det, fn=filename_only: self.file_labels[d].config(text=f"{d} File: {fn}"))
+                    self.root.after(0, lambda dd=d: self.set_detector_offset_ms(dd, 0.0))
+                    self.root.after(0, lambda d=det, fn=filename_only: self.file_labels[d].config(text=f"{d} File: {fn}"))
 
             with h5py.File(filepath, 'r') as f:
                 key = 'strain/Strain' if 'strain/Strain' in f else 'strain/strain'
@@ -2507,9 +2506,8 @@ class GWExplorerApp:
                 signed_ms = -offset_ms if "leads H1" in lead_text else offset_ms
                 rounded_ms = round(signed_ms, 1)
 
-                if hasattr(self, "detector_offsets_ms"):
-                    self.detector_offsets_ms[det].set(rounded_ms)
-
+                self.set_detector_offset_ms(det, rounded_ms)
+                
                 if hasattr(self, "signal_flips") and det in self.signal_flips:
                     self.signal_flips[det].set(needs_inv)
 
@@ -2521,6 +2519,7 @@ class GWExplorerApp:
             # FIX 2: Preserve the binding here as well
             self.sky_result_text.set("Offsets: " + " | ".join(results) + " (Computing Sky...)")
             self.lbl_offset_result.config(foreground="green")
+            self.root.update_idletasks()
 
             self.update_all_tabs()
 
@@ -3340,7 +3339,24 @@ class GWExplorerApp:
     
         canvas.draw_idle()
         
-        
+    def set_detector_offset_ms(self, det, value_ms):
+        """Set detector delay and force the visible spinbox to match."""
+        try:
+            value_ms = round(float(value_ms), 1)
+        except Exception:
+            value_ms = 0.0
+    
+        if hasattr(self, "detector_offsets_ms") and det in self.detector_offsets_ms:
+            self.detector_offsets_ms[det].set(value_ms)
+    
+        if hasattr(self, "offset_spinboxes") and det in self.offset_spinboxes:
+            spin = self.offset_spinboxes[det]
+            try:
+                spin.delete(0, tk.END)
+                spin.insert(0, f"{value_ms:.1f}")
+            except Exception:
+                pass
+                   
         
     # ------------------------------------------------------------------
     # Cross-correlation and time conversion
