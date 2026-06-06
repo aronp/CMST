@@ -81,6 +81,8 @@ STARTUP_FILES = {
 }
 
 
+
+
 def pearson_corr(a, b):
     a = np.asarray(a, dtype=float)
     b = np.asarray(b, dtype=float)
@@ -162,6 +164,45 @@ def cmst_window(t, width=1.0, power=2):
     y[mask] = y_masked
     
     return y
+
+
+def cmst_bandpass(strain, fs, f_low, f_high, freq_power=2):
+    N = len(strain)
+    if N < 8:
+        return strain
+
+    # 1. Global FFT (Direct, no padding)
+    spec = np.fft.rfft(strain)
+    freqs = np.fft.rfftfreq(N, 1 / fs)
+
+    # 2. Universal 50% Cutoff Constant
+    # Using your exact root formula: 0.5 * (2 - sqrt(4 + ln^2(2)) + ln(2))
+    u_50 = 0.5 * (+ np.sqrt(4.0 * np.log(2) + np.log(2) ** 2) + -np.log(2))
+
+    # The fractional 50% point depends on the power parameter (1/p)
+    # to perfectly cancel out the x^p step inside the CMST function.
+    x_50 = u_50 ** (1.0 / freq_power)
+
+    # Expand the mathematical width so the 50% amplitude lands exactly on the physical cutoffs
+    f_center = (f_high + f_low) / 2.0
+    f_half_width = (f_high - f_low) / 2.0
+    actual_width = f_half_width / x_50
+
+    # --- DC LEAKAGE SAFETY OVERRIDE ---
+    # If the window base extends below 0 Hz, it will leak DC and seismic noise.
+    if f_center - actual_width < 0:
+        leakage_hz = f_center - actual_width
+        actual_width = f_center
+    # ----------------------------------
+
+    # 3. Apply the Zero-Phase Frequency Mask
+    freq_weight = cmst_window(freqs - f_center, width=actual_width, power=freq_power)
+    filtered_spec = spec * freq_weight
+
+    # 4. IFFT directly back to the time domain
+    filtered = np.fft.irfft(filtered_spec, n=N)
+
+    return filtered
 
 
 # -----------------------------------------------------------------------------
@@ -950,9 +991,10 @@ class GWExplorerApp:
             high = min(float(f_high), nyquist - 1.0)
 
             apply_filter = high > low
-            if apply_filter:
-                # Bumping the Butterworth filter order to 8 to crush low-frequency seismic noise
-                sos = signal.butter(8, [low, high], btype='bandpass', fs=self.fs, output='sos')
+            # --- FAST FIR BANDPASS SETUP ---
+            apply_filter = high > low
+            fir_taps = None
+
 
             detectors = DETECTORS
             t_common = np.linspace(t_start, t_end, int((t_end - t_start) * self.fs))
@@ -970,11 +1012,8 @@ class GWExplorerApp:
                     t_arr = np.arange(idx_start, idx_end) / self.fs
                     data = self.detectors[det]['whitened'][idx_start:idx_end]
 
-                    if apply_filter and len(data) > 33:
-                        try:
-                            data = signal.sosfiltfilt(sos, data)
-                        except ValueError:
-                            pass
+                    if apply_filter:
+                        data = cmst_bandpass(data * cmst(len(data)), self.fs, low, high)
 
                     # 1. OPTIMAL WEIGHTING: Inverse-variance
                     variance = np.var(data)
@@ -2788,14 +2827,20 @@ class GWExplorerApp:
         low = max(1.0, float(f_low))
         high = min(float(f_high), nyquist - 1.0)
 
+        # --- FAST FIR BANDPASS SETUP ---
         apply_filter = high > low
-        if apply_filter:
-            sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
+        fir_taps = None
+        # -------------------------------
 
         detectors = DETECTORS
         # Lock the grid to absolute integer sample boundaries
-        idx_min = int(max(0, t_start * self.fs))
-        idx_max = int(min(self.total_duration * self.fs, t_end * self.fs))
+        #idx_min = int(max(0, t_start * self.fs))
+        #idx_max = int(min(self.total_duration * self.fs, t_end * self.fs))
+
+        buffer_s = 0.2
+        idx_min = int(max(0, (t_start-buffer_s) * self.fs))
+        idx_max = int(min(self.total_duration * self.fs, (t_end+buffer_s) * self.fs))
+
 
         if idx_min >= idx_max:
             return
@@ -2812,19 +2857,24 @@ class GWExplorerApp:
 
         for det in detectors:
             if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
-                idx_start = int(max(0, t_start * self.fs))
-                idx_end = int(min(len(self.detectors[det]['whitened']), t_end * self.fs))
+#                idx_start = int(max(0, t_start * self.fs))
+#                idx_end = int(min(len(self.detectors[det]['whitened']), t_end * self.fs))
+
+                idx_start = int(max(0, (t_start - buffer_s) * self.fs))
+                idx_end = int(min(len(self.detectors[det]["whitened"]), (t_end + buffer_s) * self.fs))
 
                 if idx_start >= idx_end: continue
 
                 t_arr = np.arange(idx_start, idx_end) / self.fs
                 data = self.detectors[det]['whitened'][idx_start:idx_end]
 
-                if apply_filter and len(data) > 33:
-                    try:
-                        data = signal.sosfiltfilt(sos, data)
-                    except ValueError:
-                        pass
+                if apply_filter:
+                    # signal.fftconvolve uses the O(N log N) fast convolution matrix math.
+                    # mode='same' automatically shifts the array backwards by exactly (numtaps - 1) / 2
+                    # samples, perfectly erasing the filter delay and ensuring zero-phase output.
+                    data = cmst_bandpass(data * cmst(len(data)), self.fs, low, high, freq_power=6)
+                    # data = signal.fftconvolve(data, fir_taps, mode='same')
+
 
                 variance = np.var(data)
                 weight = 1.0 / (variance + 1e-20)
@@ -2893,7 +2943,8 @@ class GWExplorerApp:
             Sxx = np.abs(Zxx_coherent) ** 2
             # -------------------------------------------------------------------------
 
-            t_spec_shifted = t_spec + t_start
+#            t_spec_shifted = t_spec + t_start
+            t_spec_shifted = t_spec + t_common[0]
 
             f_mask = (f >= f_low) & (f <= f_high)
             Sxx_sub = Sxx[f_mask, :]
@@ -3108,18 +3159,12 @@ class GWExplorerApp:
         nyquist = self.fs / 2.0
         low = max(1.0, float(f_low))
         high = min(float(f_high), nyquist - 1.0)
-    
-        apply_filter = False
-        if high > low:
-            apply_filter = True
-            sos = signal.butter(
-                4,
-                [low, high],
-                btype='bandpass',
-                fs=self.fs,
-                output='sos'
-            )
-    
+
+        # --- FAST FIR BANDPASS SETUP ---
+        apply_filter = high > low
+        fir_taps = None
+
+        # -------------------------------
         # Common time grid for aligned coherent sum
         n_common = int((t_end - t_start) * self.fs)
         if n_common < 2:
@@ -3175,11 +3220,9 @@ class GWExplorerApp:
 
             # We still apply the bandpass filter to the raw data here so you
             # can actually see it (otherwise the 0Hz DC offset makes it a flat line)
-            if apply_filter and len(data) > 33:
-                try:
-                    data = signal.sosfiltfilt(sos, data)
-                except ValueError:
-                    pass
+            if apply_filter:
+                # data = signal.fftconvolve(data, fir_taps, mode='same')
+                data = cmst_bandpass(data * cmst(len(data)), self.fs, low, high)
 
             # Normalize individual detector trace
             max_amp = np.max(np.abs(data))
