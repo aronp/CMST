@@ -284,3 +284,63 @@ def get_normalised_cmst_window(N):
         
     return my_g
 
+def generate_cmst_fir(taps, fs, bandwidth, freq_power=2):
+    """Generates linear FIR coefficients from the continuous CMST frequency mask."""
+    if taps % 2 == 0:
+        taps += 1
+
+    freqs = np.fft.rfftfreq(taps, 1 / fs)
+    u_50 = 0.5 * ( + np.sqrt(4.0*np.log(2) + np.log(2) ** 2) + -np.log(2))
+    x_50 = u_50 ** (1.0 / freq_power)
+    actual_width = bandwidth / x_50
+
+    x = freqs / actual_width
+    mask = np.zeros_like(x)
+    valid = np.abs(x) < 1.0
+
+    with np.errstate(divide='ignore', invalid='ignore'):
+        x_valid = np.abs(x[valid]) ** freq_power
+        exponent = 1 + x_valid - (1.0 / (1.0 - x_valid))
+        mask[valid] = np.exp(exponent)
+
+    impulse_response = np.fft.irfft(mask, n=taps)
+    fir_coeffs = np.fft.fftshift(impulse_response)
+
+    return fir_coeffs * cmst(taps, p=freq_power)
+
+
+def cmst_lowpass(strain, fs, f_high, freq_power=2):
+    """
+    Ultra-fast, zero-phase CMST low-pass filter.
+    Centers the window at 0 Hz to perfectly pass DC/low frequencies,
+    with a mathematically exact 50% amplitude roll-off at f_high.
+    """
+    N = len(strain)
+    if N < 8:
+        return strain
+
+    # 1. Global FFT (Direct, no padding)
+    spec = np.fft.rfft(strain)
+    freqs = np.fft.rfftfreq(N, 1 / fs)
+
+    u_50 = 0.5 * ( + np.sqrt(4.0*np.log(2) + np.log(2) ** 2) + -np.log(2))
+
+    # Cancel out the x^p exponent scaling
+    x_50 = u_50 ** (1.0 / freq_power)
+
+    # --- LOW-PASS GEOMETRY ---
+    # Center the peak of the window exactly at 0 Hz
+    f_center = 0.0
+
+    # The mathematical distance from 0 Hz to the 50% mark is simply f_high
+    actual_width = f_high / x_50
+    # -------------------------
+
+    # 3. Apply the Zero-Phase Frequency Mask
+    freq_weight = cmst_window(freqs - f_center, width=actual_width, power=freq_power)
+    filtered_spec = spec * freq_weight
+
+    # 4. IFFT directly back to the time domain
+    filtered = np.fft.irfft(filtered_spec, n=N)
+
+    return filtered
