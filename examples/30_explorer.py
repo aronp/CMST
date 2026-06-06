@@ -32,6 +32,7 @@ from tkinter import ttk, messagebox
 # -----------------------------------------------------------------------------
 
 C_LIGHT = 299792458.0
+EPS = 1e-100
 
 DETECTORS = ("H1", "L1", "V1")
 REFERENCE_DETECTOR = "H1"
@@ -95,7 +96,7 @@ def pearson_corr(a, b):
     b = b[:n] - np.mean(b[:n])
 
     denom = np.linalg.norm(a) * np.linalg.norm(b)
-    if denom < 1e-20:
+    if denom < EPS:
         return np.nan
 
     return float(np.dot(a, b) / denom)
@@ -1017,7 +1018,7 @@ class GWExplorerApp:
 
                     # 1. OPTIMAL WEIGHTING: Inverse-variance
                     variance = np.var(data)
-                    weight = 1.0 / (variance + 1e-20)
+                    weight = 1.0 / (variance + EPS)
 
                     offset_sec = self.get_detector_offset_ms(det) / 1000.0
                     shifted_t_arr = t_arr - offset_sec
@@ -1046,7 +1047,7 @@ class GWExplorerApp:
                 # Use the 99.9th percentile to scale volume, ignoring transient filter spikes
                 peak = np.percentile(np.abs(coherent_sum), 99.9)
 
-                if peak > 1e-40:
+                if peak > EPS:
                     audio_data = coherent_sum / peak
                 else:
                     audio_data = coherent_sum
@@ -1152,7 +1153,7 @@ class GWExplorerApp:
                     power_map[j, i] = np.sum(coherent_sum ** 2)
 
             # 5. Normalize the power matrix for visualization
-            power_map = (power_map - np.min(power_map)) / (np.max(power_map) - np.min(power_map) + 1e-20)
+            power_map = (power_map - np.min(power_map)) / (np.max(power_map) - np.min(power_map) + EPS)
 
             # 6. Push rendering back to the main UI thread
             def update_canvas():
@@ -1237,7 +1238,6 @@ class GWExplorerApp:
 
         jump_frame = ttk.Frame(btn_layout)
         jump_frame.pack(side=tk.RIGHT, padx=10)
-        ttk.Button(btn_layout, text="Reset Zoom", command=self.reset_view).pack(side=tk.LEFT, padx=10)
         ttk.Label(jump_frame, text="Jump to Time (s):").pack(side=tk.LEFT, padx=2)
         jump_ent = ttk.Entry(jump_frame, textvariable=self.jump_var, width=8)
         jump_ent.pack(side=tk.LEFT, padx=2)
@@ -2156,7 +2156,7 @@ class GWExplorerApp:
         laplacian_f[1:-1, :] = Sxx[2:, :] - 2 * Sxx[1:-1, :] + Sxx[0:-2, :]
 
         Sxx_sharp = Sxx - (alpha / (nfft / actual_nperseg)) * laplacian_f
-        Sxx_sharp = np.maximum(np.nan_to_num(Sxx_sharp, nan=1e-20), 1e-20)
+        Sxx_sharp = np.maximum(np.nan_to_num(Sxx_sharp, nan=EPS), EPS)
 
         # Ensure the returned time vector aligns with the buffered start
         return f, t + t_start_buf, Sxx_sharp
@@ -2419,7 +2419,7 @@ class GWExplorerApp:
 
             psd_smooth = interp1d(freqs, mag, kind='nearest', fill_value="extrapolate")(freqs)
             with np.errstate(divide='ignore', invalid='ignore'):
-                whitened_spec = spec / (psd_smooth + 1e-20)
+                whitened_spec = spec / (psd_smooth + EPS)
 
             clean_chunk = np.fft.irfft(whitened_spec, n=chunk_size) * win
 
@@ -2484,7 +2484,7 @@ class GWExplorerApp:
 
                     if len(slice_data) > 0:
                         var = np.var(slice_data)
-                        self.detector_weights[det] = 1.0 / (var + 1e-20)
+                        self.detector_weights[det] = 1.0 / (var + EPS)
             # ---------------------------------------
 
             h1_slice = h1_data[idx_min:idx_max]
@@ -2649,7 +2649,7 @@ class GWExplorerApp:
         laplacian_f = np.zeros_like(Sxx)
         laplacian_f[1:-1, :] = Sxx[2:, :] - 2 * Sxx[1:-1, :] + Sxx[0:-2, :]
         Sxx_sharp = Sxx - (alpha / (nfft / nperseg)) * laplacian_f
-        self.detectors[det]['Sxx'] = np.maximum(np.nan_to_num(Sxx_sharp, nan=1e-20), 1e-20)
+        self.detectors[det]['Sxx'] = np.maximum(np.nan_to_num(Sxx_sharp, nan=EPS), EPS)
         self.detectors[det]['t'] = t
         self.detectors[det]['f'] = f
 
@@ -2766,7 +2766,7 @@ class GWExplorerApp:
                 shifted_rows.append(shifted)
 
             S_shifted = np.array(shifted_rows)
-            norm_S = S_shifted / (np.max(S_shifted) + 1e-20)
+            norm_S = S_shifted / (np.max(S_shifted) + EPS)
 
             if joint_product is None:
                 joint_product = norm_S
@@ -2876,7 +2876,7 @@ class GWExplorerApp:
 
 
                 variance = np.var(data)
-                weight = 1.0 / (variance + 1e-20)
+                weight = 1.0 / (variance + EPS)
 
                 # --- MAX_AMP NORMALIZATION COMPLETELY REMOVED ---
                 # We now trust the whitening process to handle the relative scaling.
@@ -3225,7 +3225,7 @@ class GWExplorerApp:
 
             # Normalize individual detector trace
             max_amp = np.max(np.abs(data))
-            if max_amp > 1e-20:
+            if max_amp > EPS:
                 data = data / max_amp
 
 
@@ -3394,7 +3394,7 @@ class GWExplorerApp:
         h1_norm = np.linalg.norm(h1)
         l1_norm = np.linalg.norm(l1)
 
-        if h1_norm < 1e-20 or l1_norm < 1e-20:
+        if h1_norm < EPS or l1_norm < EPS:
             raise ValueError("Signal energy too small")
 
         h1 /= h1_norm
@@ -3421,7 +3421,7 @@ class GWExplorerApp:
         if 0 < peak < len(corr_m) - 1:
             y0, y1, y2 = corr_m[peak - 1], corr_m[peak], corr_m[peak + 1]
             denom = y0 - 2 * y1 + y2
-            if abs(denom) > 1e-20:
+            if abs(denom) > EPS:
                 lag_samples += 0.5 * (y0 - y2) / denom
 
         tau_ms = 1000.0 * lag_samples / fs
