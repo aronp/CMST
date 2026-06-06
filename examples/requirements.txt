@@ -6,3 +6,4 @@ requests
 sounddevice
 gwosc
 scikit-image
+
