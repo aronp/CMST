@@ -22,10 +22,7 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import urlencode
 import sounddevice as sd
 import re
-import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import tkinter as tk
-from tkinter import ttk, messagebox
 
 # -----------------------------------------------------------------------------
 # Central application configuration
@@ -192,7 +189,6 @@ def cmst_bandpass(strain, fs, f_low, f_high, freq_power=2):
     # --- DC LEAKAGE SAFETY OVERRIDE ---
     # If the window base extends below 0 Hz, it will leak DC and seismic noise.
     if f_center - actual_width < 0:
-        leakage_hz = f_center - actual_width
         actual_width = f_center
     # ----------------------------------
 
@@ -2503,7 +2499,7 @@ class GWExplorerApp:
                     max(35.0, self.f_min.get()), self.f_max.get(), max_delay_ms=30.0
                 )
 
-                signed_ms = -offset_ms if "leads H1" in lead_text else offset_ms
+                signed_ms = offset_ms 
                 rounded_ms = round(signed_ms, 1)
 
                 self.set_detector_offset_ms(det, rounded_ms)
@@ -3381,8 +3377,12 @@ class GWExplorerApp:
 
         sos = signal.butter(4, [low, high], btype="bandpass", fs=fs, output="sos")
 
-        h1 = signal.sosfiltfilt(sos, h1)
-        l1 = signal.sosfiltfilt(sos, l1)
+        #h1 = signal.sosfiltfilt(sos, h1)
+        h1 = cmst_bandpass(h1, fs, low, high, freq_power=2)
+        l1 = cmst_bandpass(l1, fs, low, high, freq_power=2)
+
+
+        #l1 = signal.sosfiltfilt(sos, l1)
 
         h1 -= np.mean(h1)
         l1 -= np.mean(l1)
@@ -3419,7 +3419,7 @@ class GWExplorerApp:
         needs_inversion = bool(peak_value < 0)
 
         if 0 < peak < len(corr_m) - 1:
-            y0, y1, y2 = corr_m[peak - 1], corr_m[peak], corr_m[peak + 1]
+            y0, y1, y2 = np.abs(corr_m[peak - 1]), np.abs(corr_m[peak]), np.abs(corr_m[peak + 1])
             denom = y0 - 2 * y1 + y2
             if abs(denom) > EPS:
                 lag_samples += 0.5 * (y0 - y2) / denom
@@ -3427,7 +3427,7 @@ class GWExplorerApp:
         tau_ms = 1000.0 * lag_samples / fs
         lead_text = "other leads H1" if tau_ms < 0 else "other lags H1"
 
-        return abs(tau_ms), lead_text, needs_inversion
+        return tau_ms, lead_text, needs_inversion
 
     def gps_to_utc_datetime(self, gps_time):
         gps_epoch = datetime(1980, 1, 6, tzinfo=timezone.utc)
