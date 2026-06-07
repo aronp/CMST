@@ -977,50 +977,72 @@ class GWExplorerApp:
         # 1. Match the exact time window currently visible on the screen
         t_center = self.t_center.get()
         t_width = self.t_width_seconds
+
+        # Add a 0.25s safety buffer so the CMST window taper doesn't crush the visible edges
+        buffer_sec = 0.25
         t_start = max(0.0, t_center - t_width / 2.0)
         t_end = min(self.total_duration, t_center + t_width / 2.0)
 
-        idx_start = int(t_start * self.fs)
-        idx_end = int(t_end * self.fs)
+        t_start_buf = max(0.0, t_start - buffer_sec)
+        t_end_buf = min(self.total_duration, t_end + buffer_sec)
+
+        idx_start = int(t_start_buf * self.fs)
+        idx_end = int(t_end_buf * self.fs)
         if idx_start >= idx_end:
             return
 
-        # 2. Build the relative time array for the x-axis (in seconds)
-        t = np.linspace(t_start, t_end, idx_end - idx_start)
+        # 2. Fetch the frequency limits from the UI
+        f_low, f_high = self.get_frequency_limits()
+        nyquist = self.fs / 2.0
+        low = max(1.0, float(f_low))
+        high = min(float(f_high), nyquist - 1.0)
+        apply_filter = high > low
+
+        # 3. Build the relative time array for the visible x-axis
+        n_points = int((t_end - t_start) * self.fs)
+        if n_points < 2: return
+        t = np.linspace(t_start, t_end, n_points)
         coherent_sum = np.zeros_like(t)
 
-        # 3. Shift and interpolate using your exact waveform logic
+        # 4. Shift, filter, and interpolate
         for det in DETECTORS:
             if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
                 offset_sec = self.get_detector_offset_ms(det) / 1000.0
                 shifted_t_arr = t - offset_sec
 
-                # The full timeline of the file to interpolate from
-                full_t = np.arange(len(self.detectors[det]['whitened'])) / self.fs
+                # The buffered timeline and data
+                buf_t = np.arange(idx_start, idx_end) / self.fs
+                data = self.detectors[det]['whitened'][idx_start:idx_end].copy()
+
+                # Apply the same CMST bandpass used by the rest of the application
+                if apply_filter and len(data) > 8:
+                    data = cmst_bandpass(data * cmst(len(data)), self.fs, low, high)
 
                 is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
-                plot_data = -self.detectors[det]['whitened'] if is_flipped else self.detectors[det]['whitened']
+                plot_data = -data if is_flipped else data
 
-                aligned_data = np.interp(shifted_t_arr, full_t, plot_data, left=0.0, right=0.0)
+                aligned_data = np.interp(shifted_t_arr, buf_t, plot_data, left=0.0, right=0.0)
                 coherent_sum += aligned_data
 
-        # 4. Square for power and plot
+        # 5. Square for power and plot
         coherent_power = coherent_sum ** 2
 
         time_ax.plot(t, coherent_power, color='purple', linewidth=1)
 
-        # Safely get RA/DEC for the title
         ra_val = getattr(self, 'last_sky_ra_deg', 0.0) or 0.0
         dec_val = getattr(self, 'last_sky_dec_deg', 0.0) or 0.0
-        time_ax.set_title(f"Coherent Energy Direction: RA={ra_val:.1f}°, DEC={dec_val:.1f}°", fontsize=10)
+
+        filter_str = f"(BP: {low:.0f}-{high:.0f} Hz)" if apply_filter else ""
+        time_ax.set_title(f"Coherent Energy Direction: RA={ra_val:.1f}°, DEC={dec_val:.1f}° {filter_str}", fontsize=10)
         time_ax.set_xlabel("Relative Time (s)", fontsize=8)
         time_ax.set_ylabel("Power", fontsize=8)
         time_ax.grid(True, alpha=0.3)
+        time_ax.set_xlim(t_start, t_end)
 
-        # 5. Draw the red line at the current view center
+        # 6. Draw the red line at the current view center
         time_ax.axvline(x=t_center, color='red', linestyle='--', alpha=0.7, label="Current View")
         time_ax.legend(loc="upper right")
-
+        
 
 
     def _build_correlation_panel(self):
@@ -1292,22 +1314,25 @@ class GWExplorerApp:
                 if self.show_contours.get():
                     ax.contour(RA, R, power_map, levels=10, colors='white', alpha=0.3, linewidths=0.5)
 
-                    # NEW: Overlay the current estimated correlation coordinate as a bright 'X'
-                    if getattr(self, 'last_sky_ra_deg', None) is not None and getattr(self, 'last_sky_dec_deg',
-                                                                                      None) is not None:
-                        marker_ra = np.radians(self.last_sky_ra_deg)
-                        marker_r = 90.0 - self.last_sky_dec_deg
+                # --- FIXED INDENTATION: Always draw the cross ---
+                if getattr(self, 'last_sky_ra_deg', None) is not None and getattr(self, 'last_sky_dec_deg',
+                                                                                  None) is not None:
+                    marker_ra = np.radians(self.last_sky_ra_deg)
+                    marker_r = 90.0 - self.last_sky_dec_deg
 
-                        # ADD 'self.sky_marker, =' to capture the drawing object
-                        self.sky_marker, = ax.plot([marker_ra], [marker_r], marker='x', color='blue', markersize=14,
-                                                   markeredgewidth=3,
-                                                   label='Triangulated Vector')
+                    self.sky_marker, = ax.plot([marker_ra], [marker_r], marker='x', color='blue', markersize=14,
+                                               markeredgewidth=3, label='Triangulated Vector')
 
-                        ax.legend(loc='upper right', bbox_to_anchor=(1.15, 1.15), fontsize=8)
-                    else:
-                        self.sky_marker = None
+                    ax.legend(loc='upper right', bbox_to_anchor=(1.15, 1.15), fontsize=8)
+                else:
+                    self.sky_marker = None
+                # ------------------------------------------------
 
                 ax.set_title(f"Coherent Network Power (GPS: {gps_time})\nWindow: {t_width:.3f}s", pad=20)
+
+                # Automatically render the timeline for the current steering vector
+                self._render_directional_time_series()
+
                 canvas.draw_idle()
                 self.global_status.config(text="System: Idle (Sky Map Generated)")
 
@@ -1316,6 +1341,7 @@ class GWExplorerApp:
         except Exception as e:
             self.root.after(0, lambda err=e: self.global_status.config(text=f"Sky Map Error: {str(err)}",
                                                                        foreground="red"))
+
 
     def on_sky_map_click(self, event):
         """Handles user clicks on the polar sky map to steer the array delays."""
@@ -2680,7 +2706,7 @@ class GWExplorerApp:
                 )
 
                 signed_ms = offset_ms 
-                rounded_ms = round(signed_ms, 1)
+                rounded_ms = round(signed_ms, 2)
 
                 self.set_detector_offset_ms(det, rounded_ms)
                 
@@ -2789,16 +2815,25 @@ class GWExplorerApp:
             if hasattr(self, "lbl_offset_result"):
                 self.lbl_offset_result.config(foreground="purple")
 
-            # --- ADDED: Move the visual marker on the map ---
-            if hasattr(self, 'sky_marker') and self.sky_marker is not None:
-                try:
-                    marker_ra = np.radians(self.last_sky_ra_deg)
-                    marker_r = 90.0 - self.last_sky_dec_deg
+            # --- NEW: Move the cross, or create it if it doesn't exist ---
+            try:
+                ax = self.tabs["Coherent Sky Map"]['ax']
+                marker_ra = np.radians(self.last_sky_ra_deg)
+                marker_r = 90.0 - self.last_sky_dec_deg
+
+                if hasattr(self, 'sky_marker') and self.sky_marker is not None:
+                    # The cross exists, just move it
                     self.sky_marker.set_data([marker_ra], [marker_r])
-                    self.tabs["Coherent Sky Map"]['canvas'].draw_idle()
-                except Exception:
-                    pass
-            # ------------------------------------------------
+                else:
+                    # The cross doesn't exist yet, draw it
+                    self.sky_marker, = ax.plot([marker_ra], [marker_r], marker='x', color='blue', markersize=14,
+                                               markeredgewidth=3, label='Triangulated Vector')
+                    ax.legend(loc='upper right', bbox_to_anchor=(1.15, 1.15), fontsize=8)
+
+                self.tabs["Coherent Sky Map"]['canvas'].draw_idle()
+            except Exception:
+                pass
+            # -------------------------------------------------------------
 
             return self.last_sky_ra_deg, self.last_sky_dec_deg
 
