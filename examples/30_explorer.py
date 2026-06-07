@@ -10,6 +10,8 @@ from scipy.interpolate import interp1d
 import tkinter as tk
 from tkinter import messagebox, filedialog, ttk
 import matplotlib
+import matplotlib.gridspec as gridspec
+from matplotlib.figure import Figure
 
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -875,34 +877,151 @@ class GWExplorerApp:
 
         self.tabs["Whitening Filter (ASD)"] = {'fig': asd_fig, 'ax': asd_ax, 'canvas': asd_canvas, 'pbar': None}
 
-        # NEW: Sky Map Tab (Polar Projection)
+        # ... inside _build_notebook_tabs ...
         sky_frame = ttk.Frame(self.notebook)
         self.notebook.add(sky_frame, text="Coherent Sky Map")
 
-        sky_fig = plt.figure(figsize=(8, 8))
-        sky_fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.82)
+        # NEW: Split the figure 70% Sky Map, 30% Time Series
+        sky_fig = Figure(figsize=(8, 8))
+        gs = gridspec.GridSpec(3, 1, figure=sky_fig)
 
-        sky_ax = sky_fig.add_subplot(111, projection='polar')
-
-        # Configure polar plot to look like a sky map
-        sky_ax.set_theta_zero_location("N")
-        sky_ax.set_theta_direction(-1)
-        sky_ax.set_rticks([30, 60, 90, 120, 150])
-        sky_ax.set_yticklabels(['60°', '30°', 'Eq', '-30°', '-60°'])
-        sky_ax.grid(True, alpha=0.5)
+        sky_ax = sky_fig.add_subplot(gs[0:2, 0], projection='polar')
+        sky_time_ax = sky_fig.add_subplot(gs[2, 0])  # The new time-series axis
 
         sky_canvas = FigureCanvasTkAgg(sky_fig, master=sky_frame)
         sky_canvas_widget = sky_canvas.get_tk_widget()
         sky_canvas_widget.pack(fill=tk.BOTH, expand=True)
 
-        sky_canvas.mpl_connect('button_press_event', self.on_sky_map_click)
+        # Update the click binding to a new master router function
+        sky_canvas.mpl_connect('button_press_event', self.on_sky_tab_click)
 
-        self.tabs["Coherent Sky Map"] = {'fig': sky_fig, 'ax': sky_ax, 'canvas': sky_canvas, 'pbar': None}
-
-
-        self.tabs["Coherent Sky Map"] = {'fig': sky_fig, 'ax': sky_ax, 'canvas': sky_canvas, 'pbar': None}
+        self.tabs["Coherent Sky Map"] = {
+            'fig': sky_fig,
+            'ax': sky_ax,
+            'time_ax': sky_time_ax,  # Save the new axis reference
+            'canvas': sky_canvas,
+            'pbar': None
+        }
 
         self.notebook.bind("<<NotebookTabChanged>>", lambda e: self.update_all_tabs())
+
+    def on_sky_tab_click(self, event):
+        """Routes clicks on the Sky Map tab to either spatial steering or temporal selection."""
+        if event.inaxes is None:
+            return
+
+        # ==========================================
+        # IF CLICKED ON THE POLAR SKY MAP (SPATIAL)
+        # ==========================================
+        if event.inaxes == self.tabs["Coherent Sky Map"]['ax']:
+            ra_rad = event.xdata
+            r_deg = event.ydata
+            ra_deg = np.degrees(ra_rad) % 360.0
+            dec_deg = max(-90.0, min(90.0, 90.0 - r_deg))
+
+            self.last_sky_ra_deg = ra_deg
+            self.last_sky_dec_deg = dec_deg
+
+            # 1. Steer the hardware delays
+            if getattr(self, 'cached_target_gps', "N/A") != "N/A":
+                gps_time = float(self.cached_target_gps)
+                gmst = self.gps_to_gmst(gps_time)
+                n = self.radec_to_ecef_unit(ra_rad, np.radians(dec_deg), gmst)
+
+                for det in NON_REFERENCE_DETECTORS:
+                    baseline = DETECTOR_ECEF[det] - DETECTOR_ECEF["H1"]
+                    dt_sec = -np.dot(n, baseline) / C_LIGHT
+                    self.set_detector_offset_ms(det, round(dt_sec * 1000.0, 1))
+
+            # 2. Move the blue cross
+            if hasattr(self, 'sky_marker') and self.sky_marker is not None:
+                try:
+                    self.sky_marker.set_data([ra_rad], [r_deg])
+                except Exception:
+                    pass
+
+            # 3. Compute and plot the Coherent Time Series (The "Microphone")
+            self._render_directional_time_series()
+
+            # Force UI update
+            self.tabs["Coherent Sky Map"]['canvas'].draw_idle()
+            self.update_all_tabs()
+
+        # ==========================================
+        # IF CLICKED ON THE TIME SERIES (TEMPORAL)
+        # ==========================================
+        elif event.inaxes == self.tabs["Coherent Sky Map"]['time_ax']:
+            # event.xdata is the exact relative time in seconds (e.g., 15.4s)
+            clicked_time = event.xdata
+
+            # Use your built-in navigation function to snap the app to this second
+            self.clamp_and_set_center(clicked_time)
+
+            # Flash a UI message
+            if hasattr(self, 'lbl_offset_result'):
+                self.lbl_offset_result.config(foreground="green", text=f"Snapped to time: {clicked_time:.4f}s")
+
+            # Redraw just the microphone plot so the red line jumps to the new click
+            self._render_directional_time_series()
+            self.tabs["Coherent Sky Map"]['canvas'].draw_idle()
+
+    def _render_directional_time_series(self):
+        """Calculates the coherent network energy over time for the current delays."""
+        time_ax = self.tabs["Coherent Sky Map"]['time_ax']
+        time_ax.clear()
+
+        if not self.detectors["H1"]["loaded"] or self.detectors["H1"]["whitened"] is None:
+            time_ax.set_title("No data loaded. Fetch data first.", fontsize=10)
+            return
+
+        # 1. Match the exact time window currently visible on the screen
+        t_center = self.t_center.get()
+        t_width = self.t_width_seconds
+        t_start = max(0.0, t_center - t_width / 2.0)
+        t_end = min(self.total_duration, t_center + t_width / 2.0)
+
+        idx_start = int(t_start * self.fs)
+        idx_end = int(t_end * self.fs)
+        if idx_start >= idx_end:
+            return
+
+        # 2. Build the relative time array for the x-axis (in seconds)
+        t = np.linspace(t_start, t_end, idx_end - idx_start)
+        coherent_sum = np.zeros_like(t)
+
+        # 3. Shift and interpolate using your exact waveform logic
+        for det in DETECTORS:
+            if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
+                offset_sec = self.get_detector_offset_ms(det) / 1000.0
+                shifted_t_arr = t - offset_sec
+
+                # The full timeline of the file to interpolate from
+                full_t = np.arange(len(self.detectors[det]['whitened'])) / self.fs
+
+                is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
+                plot_data = -self.detectors[det]['whitened'] if is_flipped else self.detectors[det]['whitened']
+
+                aligned_data = np.interp(shifted_t_arr, full_t, plot_data, left=0.0, right=0.0)
+                coherent_sum += aligned_data
+
+        # 4. Square for power and plot
+        coherent_power = coherent_sum ** 2
+
+        time_ax.plot(t, coherent_power, color='purple', linewidth=1)
+
+        # Safely get RA/DEC for the title
+        ra_val = getattr(self, 'last_sky_ra_deg', 0.0) or 0.0
+        dec_val = getattr(self, 'last_sky_dec_deg', 0.0) or 0.0
+        time_ax.set_title(f"Coherent Energy Direction: RA={ra_val:.1f}°, DEC={dec_val:.1f}°", fontsize=10)
+        time_ax.set_xlabel("Relative Time (s)", fontsize=8)
+        time_ax.set_ylabel("Power", fontsize=8)
+        time_ax.grid(True, alpha=0.3)
+
+        # 5. Draw the red line at the current view center
+        time_ax.axvline(x=t_center, color='red', linestyle='--', alpha=0.7, label="Current View")
+        time_ax.legend(loc="upper right")
+
+
 
     def _build_correlation_panel(self):
         self.corr_frame = ttk.LabelFrame(self.right_panel, text="Interferometer Time Delay Analysis", padding=10)
@@ -2669,6 +2788,18 @@ class GWExplorerApp:
                 self.sky_link_text.set("in-the-sky.org")
             if hasattr(self, "lbl_offset_result"):
                 self.lbl_offset_result.config(foreground="purple")
+
+            # --- ADDED: Move the visual marker on the map ---
+            if hasattr(self, 'sky_marker') and self.sky_marker is not None:
+                try:
+                    marker_ra = np.radians(self.last_sky_ra_deg)
+                    marker_r = 90.0 - self.last_sky_dec_deg
+                    self.sky_marker.set_data([marker_ra], [marker_r])
+                    self.tabs["Coherent Sky Map"]['canvas'].draw_idle()
+                except Exception:
+                    pass
+            # ------------------------------------------------
+
             return self.last_sky_ra_deg, self.last_sky_dec_deg
 
         except Exception as e:
