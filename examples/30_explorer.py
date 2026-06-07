@@ -895,6 +895,11 @@ class GWExplorerApp:
         sky_canvas_widget = sky_canvas.get_tk_widget()
         sky_canvas_widget.pack(fill=tk.BOTH, expand=True)
 
+        sky_canvas.mpl_connect('button_press_event', self.on_sky_map_click)
+
+        self.tabs["Coherent Sky Map"] = {'fig': sky_fig, 'ax': sky_ax, 'canvas': sky_canvas, 'pbar': None}
+
+
         self.tabs["Coherent Sky Map"] = {'fig': sky_fig, 'ax': sky_ax, 'canvas': sky_canvas, 'pbar': None}
 
         self.notebook.bind("<<NotebookTabChanged>>", lambda e: self.update_all_tabs())
@@ -1168,18 +1173,20 @@ class GWExplorerApp:
                 if self.show_contours.get():
                     ax.contour(RA, R, power_map, levels=10, colors='white', alpha=0.3, linewidths=0.5)
 
-                # NEW: Overlay the current estimated correlation coordinate as a bright 'X'
-                if getattr(self, 'last_sky_ra_deg', None) is not None and getattr(self, 'last_sky_dec_deg',
-                                                                                  None) is not None:
-                    marker_ra = np.radians(self.last_sky_ra_deg)
-                    marker_r = 90.0 - self.last_sky_dec_deg
+                    # NEW: Overlay the current estimated correlation coordinate as a bright 'X'
+                    if getattr(self, 'last_sky_ra_deg', None) is not None and getattr(self, 'last_sky_dec_deg',
+                                                                                      None) is not None:
+                        marker_ra = np.radians(self.last_sky_ra_deg)
+                        marker_r = 90.0 - self.last_sky_dec_deg
 
-                    # Using a cyan 'X' to ensure it pops visibly against the magma/inferno colormaps
-                    ax.plot(marker_ra, marker_r, marker='x', color='blue', markersize=14, markeredgewidth=3,
-                            label='Triangulated Vector')
+                        # ADD 'self.sky_marker, =' to capture the drawing object
+                        self.sky_marker, = ax.plot([marker_ra], [marker_r], marker='x', color='blue', markersize=14,
+                                                   markeredgewidth=3,
+                                                   label='Triangulated Vector')
 
-                    # Add a small legend so we know what the X represents
-                    ax.legend(loc='upper right', bbox_to_anchor=(1.15, 1.15), fontsize=8)
+                        ax.legend(loc='upper right', bbox_to_anchor=(1.15, 1.15), fontsize=8)
+                    else:
+                        self.sky_marker = None
 
                 ax.set_title(f"Coherent Network Power (GPS: {gps_time})\nWindow: {t_width:.3f}s", pad=20)
                 canvas.draw_idle()
@@ -1190,6 +1197,67 @@ class GWExplorerApp:
         except Exception as e:
             self.root.after(0, lambda err=e: self.global_status.config(text=f"Sky Map Error: {str(err)}",
                                                                        foreground="red"))
+
+    def on_sky_map_click(self, event):
+        """Handles user clicks on the polar sky map to steer the array delays."""
+
+        # 1. Ignore clicks outside the actual polar circle
+        if event.inaxes != self.tabs["Coherent Sky Map"]['ax']:
+            return
+        if event.xdata is None or event.ydata is None:
+            return
+
+        # 2. Extract Matplotlib polar coordinates
+        # event.xdata = Theta (RA in radians)
+        # event.ydata = Radius (90.0 - DEC in degrees)
+        ra_rad = event.xdata
+        r_deg = event.ydata
+
+        ra_deg = np.degrees(ra_rad) % 360.0
+        dec_deg = 90.0 - r_deg
+
+        # Clamp to bounds just in case they click the very corners of the square axes
+        dec_deg = max(-90.0, min(90.0, dec_deg))
+
+        # 3. Update the global state
+        self.last_sky_ra_deg = ra_deg
+        self.last_sky_dec_deg = dec_deg
+
+        # 4. Calculate geometric time delays for this exact coordinate
+        if self.cached_target_gps != "N/A":
+            gps_time = float(self.cached_target_gps)
+            gmst = self.gps_to_gmst(gps_time)
+
+            # Use your existing hardware geometry math
+            n = self.radec_to_ecef_unit(ra_rad, np.radians(dec_deg), gmst)
+
+            for det in NON_REFERENCE_DETECTORS:
+                baseline = DETECTOR_ECEF[det] - DETECTOR_ECEF["H1"]
+                dt_sec = -np.dot(n, baseline) / C_LIGHT
+                dt_ms = round(dt_sec * 1000.0, 1)
+
+                # Push the new delays directly into your UI spinboxes
+                self.set_detector_offset_ms(det, dt_ms)
+
+        # 5. Move the blue cross instantly (without waiting for the heatmap to rebuild)
+        if hasattr(self, 'sky_marker') and self.sky_marker is not None:
+            try:
+                self.sky_marker.set_data([ra_rad], [r_deg])
+                self.tabs["Coherent Sky Map"]['canvas'].draw_idle()
+            except Exception:
+                pass
+
+        # 6. Update the UI text readout
+        result_text = (
+            f"RA={ra_deg:.1f} deg, DEC={dec_deg:+.1f} deg, "
+            f"L1={self.get_detector_offset_ms('L1'):+.1f} ms, V1={self.get_detector_offset_ms('V1'):+.1f} ms"
+        )
+        self.sky_result_text.set(result_text)
+        self.lbl_offset_result.config(foreground="blue")
+
+        # 7. Force the Spectrograms and Waveform tabs to re-render with the new steering delays
+        self.update_all_tabs()
+
 
     def _build_playback_controls(self):
         controls_bar = ttk.LabelFrame(self.right_panel, text="Playback Control Desk & Global Positioning Timeline",
