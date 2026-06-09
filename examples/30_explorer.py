@@ -1241,13 +1241,13 @@ class GWExplorerApp:
             f_low, f_high = self.get_frequency_limits()
             nyquist = self.fs / 2.0
             low, high = max(1.0, float(f_low)), min(float(f_high), nyquist - 1.0)
-            sos = signal.butter(4, [low, high], btype='bandpass', fs=self.fs, output='sos')
+            apply_filter = high > low
 
             data_cache = {}
             for det in DETECTORS:
                 d = self.detectors[det]['whitened'][idx_start:idx_end]
-                if len(d) > 33:
-                    d = signal.sosfiltfilt(sos, d)
+                if len(d) > 33 and apply_filter:
+                    d = cmst_bandpass(d * cmst(len(d)), self.fs, low, high)
 
                 # Check for requested inversion
                 is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
@@ -3630,14 +3630,8 @@ class GWExplorerApp:
         if high <= low:
             raise ValueError("Invalid bandpass range")
 
-        sos = signal.butter(4, [low, high], btype="bandpass", fs=fs, output="sos")
-
-        #h1 = signal.sosfiltfilt(sos, h1)
         h1 = cmst_bandpass(h1, fs, low, high, freq_power=2)
         l1 = cmst_bandpass(l1, fs, low, high, freq_power=2)
-
-
-        #l1 = signal.sosfiltfilt(sos, l1)
 
         h1 -= np.mean(h1)
         l1 -= np.mean(l1)
