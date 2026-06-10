@@ -490,7 +490,7 @@ class GWExplorerApp:
                         daemon=True
                     ).start()
 
-            self.root.after(1000, load_startup_suite)
+            self.root.after(100, load_startup_suite)
 
     # ------------------------------------------------------------------
     # Persistent settings and recent-file history
@@ -1060,6 +1060,10 @@ class GWExplorerApp:
         self.btn_play_audio = ttk.Button(button_row, text="🔊 Play Coherent Audio", command=self.play_coherent_audio)
         self.btn_play_audio.pack(side=tk.LEFT, padx=5)
 
+        self.btn_sig_mc = ttk.Button(button_row, text="Calculate Significance (MC 1000)",
+                                     command=self.trigger_monte_carlo)
+        self.btn_sig_mc.pack(side=tk.LEFT, padx=5)
+
         self.btn_sky_map = ttk.Button(button_row, text="Run Sky Map", command=self.generate_sky_map)
         self.btn_sky_map.pack(side=tk.LEFT, padx=10)
 
@@ -1108,6 +1112,90 @@ class GWExplorerApp:
         for det in DETECTORS:
             ttk.Checkbutton(flip_row, text=det, variable=self.signal_flips[det], command=self.update_all_tabs).pack(
                 side=tk.LEFT, padx=5)
+
+    def trigger_monte_carlo(self):
+        if not (self.detectors["H1"]["loaded"] and self.detectors["L1"]["loaded"]):
+            messagebox.showerror("Missing Data",
+                                 "H1 and L1 must be loaded to run the Monte Carlo background estimation.")
+            return
+
+        self.sky_result_text.set("Running Monte Carlo (1000 background iterations)...")
+        self.lbl_offset_result.config(foreground="orange")
+        self.root.update_idletasks()
+
+        # Fire off the heavy loop in a background thread
+        threading.Thread(target=self._monte_carlo_worker, daemon=True).start()
+
+    def _monte_carlo_worker(self):
+        try:
+            h1_data = self.detectors["H1"]["whitened"]
+            l1_data = self.detectors["L1"]["whitened"]
+
+            t_center = self.t_center.get()
+            t_width = self.t_width_seconds
+            f_min = max(35.0, self.f_min.get())
+            f_max = self.f_max.get()
+
+            # 1. Get the target signal strength of the current active window
+            t_start = max(0.0, t_center - t_width / 2)
+            t_end = min(self.total_duration, t_center + t_width / 2)
+            idx_min, idx_max = int(t_start * self.fs), int(t_end * self.fs)
+
+            _, _, _, actual_peak = self.calculate_delay_xcorr(
+                h1_data[idx_min:idx_max], l1_data[idx_min:idx_max],
+                self.fs, f_min, f_max, max_delay_ms=30.0
+            )
+
+            # 2. Define valid background regions (Avoid edges by the whitening interval)
+            edge_buffer = self.whiten_interval.get()
+            valid_start = edge_buffer
+            valid_end = self.total_duration - edge_buffer - t_width
+
+            if valid_end <= valid_start:
+                raise ValueError("The data file is too short to avoid whitening edges while sampling.")
+
+            # 3. Monte Carlo Loop
+            bg_peaks = []
+            iterations = 1000
+            np.random.seed()  # Ensure thread has a fresh random state
+
+            for i in range(iterations):
+                # Pick a random time, ensuring it doesn't overlap the actual physical signal
+                rand_start = np.random.uniform(valid_start, valid_end)
+                while abs(rand_start - t_start) < t_width:
+                    rand_start = np.random.uniform(valid_start, valid_end)
+
+                r_min = int(rand_start * self.fs)
+                r_max = int((rand_start + t_width) * self.fs)
+
+                # Run the exact same maximizing correlation engine on the random noise
+                _, _, _, bg_peak = self.calculate_delay_xcorr(
+                    h1_data[r_min:r_max], l1_data[r_min:r_max],
+                    self.fs, f_min, f_max, max_delay_ms=30.0
+                )
+                bg_peaks.append(bg_peak)
+
+                # Update UI periodically to show progress
+                if i % 50 == 0:
+                    self.root.after(0, lambda pct=i: self.sky_result_text.set(f"Running Monte Carlo... {pct}%"))
+
+            # 4. Calculate empirical sigma
+            bg_mean = np.mean(bg_peaks)
+            bg_std = np.std(bg_peaks) + EPS
+
+            sigma = (actual_peak - bg_mean) / bg_std
+
+            # 5. Push result back to the UI
+            result_str = f"Signal r={actual_peak:.3f} | BG Mean r={bg_mean:.3f} (±{bg_std:.3f}) | Significance: {sigma:.1f}σ"
+
+            self.root.after(0, lambda: self.sky_result_text.set(result_str))
+            self.root.after(0, lambda: self.lbl_offset_result.config(foreground="green"))
+
+        except Exception as e:
+            self.root.after(0, lambda err=str(e): self.sky_result_text.set(f"MC Error: {err}"))
+            self.root.after(0, lambda: self.lbl_offset_result.config(foreground="red"))
+
+
 
     def play_coherent_audio(self):
         if not (self.detectors["H1"]["loaded"] and self.fs):
@@ -1209,10 +1297,11 @@ class GWExplorerApp:
             self.global_status.config(text="System: Idle")
             messagebox.showerror("Audio Error", f"Could not play audio:\n{str(e)}")
 
-
     def generate_sky_map(self):
-        if not (self.detectors["H1"]["loaded"] and self.detectors["L1"]["loaded"] and self.detectors["V1"]["loaded"]):
-            messagebox.showerror("Missing Data", "H1, L1, and V1 must all be loaded to generate a sky map.")
+        active_non_refs = [det for det in NON_REFERENCE_DETECTORS if self.detectors[det]["loaded"]]
+
+        if not self.detectors["H1"]["loaded"] or not active_non_refs:
+            messagebox.showerror("Missing Data", "H1 and at least one other detector must be loaded to map the sky.")
             return
 
         if self.cached_target_gps == "N/A":
@@ -1245,14 +1334,19 @@ class GWExplorerApp:
 
             data_cache = {}
             for det in DETECTORS:
-                d = self.detectors[det]['whitened'][idx_start:idx_end]
-                if len(d) > 33 and apply_filter:
-                    d = cmst_bandpass(d * cmst(len(d)), self.fs, low, high)
+                # Only slice and filter if the detector is actually loaded
+                if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
+                    d = self.detectors[det]['whitened'][idx_start:idx_end].copy()
+                    if len(d) > 33 and apply_filter:
+                        d = cmst_bandpass(d * cmst(len(d)), self.fs, low, high)
 
-                # Check for requested inversion
-                is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
-                if is_flipped: d = -d
-                data_cache[det] = d
+                    # Check for requested inversion
+                    is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
+                    if is_flipped: d = -d
+                    data_cache[det] = d
+                else:
+                    # SAFEGUARD: Feed offline detectors an array of zeros
+                    data_cache[det] = np.zeros(idx_end - idx_start)
 
             t_arr = np.linspace(t_start, t_end, idx_end - idx_start)
             h1_data = data_cache["H1"]
@@ -2677,9 +2771,7 @@ class GWExplorerApp:
             idx_min = int(t_start * self.fs)
             idx_max = int(t_end * self.fs)
 
-            # --- NEW: RECALCULATE & LOCK WEIGHTS ---
-            # Calculate the inverse-variance of the specific window we are correlating
-            # and lock it into the global state so the rendering loop stops morphing.
+            # --- RECALCULATE & LOCK WEIGHTS ---
             for det in DETECTORS:
                 if self.detectors[det]["loaded"] and self.detectors[det]["whitened"] is not None:
                     slice_data = self.detectors[det]["whitened"][idx_min:idx_max]
@@ -2692,7 +2784,6 @@ class GWExplorerApp:
             h1_slice = h1_data[idx_min:idx_max]
             results = []
 
-
             for det in NON_REFERENCE_DETECTORS:
                 if not self.detectors[det]["loaded"]:
                     continue
@@ -2700,40 +2791,39 @@ class GWExplorerApp:
                 other_data = self.detectors[det]["whitened"]
                 other_slice = other_data[idx_min:idx_max]
 
-                offset_ms, lead_text, needs_inv = self.calculate_delay_xcorr(
+                offset_ms, lead_text, needs_inv, raw_r = self.calculate_delay_xcorr(
                     h1_slice, other_slice, self.fs,
                     max(35.0, self.f_min.get()), self.f_max.get(), max_delay_ms=30.0
                 )
 
-                signed_ms = offset_ms 
+                signed_ms = offset_ms
                 rounded_ms = round(signed_ms, 2)
 
                 self.set_detector_offset_ms(det, rounded_ms)
-                
+
                 if hasattr(self, "signal_flips") and det in self.signal_flips:
                     self.signal_flips[det].set(needs_inv)
 
-                results.append(f"{det}: {rounded_ms:+.1f} ms")
+                results.append(f"{det}: {rounded_ms:+.1f} ms (r={raw_r:.3f})")
 
             if not results:
                 raise ValueError("No L1 or V1 detector loaded.")
 
-            # FIX 2: Preserve the binding here as well
-            self.sky_result_text.set("Offsets: " + " | ".join(results) + " (Computing Sky...)")
+            # --- CLEANED TEXT OVERRIDE ---
+            # Replaced the computing text to just show the raw offsets and strengths
+            self.sky_result_text.set("Offsets: " + " | ".join(results))
             self.lbl_offset_result.config(foreground="green")
             self.root.update_idletasks()
 
             self.update_all_tabs()
 
-            # This triggers the vector math ~200ms later
-            self.schedule_sky_recompute()
+            # The self.schedule_sky_recompute() call has been completely removed from here.
+            # You will now use the "Estimate Vector" button to calculate the sky manually.
 
         except Exception as e:
-            # FIX 3: Preserve the binding on error
             self.sky_result_text.set(f"Error: {str(e)}")
             self.lbl_offset_result.config(foreground="red")
             print(f"Correlation Error: {e}")
-
     # ------------------------------------------------------------------
     # Sky-localisation math
     # ------------------------------------------------------------------
@@ -2760,11 +2850,22 @@ class GWExplorerApp:
     def recompute_sky_from_offsets(self, show_errors=False):
         self.sky_recompute_job = None
         try:
-            if not (self.detectors["H1"]["loaded"] and self.detectors["L1"]["loaded"] and self.detectors["V1"][
-                "loaded"]):
+            # Check which non-reference detectors are actually loaded
+            active_non_refs = [det for det in NON_REFERENCE_DETECTORS if self.detectors[det]["loaded"]]
+
+            if not self.detectors["H1"]["loaded"] or not active_non_refs:
                 if show_errors:
-                    raise ValueError("H1, L1 and V1 must all be loaded.")
+                    raise ValueError("H1 and at least one other detector must be loaded.")
                 return None
+
+            # --- Handle 2-detector limitation cleanly ---
+            if len(active_non_refs) < 2:
+                # Strip the computing tag and report that we can only draw a ring
+                current_text = self.sky_result_text.get().replace(" (Computing Sky...)", "")
+                self.sky_result_text.set(current_text + " (2-Det Ring: Cannot pinpoint)")
+                self.lbl_offset_result.config(foreground="orange")
+                return None
+            # -------------------------------------------------
 
             gps_time = float(self.cached_target_gps)
             observed = {
@@ -2815,17 +2916,14 @@ class GWExplorerApp:
             if hasattr(self, "lbl_offset_result"):
                 self.lbl_offset_result.config(foreground="purple")
 
-            # --- NEW: Move the cross, or create it if it doesn't exist ---
             try:
                 ax = self.tabs["Coherent Sky Map"]['ax']
                 marker_ra = np.radians(self.last_sky_ra_deg)
                 marker_r = 90.0 - self.last_sky_dec_deg
 
                 if hasattr(self, 'sky_marker') and self.sky_marker is not None:
-                    # The cross exists, just move it
                     self.sky_marker.set_data([marker_ra], [marker_r])
                 else:
-                    # The cross doesn't exist yet, draw it
                     self.sky_marker, = ax.plot([marker_ra], [marker_r], marker='x', color='blue', markersize=14,
                                                markeredgewidth=3, label='Triangulated Vector')
                     ax.legend(loc='upper right', bbox_to_anchor=(1.15, 1.15), fontsize=8)
@@ -2833,7 +2931,6 @@ class GWExplorerApp:
                 self.tabs["Coherent Sky Map"]['canvas'].draw_idle()
             except Exception:
                 pass
-            # -------------------------------------------------------------
 
             return self.last_sky_ra_deg, self.last_sky_dec_deg
 
@@ -3349,41 +3446,53 @@ class GWExplorerApp:
 
     def correlation_weight_aligned_streams(self, aligned_streams):
         active_count = len(aligned_streams)
-    
+
         if active_count == 0:
             return [], None, []
 
         if active_count == 1:
             return np.array([1.0]), aligned_streams[0].copy(), [1.0]
-    
-        provisional_sum = np.mean(np.vstack(aligned_streams), axis=0)
-    
-        raw_weights = []
-        correlations = []
-    
-        for stream in aligned_streams:
-            corr = pearson_corr(stream, provisional_sum)
-            correlations.append(corr)
-    
-            if np.isfinite(corr):
-                raw_weights.append(max(0.0, corr))
-            else:
-                raw_weights.append(0.0)
-    
-        raw_weights = np.asarray(raw_weights, dtype=float)
-        weight_sum = np.sum(raw_weights)
-    
-        if not np.isfinite(weight_sum) or weight_sum <= EPS:
-            weights = np.ones(active_count, dtype=float) / active_count
+
+        # 1. Build the Data Matrix (N detectors x M samples)
+        X = np.vstack(aligned_streams)
+
+        # 2. Calculate the N x N Covariance Matrix
+        # np.cov automatically handles mean-centering across the samples
+        C = np.cov(X)
+
+        # 3. Eigenvalue Decomposition
+        # eigh is highly optimized for symmetric matrices like covariance
+        eigenvalues, eigenvectors = np.linalg.eigh(C)
+
+        # 4. Extract the Principal Component
+        # eigh sorts ascending, so the largest eigenvalue (the coherent GW) is the last column
+        principal_weights = eigenvectors[:, -1]
+
+        # Phase Correction: Eigenvectors can point in either direction (+ or -).
+        # We force the sum to be positive so your coherent waveform doesn't randomly draw upside down.
+        if np.sum(principal_weights) < 0:
+            principal_weights = -principal_weights
+
+        # Normalize the weights so their absolute values sum to 1 (maintains UI amplitude scale)
+        weight_sum = np.sum(np.abs(principal_weights))
+        if weight_sum > EPS:
+            weights = principal_weights / weight_sum
         else:
-            weights = raw_weights / weight_sum
-    
+            weights = np.ones(active_count) / active_count
+
+        # 5. Build the Optimal Coherent Sum using the Principal Weights
         final_sum = np.zeros_like(aligned_streams[0], dtype=float)
         for stream, weight in zip(aligned_streams, weights):
             final_sum += weight * stream
-    
+
+        # 6. For the UI: Calculate the pure correlation of each stream against the new optimal axis
+        correlations = []
+        for stream in aligned_streams:
+            corr = pearson_corr(stream, final_sum)
+            correlations.append(corr)
+
         return weights, final_sum, correlations
-    
+
 
 
     def render_whitened_waveforms(self, t_start, t_end):
@@ -3640,6 +3749,7 @@ class GWExplorerApp:
         h1 *= win
         l1 *= win
 
+        # Restored L2 Normalization to bound the strength as a true Pearson r [-1, 1]
         h1_norm = np.linalg.norm(h1)
         l1_norm = np.linalg.norm(l1)
 
@@ -3658,12 +3768,9 @@ class GWExplorerApp:
         corr_m = corr[mask]
         lags_m = lags[mask]
 
-        # Find the index of the maximum absolute correlation
         peak = np.argmax(np.abs(corr_m))
         lag_samples = float(lags_m[peak])
 
-        # AUTOMATIC POLARITY DETECTION
-        # If the actual correlation value at the peak is negative, the signal is inverted
         peak_value = corr_m[peak]
         needs_inversion = bool(peak_value < 0)
 
@@ -3676,7 +3783,10 @@ class GWExplorerApp:
         tau_ms = 1000.0 * lag_samples / fs
         lead_text = "other leads H1" if tau_ms < 0 else "other lags H1"
 
-        return tau_ms, lead_text, needs_inversion
+        # Return the absolute signal strength (r) as the 4th parameter
+        return tau_ms, lead_text, needs_inversion, np.abs(peak_value)
+
+
 
     def gps_to_utc_datetime(self, gps_time):
         gps_epoch = datetime(1980, 1, 6, tzinfo=timezone.utc)
