@@ -1158,8 +1158,9 @@ class GWExplorerApp:
             f_min = max(35.0, self.f_min.get())
             f_max = self.f_max.get()
 
-            # --- Sub-Sample Interpolation & Buffered Filtering ---
-            def extract_aligned_streams(center_time):
+            # --- DECOUPLED EXTRACTION ENGINE ---
+            # Now requires explicit offset and flip dictionaries instead of hitting the UI
+            def extract_aligned_streams(center_time, offsets_dict, flips_dict):
                 buffer_sec = 0.25
                 t_start = max(0.0, center_time - t_width / 2)
                 t_end = min(self.total_duration, center_time + t_width / 2)
@@ -1186,78 +1187,84 @@ class GWExplorerApp:
                     t_arr = np.arange(idx_start, idx_end) / self.fs
                     data = self.detectors[det]["whitened"][idx_start:idx_end].copy()
 
-                    # Apply filter to the buffered data so edges ring outside our window
                     if apply_filter and len(data) > 8:
                         data = cmst_bandpass(data * cmst(len(data)), self.fs, low, high)
 
-                    offset_sec = self.get_detector_offset_ms(det) / 1000.0
+                    # Read from the local memory dictionary, NOT the UI
+                    offset_sec = offsets_dict[det] / 1000.0
                     shifted_t_arr = t_arr - offset_sec
 
-                    is_flipped = getattr(self, 'signal_flips', {}).get(det, tk.BooleanVar(value=False)).get()
+                    # Read polarity from local memory dictionary
+                    is_flipped = flips_dict[det]
                     plot_data = -data if is_flipped else data
 
-                    # Perfect sub-sample alignment
                     aligned = np.interp(t_common, shifted_t_arr, plot_data, left=0.0, right=0.0)
 
-                    # Detrend and window the final exact slice
                     aligned -= np.mean(aligned)
                     aligned *= win_common
                     streams.append(aligned)
 
                 return streams
 
+            # --- LOCK INITIAL UI STATE ONCE ---
+            true_offsets = {det: self.get_detector_offset_ms(det) for det in active_detectors}
+            true_flips = {det: self.signal_flips[det].get() for det in active_detectors}
+
             # 1. Score the Actual Target Signal
-            actual_streams = extract_aligned_streams(t_center)
+            actual_streams = extract_aligned_streams(t_center, true_offsets, true_flips)
             if actual_streams is None: raise ValueError("Failed to extract target window.")
             actual_coherence = self.calculate_pca_network_coherence(actual_streams)
 
-            # 2. Score the Background (Iterating cleanly)
+            # 2. Score the Background
             edge_buffer = self.whiten_interval.get() + 1.0
             valid_start = edge_buffer + (t_width / 2)
             valid_end = self.total_duration - edge_buffer - (t_width / 2)
 
             bg_peaks = []
-            iterations = 100
+            iterations = 1000
             np.random.seed()
-
-            # Max light travel time between detectors is roughly 30ms (0.030s)
-            max_delay_sec = 0.030
-            # Search in 5ms increments to keep the UI from freezing
-            delay_steps = np.arange(-max_delay_sec, max_delay_sec + 0.0005, 0.0005)
 
             for i in range(iterations):
                 rand_center = np.random.uniform(valid_start, valid_end)
-                # Keep noise selections away from the actual target signal
                 while abs(rand_center - t_center) < t_width:
                     rand_center = np.random.uniform(valid_start, valid_end)
 
-                max_bg_coherence = 0.0
-                original_offsets = {det: self.get_detector_offset_ms(det) for det in active_detectors}
+                # Initialize local memory for this specific Monte Carlo iteration
+                current_offsets = true_offsets.copy()
+                current_flips = true_flips.copy()
 
-                # Perform a coarse search to allow the noise to accidentally align
-                for jitter in delay_steps:
+                # --- Fast FFT Cross-Correlation Search ---
+                idx_min = int((rand_center - t_width / 2) * self.fs)
+                idx_max = idx_min + int(t_width * self.fs)
+
+                if "H1" in active_detectors and idx_max <= len(self.detectors["H1"]["whitened"]):
+                    h1_slice = self.detectors["H1"]["whitened"][idx_min:idx_max]
+
                     for det in active_detectors:
                         if det != "H1":
-                            temp_offset = original_offsets[det] + (jitter * 1000.0)
-                            self.set_detector_offset_ms(det, temp_offset)
+                            other_slice = self.detectors[det]["whitened"][idx_min:idx_max]
+                            try:
+                                offset_ms, _, needs_inv, _ = self.calculate_delay_xcorr(
+                                    h1_slice, other_slice, self.fs, f_min, f_max, max_delay_ms=30.0
+                                )
+                                # Update local dictionary, UI remains completely unaware
+                                current_offsets[det] = offset_ms
+                                current_flips[det] = needs_inv
+                            except ValueError:
+                                pass
 
-                    bg_streams = extract_aligned_streams(rand_center)
-                    if bg_streams:
-                        current_coherence = self.calculate_pca_network_coherence(bg_streams)
-                        if current_coherence > max_bg_coherence:
-                            max_bg_coherence = current_coherence
+                # Extract and score using the locally optimized parameters
+                bg_streams = extract_aligned_streams(rand_center, current_offsets, current_flips)
+                if bg_streams:
+                    bg_coherence = self.calculate_pca_network_coherence(bg_streams)
+                    bg_peaks.append(bg_coherence)
+                else:
+                    bg_peaks.append(0.0)
 
-                # Restore the true UI offsets for the next iteration
-                for det in active_detectors:
-                    self.set_detector_offset_ms(det, original_offsets[det])
-
-                # Log the MAXIMUM accidental coherence found in this window
-                bg_peaks.append(max_bg_coherence)
-
-                # UI Progress
+                # UI Progress Update
                 if i % 50 == 0:
                     pct = int((i / iterations) * 100)
-                    self.root.after(0, lambda p=pct: self.sky_result_text.set(f"Running Fair MC Search... {p}%"))
+                    self.root.after(0, lambda p=pct: self.sky_result_text.set(f"Running Fast FFT MC Search... {p}%"))
 
             # 3. Calculate Sigma
             bg_mean = np.mean(bg_peaks)
@@ -1273,6 +1280,7 @@ class GWExplorerApp:
             self.root.after(0, lambda err=str(e): self.sky_result_text.set(f"MC Error: {err}"))
             self.root.after(0, lambda: self.lbl_offset_result.config(foreground="red"))
 
+            
 
 
     def play_coherent_audio(self):
