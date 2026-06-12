@@ -1067,6 +1067,9 @@ class GWExplorerApp:
         self.btn_sky_map = ttk.Button(button_row, text="Run Sky Map", command=self.generate_sky_map)
         self.btn_sky_map.pack(side=tk.LEFT, padx=10)
 
+#        self.btn_print_peaks = ttk.Button(button_row, text="Print Peaks to Console", command=self.print_top_peaks)
+#        self.btn_print_peaks.pack(side=tk.LEFT, padx=5)
+        # --------------------------------
 
         # 2. Dedicated Row for the Result Label
         label_row = ttk.Frame(self.corr_frame)
@@ -1158,60 +1161,12 @@ class GWExplorerApp:
             f_min = max(35.0, self.f_min.get())
             f_max = self.f_max.get()
 
-            # --- DECOUPLED EXTRACTION ENGINE ---
-            # Now requires explicit offset and flip dictionaries instead of hitting the UI
-            def extract_aligned_streams(center_time, offsets_dict, flips_dict):
-                buffer_sec = 0.25
-                t_start = max(0.0, center_time - t_width / 2)
-                t_end = min(self.total_duration, center_time + t_width / 2)
+            # 1. Score the Actual Target Signal (Locked to current UI state)
+            ui_offsets = {det: self.get_detector_offset_ms(det) for det in active_detectors}
+            ui_flips = {det: self.signal_flips[det].get() for det in active_detectors}
 
-                t_start_buf = max(0.0, t_start - buffer_sec)
-                t_end_buf = min(self.total_duration, t_end + buffer_sec)
-
-                n_common = int((t_end - t_start) * self.fs)
-                if n_common < 2: return None
-                t_common = np.linspace(t_start, t_end, n_common)
-
-                low = max(20.0, float(f_min))
-                high = min(float(f_max), self.fs / 2.0 - 1.0)
-                apply_filter = high > low
-
-                streams = []
-                win_common = cmst(n_common)
-
-                for det in active_detectors:
-                    idx_start = int(t_start_buf * self.fs)
-                    idx_end = int(t_end_buf * self.fs)
-                    if idx_start >= idx_end: return None
-
-                    t_arr = np.arange(idx_start, idx_end) / self.fs
-                    data = self.detectors[det]["whitened"][idx_start:idx_end].copy()
-
-                    if apply_filter and len(data) > 8:
-                        data = cmst_bandpass(data * cmst(len(data)), self.fs, low, high)
-
-                    # Read from the local memory dictionary, NOT the UI
-                    offset_sec = offsets_dict[det] / 1000.0
-                    shifted_t_arr = t_arr - offset_sec
-
-                    # Read polarity from local memory dictionary
-                    is_flipped = flips_dict[det]
-                    plot_data = -data if is_flipped else data
-
-                    aligned = np.interp(t_common, shifted_t_arr, plot_data, left=0.0, right=0.0)
-
-                    aligned -= np.mean(aligned)
-                    aligned *= win_common
-                    streams.append(aligned)
-
-                return streams
-
-            # --- LOCK INITIAL UI STATE ONCE ---
-            true_offsets = {det: self.get_detector_offset_ms(det) for det in active_detectors}
-            true_flips = {det: self.signal_flips[det].get() for det in active_detectors}
-
-            # 1. Score the Actual Target Signal
-            actual_streams = extract_aligned_streams(t_center, true_offsets, true_flips)
+            actual_streams = self._extract_aligned_streams(t_center, t_width, f_min, f_max, active_detectors,
+                                                           ui_offsets, ui_flips)
             if actual_streams is None: raise ValueError("Failed to extract target window.")
             actual_coherence = self.calculate_pca_network_coherence(actual_streams)
 
@@ -1229,39 +1184,22 @@ class GWExplorerApp:
                 while abs(rand_center - t_center) < t_width:
                     rand_center = np.random.uniform(valid_start, valid_end)
 
-                # Initialize local memory for this specific Monte Carlo iteration
-                current_offsets = true_offsets.copy()
-                current_flips = true_flips.copy()
+                # --- THE UNIFIED BACKGROUND SEARCH ---
+                # Step A: Find the optimal accidental alignment for this noise
+                bg_offsets, bg_flips = self._find_optimal_alignments(rand_center, t_width, f_min, f_max,
+                                                                     active_detectors)
 
-                # --- Fast FFT Cross-Correlation Search ---
-                idx_min = int((rand_center - t_width / 2) * self.fs)
-                idx_max = idx_min + int(t_width * self.fs)
+                # Step B: Extract the noise using those accidental alignments
+                bg_streams = self._extract_aligned_streams(rand_center, t_width, f_min, f_max, active_detectors,
+                                                           bg_offsets, bg_flips)
 
-                if "H1" in active_detectors and idx_max <= len(self.detectors["H1"]["whitened"]):
-                    h1_slice = self.detectors["H1"]["whitened"][idx_min:idx_max]
-
-                    for det in active_detectors:
-                        if det != "H1":
-                            other_slice = self.detectors[det]["whitened"][idx_min:idx_max]
-                            try:
-                                offset_ms, _, needs_inv, _ = self.calculate_delay_xcorr(
-                                    h1_slice, other_slice, self.fs, f_min, f_max, max_delay_ms=30.0
-                                )
-                                # Update local dictionary, UI remains completely unaware
-                                current_offsets[det] = offset_ms
-                                current_flips[det] = needs_inv
-                            except ValueError:
-                                pass
-
-                # Extract and score using the locally optimized parameters
-                bg_streams = extract_aligned_streams(rand_center, current_offsets, current_flips)
+                # Step C: Score it
                 if bg_streams:
-                    bg_coherence = self.calculate_pca_network_coherence(bg_streams)
-                    bg_peaks.append(bg_coherence)
+                    bg_peaks.append(self.calculate_pca_network_coherence(bg_streams))
                 else:
                     bg_peaks.append(0.0)
 
-                # UI Progress Update
+                # Update UI Progress
                 if i % 50 == 0:
                     pct = int((i / iterations) * 100)
                     self.root.after(0, lambda p=pct: self.sky_result_text.set(f"Running Fast FFT MC Search... {p}%"))
@@ -1280,8 +1218,149 @@ class GWExplorerApp:
             self.root.after(0, lambda err=str(e): self.sky_result_text.set(f"MC Error: {err}"))
             self.root.after(0, lambda: self.lbl_offset_result.config(foreground="red"))
 
-            
+    def print_top_peaks(self):
+        """Finds and prints the 10 absolute largest amplitudes in the safe interior of the frequency-banded data."""
+        if self.total_duration == 0:
+            print("No data loaded. Please load detector files first.")
+            return
 
+        # Fetch the current UI frequency limits
+        try:
+            f_min_val = float(self.f_min.get())
+            f_max_val = float(self.f_max.get())
+        except Exception:
+            f_min_val, f_max_val = 0.0, 500.0
+
+        low = max(20.0, f_min_val)
+        high = min(f_max_val, self.fs / 2.0 - 1.0)
+        apply_filter = high > low
+
+        # Define the safe interior region (1.5x the whitening interval to avoid FFT edge ringing)
+        buffer_sec = self.whiten_interval.get() * 1.5
+        idx_start = int(buffer_sec * self.fs)
+        idx_end = int((self.total_duration - buffer_sec) * self.fs)
+
+        print("\n" + "=" * 65)
+        print(f" TOP 10 AMPLITUDE PEAKS (Safe Region: {buffer_sec:.1f}s to {self.total_duration - buffer_sec:.1f}s)")
+        if apply_filter:
+            print(f" Filter Applied: {low:.0f} Hz to {high:.0f} Hz")
+        else:
+            print(" Filter: None (Broadband)")
+        print("=" * 65)
+
+        for det in DETECTORS:
+            if self.detectors[det]['loaded'] and self.detectors[det]['whitened'] is not None:
+
+                if idx_start >= idx_end:
+                    print(f"\n--- Interferometer: {det} ---")
+                    print("File too short to establish a safe interior region.")
+                    continue
+
+                # 1. Get a copy of the whitened data
+                data = self.detectors[det]['whitened'].copy()
+
+                # 2. Apply the UI frequency bandpass across the entire file
+                if apply_filter and len(data) > 8:
+                    data = cmst_bandpass(data * cmst(len(data)), self.fs, low, high)
+
+                # 3. Mask out the corrupted edges and ringing zones
+                data[:idx_start] = 0.0
+                data[idx_end:] = 0.0
+
+                # 4. Get the indices of the top 10 absolute largest values, sorted descending
+                top_indices = np.argsort(np.abs(data))[-10:][::-1]
+
+                print(f"\n--- Interferometer: {det} ---")
+                print(f"{'Rank':<6} | {'Time (s)':<12} | {'Filtered Amplitude':<20}")
+                print("-" * 65)
+
+                for rank, idx in enumerate(top_indices, 1):
+                    # Convert the array index back into relative seconds
+                    t_sec = idx / self.fs
+                    amp = data[idx]
+
+                    # Highlight massive outliers for easy scanning
+                    alert = " <-- [POSSIBLE GLITCH]" if abs(amp) > 15.0 else ""
+                    print(f"#{rank:<5} | {t_sec:<12.5f} | {amp:<20.3f}{alert}")
+
+        print("=" * 65 + "\n")
+
+
+    def _extract_aligned_streams(self, center_time, t_width, f_min, f_max, active_detectors, offsets_dict, flips_dict):
+        """
+        Unified extraction engine. Buffers, filters, interpolates, and windows the data
+        strictly based on the passed-in dictionaries. Completely ignores the UI.
+        """
+        buffer_sec = 0.25
+        t_start = max(0.0, center_time - t_width / 2)
+        t_end = min(self.total_duration, center_time + t_width / 2)
+
+        t_start_buf = max(0.0, t_start - buffer_sec)
+        t_end_buf = min(self.total_duration, t_end + buffer_sec)
+
+        n_common = int((t_end - t_start) * self.fs)
+        if n_common < 2: return None
+        t_common = np.linspace(t_start, t_end, n_common)
+
+        low = max(20.0, float(f_min))
+        high = min(float(f_max), self.fs / 2.0 - 1.0)
+        apply_filter = high > low
+
+        streams = []
+        win_common = cmst(n_common)
+
+        for det in active_detectors:
+            idx_start = int(t_start_buf * self.fs)
+            idx_end = int(t_end_buf * self.fs)
+            if idx_start >= idx_end: return None
+
+            t_arr = np.arange(idx_start, idx_end) / self.fs
+            data = self.detectors[det]["whitened"][idx_start:idx_end].copy()
+
+            if apply_filter and len(data) > 8:
+                data = cmst_bandpass(data * cmst(len(data)), self.fs, low, high)
+
+            offset_sec = offsets_dict.get(det, 0.0) / 1000.0
+            shifted_t_arr = t_arr - offset_sec
+
+            is_flipped = flips_dict.get(det, False)
+            plot_data = -data if is_flipped else data
+
+            aligned = np.interp(t_common, shifted_t_arr, plot_data, left=0.0, right=0.0)
+
+            aligned -= np.mean(aligned)
+            aligned *= win_common
+            streams.append(aligned)
+
+        return streams
+
+    def _find_optimal_alignments(self, center_time, t_width, f_min, f_max, active_detectors):
+        """
+        Unified search engine. Runs the fast FFT cross-correlation against H1
+        to return the optimal offsets and polarity flips for the given window.
+        """
+        best_offsets = {det: 0.0 for det in active_detectors}
+        best_flips = {det: False for det in active_detectors}
+
+        idx_min = int((center_time - t_width / 2) * self.fs)
+        idx_max = idx_min + int(t_width * self.fs)
+
+        if "H1" in active_detectors and idx_max <= len(self.detectors["H1"]["whitened"]):
+            h1_slice = self.detectors["H1"]["whitened"][idx_min:idx_max]
+
+            for det in active_detectors:
+                if det != "H1":
+                    other_slice = self.detectors[det]["whitened"][idx_min:idx_max]
+                    try:
+                        offset_ms, _, needs_inv, _ = self.calculate_delay_xcorr(
+                            h1_slice, other_slice, self.fs, f_min, f_max, max_delay_ms=30.0
+                        )
+                        best_offsets[det] = offset_ms
+                        best_flips[det] = needs_inv
+                    except ValueError:
+                        pass
+
+        return best_offsets, best_flips
 
     def play_coherent_audio(self):
         if not (self.detectors["H1"]["loaded"] and self.fs):
@@ -2845,74 +2924,48 @@ class GWExplorerApp:
         self.root.update_idletasks()
 
         try:
-            if not self.detectors["H1"]["loaded"]:
-                raise ValueError("H1 must be loaded as the reference detector.")
+            active_detectors = [det for det in DETECTORS if
+                                self.detectors[det]["loaded"] and self.detectors[det]["active_corr"].get()]
+            if "H1" not in active_detectors:
+                raise ValueError("H1 must be loaded and active as the reference detector.")
 
-            h1_data = self.detectors["H1"]["whitened"]
             t_center = self.t_center.get()
             t_width = self.t_width_seconds
-            t_start = max(0.0, t_center - t_width / 2)
-            t_end = min(self.total_duration, t_center + t_width / 2)
+            f_min = max(35.0, self.f_min.get())
+            f_max = self.f_max.get()
 
-            idx_min = int(t_start * self.fs)
-            idx_max = int(t_end * self.fs)
+            # 1. Use the unified search engine to find the peaks
+            best_offsets, best_flips = self._find_optimal_alignments(t_center, t_width, f_min, f_max, active_detectors)
 
-            # --- RECALCULATE & LOCK WEIGHTS ---
-            for det in DETECTORS:
-                if self.detectors[det]["loaded"] and self.detectors[det]["whitened"] is not None:
-                    slice_data = self.detectors[det]["whitened"][idx_min:idx_max]
+            # 2. Extract streams using these exact optimal parameters
+            streams = self._extract_aligned_streams(t_center, t_width, f_min, f_max, active_detectors, best_offsets,
+                                                    best_flips)
+            if not streams:
+                raise ValueError("Failed to extract aligned streams.")
 
-                    if len(slice_data) > 0:
-                        var = np.var(slice_data)
-                        self.detector_weights[det] = 1.0 / (var + EPS)
-            # ---------------------------------------
+            # 3. Calculate the PCA score for the UI
+            coherence = self.calculate_pca_network_coherence(streams)
 
-            h1_slice = h1_data[idx_min:idx_max]
+            # 4. Push results directly to the UI spinboxes and checkboxes
             results = []
+            for det in active_detectors:
+                if det != "H1":
+                    rounded_ms = round(best_offsets[det], 2)
+                    self.set_detector_offset_ms(det, rounded_ms)
+                    if hasattr(self, "signal_flips") and det in self.signal_flips:
+                        self.signal_flips[det].set(best_flips[det])
+                    results.append(f"{det}: {rounded_ms:+.1f} ms")
 
-            for det in NON_REFERENCE_DETECTORS:
-                if not self.detectors[det]["loaded"]:
-                    continue
-
-                other_data = self.detectors[det]["whitened"]
-                other_slice = other_data[idx_min:idx_max]
-
-                offset_ms, lead_text, needs_inv, raw_r = self.calculate_delay_xcorr(
-                    h1_slice, other_slice, self.fs,
-                    max(35.0, self.f_min.get()), self.f_max.get(), max_delay_ms=30.0
-                )
-
-                signed_ms = offset_ms
-                rounded_ms = round(signed_ms, 2)
-
-                self.set_detector_offset_ms(det, rounded_ms)
-
-                if hasattr(self, "signal_flips") and det in self.signal_flips:
-                    self.signal_flips[det].set(needs_inv)
-
-                results.append(f"{det}: {rounded_ms:+.1f} ms (r={raw_r:.3f})")
-
-            if not results:
-                raise ValueError("No L1 or V1 detector loaded.")
-
-            # --- CLEANED TEXT OVERRIDE ---
-            # Replaced the computing text to just show the raw offsets and strengths
-            self.sky_result_text.set("Offsets: " + " | ".join(results))
+            self.sky_result_text.set(f"Coherence: {coherence:.3f} | " + " | ".join(results))
             self.lbl_offset_result.config(foreground="green")
-            self.root.update_idletasks()
 
             self.update_all_tabs()
-
-            # The self.schedule_sky_recompute() call has been completely removed from here.
-            # You will now use the "Estimate Vector" button to calculate the sky manually.
 
         except Exception as e:
             self.sky_result_text.set(f"Error: {str(e)}")
             self.lbl_offset_result.config(foreground="red")
             print(f"Correlation Error: {e}")
-    # ------------------------------------------------------------------
-    # Sky-localisation math
-    # ------------------------------------------------------------------
+
 
     def gps_to_gmst(self, gps_time):
         jd = 2444244.5 + float(gps_time) / 86400.0
