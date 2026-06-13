@@ -370,7 +370,7 @@ def apply_spectral_inversion(lowpass_taps):
 
     return highpass_taps
 
-def apply_spectral_modulation(lowpass_taps):
+def apply_spectral_inversion(lowpass_taps):
     taps = np.array(lowpass_taps, dtype=float)
     num_taps = len(taps)
 
