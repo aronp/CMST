@@ -70,7 +70,7 @@ def test_fir_frequency_response_shape():
     bandwidth = 100.0
 
     # Generate the 101-tap array
-    coeffs = cmst.generate_cmst_fir(taps=101, fs=fs, bandwidth=bandwidth, freq_power=2)
+    coeffs = cmst.generate_cmst_fir(taps=301, fs=fs, bandwidth=bandwidth, freq_power=2)
 
     # Calculate the frequency response
     # worN=8192 provides a dense, high-resolution frequency axis to interrogate
@@ -90,8 +90,9 @@ def test_fir_frequency_response_shape():
     assert amp_pass > 0.95, f"Passband attenuated too early! Amplitude at 50Hz: {amp_pass:.3f}"
 
     # Cutoff Verification
-    np.testing.assert_allclose(amp_cut, 0.5, rtol=0.20,
+    np.testing.assert_allclose(amp_cut, 0.5, rtol=0.02,
                                err_msg=f"Filter missed the 50% mark! Amplitude at 100Hz: {amp_cut:.3f}")
+    print(f"50% bandwidth is actually {amp_cut}")
 
     # Stopband Verification
     # The ripples for a 101-tap p=2 filter hover around -40dB (0.01 amplitude).
