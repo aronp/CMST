@@ -161,7 +161,7 @@ def test_hp_frequency_response_shape():
     """
     fs = 4096.0
     bandwidth = 200.0  # Cutoff at 200 Hz
-    taps = 101
+    taps = 301
 
     hp_coeffs = cmst.generate_cmst_hp_fir(taps, fs, bandwidth, freq_power=2)
 
@@ -183,8 +183,9 @@ def test_hp_frequency_response_shape():
     assert amp_blocked < 0.05, f"High-pass is leaking low frequencies! Amplitude at 50Hz: {amp_blocked:.3f}"
 
     # Cutoff Verification (Should still cross near 0.5)
-    np.testing.assert_allclose(amp_cut, 0.5, rtol=0.20,
+    np.testing.assert_allclose(amp_cut, 0.5, rtol=0.01,
                                err_msg=f"High-pass missed the 50% cutoff! Amplitude at 200Hz: {amp_cut:.3f}")
+    print(f"50% bandwidth is actually {amp_cut}")
 
     # Passband Verification (High frequencies should pass near 1.0)
     assert amp_passed > 0.95, f"High-pass attenuated the target signal! Amplitude at 1000Hz: {amp_passed:.3f}"
