@@ -305,8 +305,9 @@ def generate_cmst_fir(taps, fs, bandwidth, freq_power=2):
 
     impulse_response = np.fft.irfft(mask, n=taps)
     fir_coeffs = np.fft.fftshift(impulse_response)
+    res_fir = fir_coeffs * cmst(taps, p=freq_power)
 
-    return fir_coeffs * cmst(taps, p=freq_power)
+    return res_fir / np.sum(res_fir)
 
 
 def cmst_lowpass(strain, fs, f_high, freq_power=2):
