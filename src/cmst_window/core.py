@@ -344,3 +344,47 @@ def cmst_lowpass(strain, fs, f_high, freq_power=2):
     filtered = np.fft.irfft(filtered_spec, n=N)
 
     return filtered
+
+
+def apply_spectral_inversion(lowpass_taps):
+    taps = np.array(lowpass_taps, dtype=float)
+    num_taps = len(taps)
+
+    # Ensure an odd number of taps for a true center element
+    if num_taps % 2 == 0:
+        raise ValueError("Spectral inversion requires an odd number of taps.")
+
+    # Find the central index
+    nc = (num_taps - 1) // 2
+
+    # Calculate the actual DC gain (sum of all unnormalized taps)
+    dc_gain = np.sum(taps)
+
+    # 1. Invert the sign of every tap
+    highpass_taps = -taps
+
+    # 2. Add the original DC gain to the central tap
+    # This guarantees the new sum of all taps equals exactly 0.0
+    highpass_taps[nc] += dc_gain
+
+    return highpass_taps
+
+def apply_spectral_modulation(lowpass_taps):
+    taps = np.array(lowpass_taps, dtype=float)
+    num_taps = len(taps)
+
+    # Generate the [1, -1, 1, -1...] array
+    alternating_sequence = np.power(-1, np.arange(num_taps))
+
+    # Multiply element-wise
+    highpass_taps = taps * alternating_sequence
+
+    return highpass_taps
+
+def generate_cmst_lp_fir(taps, fs, bandwidth, freq_power=2):
+    return generate_cmst_fir(taps, fs, bandwidth, freq_power=2)
+
+def generate_cmst_hp_fir(taps, fs, bandwidth, freq_power=2):
+    return apply_spectral_inversion(generate_cmst_fir(taps, fs, bandwidth, freq_power=2))
+
+
