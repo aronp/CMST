@@ -98,4 +98,94 @@ def test_fir_frequency_response_shape():
     # We assert it must be strictly less than 0.05 (-26dB).
     assert amp_stop < 0.05, f"Stopband is leaking noise! Amplitude at 200Hz: {amp_stop:.3f}"
 
+# --- 7. DC GAIN NULLING TEST ---
+def test_hp_blocks_dc():
+    """
+    A high-pass filter must have a DC gain of exactly 0.0.
+    A low-pass filter should maintain a DC gain close to 1.0.
+    """
+    fs = 4096.0
+    bandwidth = 200.0
+    taps = 101
+
+    lp_coeffs = cmst.generate_cmst_lp_fir(taps, fs, bandwidth)
+    hp_coeffs = cmst.generate_cmst_hp_fir(taps, fs, bandwidth)
+
+    lp_dc_gain = np.sum(lp_coeffs)
+    hp_dc_gain = np.sum(hp_coeffs)
+
+    # Low-pass should sum to roughly 1.0 (depending on your internal normalization)
+    # We use a loose tolerance here just to ensure it's passing DC.
+    assert lp_dc_gain > 0.5, f"Low-pass filter is blocking DC! Gain: {lp_dc_gain:.3f}"
+
+    # High-pass MUST sum to 0.0 to perfectly block DC
+    np.testing.assert_allclose(hp_dc_gain, 0.0, atol=1e-10,
+                               err_msg=f"High-pass filter failed to block DC! Gain: {hp_dc_gain:.8f}")
+
+
+# --- 8. PERFECT COMPLEMENT (RECONSTRUCTION) TEST ---
+def test_lp_hp_complementary_reconstruction():
+    """
+    Adding the LP and HP coefficients together should perfectly reconstruct
+    an all-pass impulse (a Dirac delta function).
+    """
+    fs = 4096.0
+    bandwidth = 200.0
+    taps = 101
+    center_idx = taps // 2
+
+    lp_coeffs = cmst.generate_cmst_lp_fir(taps, fs, bandwidth)
+    hp_coeffs = cmst.generate_cmst_hp_fir(taps, fs, bandwidth)
+
+    # Combine them
+    combined_coeffs = lp_coeffs + hp_coeffs
+
+    # The sum should be 1.0 at the center
+    np.testing.assert_allclose(combined_coeffs[center_idx], 1.0, atol=1e-10,
+                               err_msg="Combined center tap does not equal 1.0")
+
+    # The sum should be 0.0 everywhere else (destructive interference)
+    combined_coeffs[center_idx] = 0.0  # Zero out the center to test the tails
+    tail_energy = np.sum(np.abs(combined_coeffs))
+
+    np.testing.assert_allclose(tail_energy, 0.0, atol=1e-10,
+                               err_msg="LP and HP tails did not perfectly cancel out!")
+
+
+# --- 9. HIGH-PASS FREQUENCY RESPONSE TEST ---
+def test_hp_frequency_response_shape():
+    """
+    Calculates the exact transfer function of the HP FIR coefficients to verify
+    the stopband (low freqs) is crushed and the passband (high freqs) is preserved.
+    """
+    fs = 4096.0
+    bandwidth = 200.0  # Cutoff at 200 Hz
+    taps = 101
+
+    hp_coeffs = cmst.generate_cmst_hp_fir(taps, fs, bandwidth, freq_power=2)
+
+    w, h = sig.freqz(hp_coeffs, worN=8192, fs=fs)
+    amplitude = np.abs(h)
+
+    def get_amp_at_target(target_f):
+        idx = np.argmin(np.abs(w - target_f))
+        return amplitude[idx]
+
+    # For a HP filter, frequencies BELOW bandwidth should be blocked,
+    # and frequencies ABOVE should pass.
+
+    amp_blocked = get_amp_at_target(50.0)  # Deep in the stopband
+    amp_cut = get_amp_at_target(200.0)  # Exactly at cutoff
+    amp_passed = get_amp_at_target(1000.0)  # Deep in the passband
+
+    # Stopband Verification (Low frequencies should be dead)
+    assert amp_blocked < 0.05, f"High-pass is leaking low frequencies! Amplitude at 50Hz: {amp_blocked:.3f}"
+
+    # Cutoff Verification (Should still cross near 0.5)
+    np.testing.assert_allclose(amp_cut, 0.5, rtol=0.20,
+                               err_msg=f"High-pass missed the 50% cutoff! Amplitude at 200Hz: {amp_cut:.3f}")
+
+    # Passband Verification (High frequencies should pass near 1.0)
+    assert amp_passed > 0.95, f"High-pass attenuated the target signal! Amplitude at 1000Hz: {amp_passed:.3f}"
+
 
