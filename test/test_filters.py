@@ -3,19 +3,26 @@ import scipy.signal as sig
 import pytest
 import cmst_window as cmst
 
+
+FILTER_POWER = 4
+TAPS = 301
+FS = 4096.0
+N = 4096
+BANDWIDTH = 200
+
 # --- 1. THE ZERO-PHASE (SYMMETRY) TEST ---
 def test_zero_phase_preservation():
     """An impulse must remain perfectly centered after filtering."""
-    fs = 4096.0
-    N = 4096
+    fs = FS
+    n = N
     
     # Create an array of zeros with a single massive spike exactly in the middle
-    impulse = np.zeros(N)
-    center_idx = N // 2
+    impulse = np.zeros(n)
+    center_idx = n // 2
     impulse[center_idx] = 1.0
     
     # Filter it
-    filtered = cmst.cmst_lowpass(impulse, fs, f_high=100.0, freq_power=2)
+    filtered = cmst.cmst_lowpass(impulse, fs, f_high=BANDWIDTH, freq_power=2)
     
     # Find the new peak
     new_peak_idx = np.argmax(filtered)
@@ -26,7 +33,7 @@ def test_zero_phase_preservation():
 # --- 2. THE AMPLITUDE CUTOFF TEST ---
 def test_exact_50_percent_cutoff():
     """A sine wave exactly at f_high must be reduced to exactly 50% amplitude."""
-    fs = 4096.0
+    fs = FS
     duration = 2.0
     t = np.arange(0, duration, 1.0/fs)
     f_target = 150.0
@@ -50,14 +57,14 @@ def test_exact_50_percent_cutoff():
 
 def test_fir_generator_forces_odd_taps():
     """Requesting an even number of taps must return an odd-length array."""
-    fs = 4096.0
-    bandwidth = 100.0
+    fs = FS
+    bandwidth = BANDWIDTH
     
-    # Request an explicitly even number of taps (100)
-    coeffs = cmst.generate_cmst_fir(taps=100, fs=fs, bandwidth=bandwidth)
+    # Request an explicitly even number of taps
+    coeffs = cmst.generate_cmst_fir(taps=TAPS+1, fs=fs, bandwidth=BANDWIDTH,freq_power=FILTER_POWER)
     
     # Assert the function caught it and appended the center tap
-    assert len(coeffs) == 101, "FIR generator failed to force odd-symmetry!"
+    assert len(coeffs) == TAPS+2, "FIR generator failed to force odd-symmetry!"
 
 
 # --- 6. THE FREQUENCY RESPONSE SHAPE TEST ---
@@ -66,15 +73,13 @@ def test_fir_frequency_response_shape():
     Calculates the exact transfer function of the FIR coefficients to verify
     the passband is preserved, the 50% cutoff is close, and the stopband is crushed.
     """
-    fs = 4096.0
-    bandwidth = 100.0
+    fs = FS
+    bandwidth = BANDWIDTH
 
-    # Generate the 101-tap array
-    coeffs = cmst.generate_cmst_fir(taps=301, fs=fs, bandwidth=bandwidth, freq_power=2)
+    coeffs = cmst.generate_cmst_fir(taps=TAPS, fs=fs, bandwidth=bandwidth, freq_power=FILTER_POWER)
 
     # Calculate the frequency response
-    # worN=8192 provides a dense, high-resolution frequency axis to interrogate
-    w, h = sig.freqz(coeffs, worN=8192, fs=fs)
+    w, h = sig.freqz(coeffs, worN=N, fs=fs)
     amplitude = np.abs(h)
 
     # Helper function to find the amplitude at a specific target frequency
@@ -82,20 +87,18 @@ def test_fir_frequency_response_shape():
         idx = np.argmin(np.abs(w - target_f))
         return amplitude[idx]
 
-    amp_pass = get_amp_at_target(bandwidth / 2.0)  # 50 Hz
-    amp_cut = get_amp_at_target(bandwidth)  # 100 Hz
-    amp_stop = get_amp_at_target(bandwidth * 2.0)  # 200 Hz
+    amp_pass = get_amp_at_target(bandwidth / 2.0)
+    amp_cut = get_amp_at_target(bandwidth)
+    amp_stop = get_amp_at_target(bandwidth * 2.0)
 
     # Passband Verification
-    assert amp_pass > 0.95, f"Passband attenuated too early! Amplitude at 50Hz: {amp_pass:.3f}"
+    assert amp_pass > 0.95, f"Passband attenuated too early! Amplitude at BANDWIDTH/2 Hz: {amp_pass:.3f}"
 
     # Cutoff Verification
-    np.testing.assert_allclose(amp_cut, 0.5, rtol=0.02,
-                               err_msg=f"Filter missed the 50% mark! Amplitude at 100Hz: {amp_cut:.3f}")
-    print(f"50% bandwidth is actually {amp_cut}")
+    np.testing.assert_allclose(amp_cut, 0.5, rtol=0.01,
+                               err_msg=f"Filter missed the 50% mark! Amplitude at BANDWIDTH Hz: {amp_cut:.3f}")
 
     # Stopband Verification
-    # The ripples for a 101-tap p=2 filter hover around -40dB (0.01 amplitude).
     # We assert it must be strictly less than 0.05 (-26dB).
     assert amp_stop < 0.05, f"Stopband is leaking noise! Amplitude at 200Hz: {amp_stop:.3f}"
 
@@ -105,12 +108,12 @@ def test_hp_blocks_dc():
     A high-pass filter must have a DC gain of exactly 0.0.
     A low-pass filter should maintain a DC gain close to 1.0.
     """
-    fs = 4096.0
+    fs = FS
     bandwidth = 200.0
-    taps = 101
+    taps = TAPS
 
-    lp_coeffs = cmst.generate_cmst_lp_fir(taps, fs, bandwidth)
-    hp_coeffs = cmst.generate_cmst_hp_fir(taps, fs, bandwidth)
+    lp_coeffs = cmst.generate_cmst_lp_fir(TAPS, fs, bandwidth,freq_power=FILTER_POWER)
+    hp_coeffs = cmst.generate_cmst_hp_fir(TAPS, fs, bandwidth,freq_power=FILTER_POWER)
 
     lp_dc_gain = np.sum(lp_coeffs)
     hp_dc_gain = np.sum(hp_coeffs)
@@ -130,13 +133,13 @@ def test_lp_hp_complementary_reconstruction():
     Adding the LP and HP coefficients together should perfectly reconstruct
     an all-pass impulse (a Dirac delta function).
     """
-    fs = 4096.0
+    fs = FS
     bandwidth = 200.0
-    taps = 101
+    taps = TAPS
     center_idx = taps // 2
 
-    lp_coeffs = cmst.generate_cmst_lp_fir(taps, fs, bandwidth)
-    hp_coeffs = cmst.generate_cmst_hp_fir(taps, fs, bandwidth)
+    lp_coeffs = cmst.generate_cmst_lp_fir(TAPS, fs, bandwidth,freq_power=FILTER_POWER)
+    hp_coeffs = cmst.generate_cmst_hp_fir(TAPS, fs, bandwidth,freq_power=FILTER_POWER)
 
     # Combine them
     combined_coeffs = lp_coeffs + hp_coeffs
@@ -159,13 +162,13 @@ def test_hp_frequency_response_shape():
     Calculates the exact transfer function of the HP FIR coefficients to verify
     the stopband (low freqs) is crushed and the passband (high freqs) is preserved.
     """
-    fs = 4096.0
-    bandwidth = 200.0  # Cutoff at 200 Hz
+    fs = FS
+    bandwidth = BANDWIDTH  # Cutoff at 200 Hz
     taps = 301
 
-    hp_coeffs = cmst.generate_cmst_hp_fir(taps, fs, bandwidth, freq_power=2)
+    hp_coeffs = cmst.generate_cmst_hp_fir(TAPS, fs, bandwidth, freq_power=FILTER_POWER)
 
-    w, h = sig.freqz(hp_coeffs, worN=8192, fs=fs)
+    w, h = sig.freqz(hp_coeffs, worN=N, fs=fs)
     amplitude = np.abs(h)
 
     def get_amp_at_target(target_f):
@@ -175,19 +178,17 @@ def test_hp_frequency_response_shape():
     # For a HP filter, frequencies BELOW bandwidth should be blocked,
     # and frequencies ABOVE should pass.
 
-    amp_blocked = get_amp_at_target(50.0)  # Deep in the stopband
-    amp_cut = get_amp_at_target(200.0)  # Exactly at cutoff
-    amp_passed = get_amp_at_target(1000.0)  # Deep in the passband
+    amp_blocked = get_amp_at_target(bandwidth/2.0)  # Deep in the stopband
+    amp_cut = get_amp_at_target(bandwidth)  # Exactly at cutoff
+    amp_passed = get_amp_at_target(bandwidth * 5)  # Deep in the passband
 
     # Stopband Verification (Low frequencies should be dead)
-    assert amp_blocked < 0.05, f"High-pass is leaking low frequencies! Amplitude at 50Hz: {amp_blocked:.3f}"
+    assert amp_blocked < 0.05, f"High-pass is leaking low frequencies! Amplitude at BANDWIDTH/2 Hz: {amp_blocked:.3f}"
 
     # Cutoff Verification (Should still cross near 0.5)
     np.testing.assert_allclose(amp_cut, 0.5, rtol=0.01,
-                               err_msg=f"High-pass missed the 50% cutoff! Amplitude at 200Hz: {amp_cut:.3f}")
-    print(f"50% bandwidth is actually {amp_cut}")
-
+                               err_msg=f"High-pass missed the 50% cutoff! Amplitude at BANDWIDTH * 2 Hz: {amp_cut:.3f}")
     # Passband Verification (High frequencies should pass near 1.0)
-    assert amp_passed > 0.95, f"High-pass attenuated the target signal! Amplitude at 1000Hz: {amp_passed:.3f}"
+    assert amp_passed > 0.95, f"High-pass attenuated the target signal! Amplitude at BANDWIDTH 0Hz: {amp_passed:.3f}"
 
 
