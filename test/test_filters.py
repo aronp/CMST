@@ -204,8 +204,20 @@ def test_lp_hp_signal_recovery_in_noise():
     t = np.arange(0, duration, 1.0 / fs)
 
     # 1. Define Frequencies
-    f_lp = bandwidth / 2.0  # 50 Hz (Target for LP, Reject for HP)
-    f_hp = bandwidth * 2.0  # 200 Hz (Reject for LP, Target for HP)
+    f_lp = bandwidth / 1.5  # 50 Hz (Target for LP, Reject for HP)
+    f_hp = bandwidth * 1.5  # 200 Hz (Reject for LP, Target for HP)
+
+    # Generate a textbook Blackman window FIR filter with exactly 301 taps
+    # Note: firwin uses a normalized cutoff frequency (Nyquist = 1.0)
+    nyquist = fs / 2.0
+    normalized_cutoff = bandwidth / nyquist
+
+    # Low-pass Blackman
+    blackman_lp_coeffs = sig.firwin(TAPS, normalized_cutoff, window='blackman')
+
+    # High-pass Hamming
+    hamming_hp_coeffs = sig.firwin(TAPS, normalized_cutoff, window='hamming', pass_zero=False)
+
 
     # 2. Generate pure signals (Amplitude = 1.0)
     s_lp = np.sin(2 * np.pi * f_lp * t)
@@ -220,8 +232,10 @@ def test_lp_hp_signal_recovery_in_noise():
     x = s_lp + s_hp + noise
 
     # 5. Generate both filters
-    lp_coeffs = cmst.generate_cmst_lp_fir(TAPS, fs, bandwidth, freq_power=FILTER_POWER)
-    hp_coeffs = cmst.generate_cmst_hp_fir(TAPS, fs, bandwidth, freq_power=FILTER_POWER)
+    lp_coeffs = cmst.generate_cmst_lp_fir(TAPS, fs, bandwidth, freq_power=6)
+    # lp_coeffs = blackman_lp_coeffs
+    hp_coeffs = cmst.generate_cmst_hp_fir(TAPS, fs, bandwidth, freq_power=6)
+    # hp_coeffs = hamming_hp_coeffs
 
     # 6. Apply filters
     # mode='same' keeps the array length identical to 't', but creates edge transients
@@ -253,8 +267,6 @@ def test_lp_hp_signal_recovery_in_noise():
     print(
         f"\nLP Output -> Target ({f_lp}Hz) Amp: {lp_recovered_target:.3f} ({lp_target_db:+.1f} dB) | Leaked ({f_hp}Hz) Amp: {lp_leaked_reject:.4f} ({lp_leaked_db:.1f} dB)")
 
-    assert lp_recovered_target > 0.95, f"LP failed to recover signal! Amp: {lp_recovered_target:.3f}"
-    assert lp_leaked_reject < 0.05, f"LP failed to reject high frequencies! Leakage: {lp_leaked_reject:.3f}"
 
     # --- B. High-Pass Filter Evaluation ---
     hp_recovered_target = measure_amplitude(y_hp_mid, s_hp_ref)
@@ -265,6 +277,10 @@ def test_lp_hp_signal_recovery_in_noise():
 
     print(
         f"HP Output -> Target ({f_hp}Hz) Amp: {hp_recovered_target:.3f} ({hp_target_db:+.1f} dB) | Leaked ({f_lp}Hz) Amp: {hp_leaked_reject:.4f} ({hp_leaked_db:.1f} dB)")
+
+
+    assert lp_recovered_target > 0.95, f"LP failed to recover signal! Amp: {lp_recovered_target:.3f}"
+    assert lp_leaked_reject < 0.05, f"LP failed to reject high frequencies! Leakage: {lp_leaked_reject:.3f}"
 
     assert hp_recovered_target > 0.95, f"HP failed to recover signal! Amp: {hp_recovered_target:.3f}"
     assert hp_leaked_reject < 0.05, f"HP failed to reject low frequencies! Leakage: {hp_leaked_reject:.3f}"
