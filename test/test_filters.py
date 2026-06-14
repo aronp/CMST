@@ -192,3 +192,79 @@ def test_hp_frequency_response_shape():
     assert amp_passed > 0.95, f"High-pass attenuated the target signal! Amplitude at BANDWIDTH 0Hz: {amp_passed:.3f}"
 
 
+def test_lp_hp_signal_recovery_in_noise():
+    """
+    Injects a composite signal (LP target + HP target + Gaussian noise) into both filters.
+    Uses time-domain orthogonal demodulation to measure the recovered amplitude
+    of the target signal and the rejection of the unwanted signal.
+    """
+    fs = FS
+    bandwidth = BANDWIDTH  # Or whatever your standard test bandwidth is
+    duration = 2.0
+    t = np.arange(0, duration, 1.0 / fs)
+
+    # 1. Define Frequencies
+    f_lp = bandwidth / 2.0  # 50 Hz (Target for LP, Reject for HP)
+    f_hp = bandwidth * 2.0  # 200 Hz (Reject for LP, Target for HP)
+
+    # 2. Generate pure signals (Amplitude = 1.0)
+    s_lp = np.sin(2 * np.pi * f_lp * t)
+    s_hp = np.sin(2 * np.pi * f_hp * t)
+
+    # 3. Add Gaussian white noise
+    noise_std = 0.2  # Moderate noise
+    rng = np.random.default_rng(seed=42)  # Lock the random state
+    noise = rng.normal(0, noise_std, len(t))
+    
+    # 4. Create the messy composite input signal
+    x = s_lp + s_hp + noise
+
+    # 5. Generate both filters
+    lp_coeffs = cmst.generate_cmst_lp_fir(TAPS, fs, bandwidth, freq_power=FILTER_POWER)
+    hp_coeffs = cmst.generate_cmst_hp_fir(TAPS, fs, bandwidth, freq_power=FILTER_POWER)
+
+    # 6. Apply filters
+    # mode='same' keeps the array length identical to 't', but creates edge transients
+    y_lp = np.convolve(x, lp_coeffs, mode='same')
+    y_hp = np.convolve(x, hp_coeffs, mode='same')
+
+    # 7. Mask out the filter edge transients (first and last 0.25 seconds)
+    # FIR filters need time to "fill up" their buffer.
+    mid_mask = (t > 0.25) & (t < 1.75)
+
+    y_lp_mid = y_lp[mid_mask]
+    y_hp_mid = y_hp[mid_mask]
+    s_lp_ref = s_lp[mid_mask]
+    s_hp_ref = s_hp[mid_mask]
+
+    # --- Helper: Lock-in Amplitude Measurement ---
+    # Multiplying by the reference sine wave and taking the mean isolates that exact frequency.
+    # Multiplying the result by 2 restores the peak amplitude measurement.
+    def measure_amplitude(signal, reference):
+        return 2.0 * np.abs(np.mean(signal * reference))
+
+    # --- A. Low-Pass Filter Evaluation ---
+    lp_recovered_target = measure_amplitude(y_lp_mid, s_lp_ref)
+    lp_leaked_reject = measure_amplitude(y_lp_mid, s_hp_ref)
+
+    lp_target_db = 20.0 * np.log10(max(lp_recovered_target, 1e-20))
+    lp_leaked_db = 20.0 * np.log10(max(lp_leaked_reject, 1e-20))
+
+    print(
+        f"\nLP Output -> Target ({f_lp}Hz) Amp: {lp_recovered_target:.3f} ({lp_target_db:+.1f} dB) | Leaked ({f_hp}Hz) Amp: {lp_leaked_reject:.4f} ({lp_leaked_db:.1f} dB)")
+
+    assert lp_recovered_target > 0.95, f"LP failed to recover signal! Amp: {lp_recovered_target:.3f}"
+    assert lp_leaked_reject < 0.05, f"LP failed to reject high frequencies! Leakage: {lp_leaked_reject:.3f}"
+
+    # --- B. High-Pass Filter Evaluation ---
+    hp_recovered_target = measure_amplitude(y_hp_mid, s_hp_ref)
+    hp_leaked_reject = measure_amplitude(y_hp_mid, s_lp_ref)
+
+    hp_target_db = 20.0 * np.log10(max(hp_recovered_target, 1e-100))
+    hp_leaked_db = 20.0 * np.log10(max(hp_leaked_reject, 1e-100))
+
+    print(
+        f"HP Output -> Target ({f_hp}Hz) Amp: {hp_recovered_target:.3f} ({hp_target_db:+.1f} dB) | Leaked ({f_lp}Hz) Amp: {hp_leaked_reject:.4f} ({hp_leaked_db:.1f} dB)")
+
+    assert hp_recovered_target > 0.95, f"HP failed to recover signal! Amp: {hp_recovered_target:.3f}"
+    assert hp_leaked_reject < 0.05, f"HP failed to reject low frequencies! Leakage: {hp_leaked_reject:.3f}"
