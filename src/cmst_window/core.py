@@ -284,7 +284,7 @@ def get_normalised_cmst_window(N):
         
     return my_g
 
-def generate_cmst_fir(taps, fs, bandwidth, freq_power=2):
+def generate_cmst_fir(taps, fs, bandwidth, freq_power=4):
     """Generates linear FIR coefficients from the continuous CMST frequency mask."""
     if taps % 2 == 0:
         taps += 1
@@ -310,7 +310,7 @@ def generate_cmst_fir(taps, fs, bandwidth, freq_power=2):
     return res_fir / np.sum(res_fir)
 
 
-def cmst_lowpass(strain, fs, f_high, freq_power=2):
+def cmst_lowpass(strain, fs, f_high, freq_power=4):
     """
     Ultra-fast, zero-phase CMST low-pass filter.
     Centers the window at 0 Hz to perfectly pass DC/low frequencies,
@@ -370,7 +370,7 @@ def apply_spectral_inversion(lowpass_taps):
 
     return highpass_taps
 
-def apply_spectral_inversion(lowpass_taps):
+def apply_spectral_modulation(lowpass_taps):
     taps = np.array(lowpass_taps, dtype=float)
     num_taps = len(taps)
 
@@ -382,10 +382,10 @@ def apply_spectral_inversion(lowpass_taps):
 
     return highpass_taps
 
-def generate_cmst_lp_fir(taps, fs, bandwidth, freq_power=2):
-    return generate_cmst_fir(taps, fs, bandwidth, freq_power=2)
+def generate_cmst_lp_fir(taps, fs, bandwidth, freq_power=4):
+    return generate_cmst_fir(taps, fs, bandwidth, freq_power)
 
-def generate_cmst_hp_fir(taps, fs, bandwidth, freq_power=2):
-    return apply_spectral_inversion(generate_cmst_fir(taps, fs, bandwidth, freq_power=2))
+def generate_cmst_hp_fir(taps, fs, bandwidth, freq_power=4):
+    return apply_spectral_inversion(generate_cmst_fir(taps, fs, bandwidth, freq_power))
 
 
