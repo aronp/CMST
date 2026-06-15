@@ -301,7 +301,7 @@ def test_compact_orthogonality():
     w_cmst = cmst.cmst(fs)
 
     # 3. Fractional frequencies to avoid trivial integer-grid alignment
-    f1, f2 = 50.3, 120.7
+    f1, f2 = 50.3, 150.7
     s1 = np.cos(2 * np.pi * f1 * t)
     s2 = np.cos(2 * np.pi * f2 * t)
 
