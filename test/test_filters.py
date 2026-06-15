@@ -284,3 +284,35 @@ def test_lp_hp_signal_recovery_in_noise():
 
     assert hp_recovered_target > 0.95, f"HP failed to recover signal! Amp: {hp_recovered_target:.3f}"
     assert hp_leaked_reject < 0.05, f"HP failed to reject low frequencies! Leakage: {hp_leaked_reject:.3f}"
+
+
+def test_compact_orthogonality():
+    """
+    Numerically verifies the preservation of orthogonality on a compact
+    domain [-1, 1] by computing the cross-frequency inner product.
+    """
+    # 1. High-resolution continuous approximation to avoid discrete aliasing
+    fs = 1_000_000
+    t = np.linspace(-1.0, 1.0, fs, endpoint=False)
+    dt = t[1] - t[0]
+
+    # 2. Generate the CMST (Gevrey class) and Blackman benchmark windows
+    safe_t = np.clip(t, -1 + 1e-12, 1 - 1e-12)
+    w_cmst = cmst.cmst(fs)
+
+    # 3. Fractional frequencies to avoid trivial integer-grid alignment
+    f1, f2 = 50.3, 120.7
+    s1 = np.cos(2 * np.pi * f1 * t)
+    s2 = np.cos(2 * np.pi * f2 * t)
+
+    # 4. Compute cross-frequency inner products: <w*s1, w*s2>
+    cmst_cross = np.trapezoid(w_cmst**2 * s1 * s2, dx=dt)
+
+    # 5. Normalize to total window energy for dB comparison
+    cmst_energy = 0.5 * np.trapezoid(w_cmst**2, dx=dt)
+
+    cmst_leakage = 20 * np.log10(abs(cmst_cross) / cmst_energy)
+
+    print(f"CMST Cross-Frequency Leakage:     {cmst_leakage:.1f} dB")
+
+    assert cmst_leakage < -200, f"Not orthoganal: {cmst_leakage:.3f}"
