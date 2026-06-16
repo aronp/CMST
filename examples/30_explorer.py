@@ -25,6 +25,8 @@ from urllib.parse import urlencode
 import sounddevice as sd
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import scipy.ndimage
+
 
 # -----------------------------------------------------------------------------
 # Central application configuration
@@ -456,6 +458,7 @@ class GWExplorerApp:
         self.detector_weights = {det: 1.0 for det in DETECTORS}
         self.catalog_filters = {
             "search": "",
+            "catalog": "Any",
             "dur": "Any",
             "rate": "Any",
             "det": "Any"
@@ -700,7 +703,7 @@ class GWExplorerApp:
 
 
     def _init_ui_variables(self):
-        self.whiten_interval = tk.DoubleVar(value=5.0)
+        self.whiten_interval = tk.DoubleVar(value=2.0)
         self.nperseg = tk.IntVar(value=256)
         self.nfft = tk.IntVar(value=1024)
         self.overlap_pct = tk.DoubleVar(value=85.0)
@@ -2124,6 +2127,11 @@ class GWExplorerApp:
         combo_frame = ttk.Frame(filter_frame)
         combo_frame.pack(fill=tk.X, pady=(4, 0))
 
+        ttk.Label(combo_frame, text="Catalog:").pack(side=tk.LEFT, padx=(0, 2))
+        cat_var = tk.StringVar(value=self.catalog_filters.get("catalog", "Any"))
+        cat_combo = ttk.Combobox(combo_frame, textvariable=cat_var, state="readonly", width=14)
+        cat_combo.pack(side=tk.LEFT, padx=(0, 15))
+
         ttk.Label(combo_frame, text="Duration (s):").pack(side=tk.LEFT, padx=(0, 2))
         dur_var = tk.StringVar(value=self.catalog_filters["dur"])
         dur_combo = ttk.Combobox(combo_frame, textvariable=dur_var, state="readonly", width=8)
@@ -2144,18 +2152,20 @@ class GWExplorerApp:
         results_frame = ttk.LabelFrame(win, text="Available Telemetry Configurations", padding=10)
         results_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        columns = ('event_id', 'duration', 'rate', 'filenames')
+        columns = ('event_id', 'catalog', 'duration', 'rate', 'filenames')
         self.tree = ttk.Treeview(results_frame, columns=columns, show='headings', selectmode='browse')
 
         self.tree.heading('event_id', text='Event ID')
+        self.tree.heading('catalog', text='Catalog')
         self.tree.heading('duration', text='Duration (s)')
         self.tree.heading('rate', text='Rate')
         self.tree.heading('filenames', text='Exact Filenames')
 
         self.tree.column('event_id', width=120, anchor=tk.CENTER)
+        self.tree.column('catalog', width=130, anchor=tk.CENTER)
         self.tree.column('duration', width=90, anchor=tk.CENTER)
         self.tree.column('rate', width=80, anchor=tk.CENTER)
-        self.tree.column('filenames', width=650, anchor=tk.W)
+        self.tree.column('filenames', width=520, anchor=tk.W)
 
         self.tree.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
 
@@ -2167,7 +2177,6 @@ class GWExplorerApp:
         progress_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(0, 5))
 
         cat_pbar = ttk.Progressbar(progress_frame, orient=tk.HORIZONTAL, mode='determinate')
-
         cat_pbar.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         cat_lbl = ttk.Label(progress_frame, text="Cache Status: Waiting...", font=('Helvetica', 9, 'italic'),
@@ -2198,7 +2207,7 @@ class GWExplorerApp:
             cat_pbar.config(value=0)
             threading.Thread(target=download_and_compile_catalog, daemon=True).start()
 
-        def process_single_event(name):
+        def process_single_event(name, catalog_name="Unknown"):
             from gwosc.locate import get_event_urls
             if not isinstance(name, str) or len(name) < 2:
                 return []
@@ -2242,6 +2251,7 @@ class GWExplorerApp:
                 filenames_str = " | ".join([f"{d}: {files_dict[d]['filename']}" for d in sorted(files_dict.keys())])
                 event_records.append({
                     'event': name,
+                    'catalog': catalog_name,
                     'duration': duration,
                     'rate': rate,
                     'files_dict': files_dict,
@@ -2253,35 +2263,123 @@ class GWExplorerApp:
 
         def download_and_compile_catalog():
             try:
-                from gwosc.datasets import find_datasets
-                self.root.after(0, lambda: cat_lbl.config(text="Fetching master event signature list..."))
-                all_events = find_datasets(type='event')
-                if not all_events:
-                    raise ValueError("No distinct event signatures returned from client query module.")
+                import requests
+                from requests.adapters import HTTPAdapter
+                from urllib3.util.retry import Retry
+                from concurrent.futures import ThreadPoolExecutor, as_completed
 
+                self.root.after(0, lambda: cat_lbl.config(text="Fetching master event index..."))
+                self.root.after(0, lambda: cat_pbar.config(mode='indeterminate'))
+                self.root.after(0, lambda: cat_pbar.start(10))
+
+                # 1. Setup a resilient HTTP session with Keep-Alive and Retries
+                session = requests.Session()
+                retries = Retry(total=5, backoff_factor=0.5, status_forcelist=[429, 500, 502, 503, 504])
+                session.mount('https://', HTTPAdapter(max_retries=retries, pool_connections=12, pool_maxsize=12))
+
+                # 2. Get the master index
+                url = "https://gwosc.org/eventapi/json/allevents/"
+                response = session.get(url, timeout=30)
+                response.raise_for_status()
+                events_dict = response.json().get("events", {})
+
+                # 3. Process all events (No "confident" filter)
+                latest_events = {}
+                for full_id, data in events_dict.items():
+                    common_name = data.get("commonName", full_id.split('-')[0])
+
+                    # If multiple versions exist (e.g. v1, v3), keep the highest
+                    if common_name not in latest_events or full_id > latest_events[common_name]['id']:
+                        latest_events[common_name] = {
+                            'id': full_id,
+                            'catalog': data.get("catalog.shortName", "Unknown")
+                        }
+
+                total_events = len(latest_events)
                 compiled_records = []
-                total_events = len(all_events)
                 completed_count = 0
 
-                with ThreadPoolExecutor(max_workers=20) as executor:
-                    future_to_event = {executor.submit(process_single_event, name): name for name in all_events}
+                self.root.after(0, lambda: cat_pbar.stop())
+                self.root.after(0, lambda: cat_pbar.config(mode='determinate', value=0))
+                self.root.after(0, lambda: cat_lbl.config(text=f"Fetching file matrices for {total_events} events..."))
 
-                    for future in as_completed(future_to_event):
-                        name = future_to_event[future]
+                # 4. Worker function: 1 targeted API call per event
+                def fetch_event_data(name, info):
+                    cat_short = info['catalog']
+                    version_str = "v1"
+                    if '-' in info['id']:
+                        v_part = info['id'].split('-')[-1]
+                        if v_part.startswith('v'): version_str = v_part
+
+                    event_url = f"https://gwosc.org/eventapi/json/{cat_short}/{name}/{version_str}/"
+
+                    try:
+                        res = session.get(event_url, timeout=15)
+                        if res.status_code != 200:
+                            res = session.get(f"https://gwosc.org/eventapi/json/allevents/{info['id']}/", timeout=15)
+
+                        res.raise_for_status()
+
+                        strain_data = res.json().get("events", {}).get(info['id'], {}).get("strain", [])
+
+                        variants = {}
+                        for s in strain_data:
+                            if s.get("format", "").lower() != "hdf5": continue
+                            det = s.get("detector", "Unknown")
+                            if det == "Unknown": continue
+
+                            rate_hz = s.get("sampling_rate", 0)
+                            rate_str = "16kHz" if rate_hz == 16384 else ("4kHz" if rate_hz == 4096 else f"{rate_hz}Hz")
+                            dur_str = str(s.get("duration", "Unknown"))
+
+                            url_str = s.get("url", "")
+                            filename = url_str.split("/")[-1] if url_str else "Unknown"
+
+                            key = (rate_str, dur_str)
+                            if key not in variants:
+                                variants[key] = {}
+                            variants[key][det] = {"filename": filename, "url": url_str}
+
+                        records = []
+                        for (rate, duration), files_dict in variants.items():
+                            filenames_str = " | ".join(
+                                [f"{d}: {files_dict[d]['filename']}" for d in sorted(files_dict.keys())])
+                            records.append({
+                                'event': name,
+                                'catalog': info['catalog'],
+                                'duration': duration,
+                                'rate': rate,
+                                'files_dict': files_dict,
+                                'filenames_str': filenames_str,
+                                'num_detectors': len(files_dict)
+                            })
+                        return records
+                    except Exception as e:
+                        return []
+
+                # 5. Fetch concurrently
+                with ThreadPoolExecutor(max_workers=12) as executor:
+                    futures = {executor.submit(fetch_event_data, name, info): name for name, info in
+                               latest_events.items()}
+
+                    for future in as_completed(futures):
+                        name = futures[future]
                         completed_count += 1
 
-                        pct = int((completed_count / total_events) * 100)
-                        self.root.after(0, lambda p=pct, n=name, c=completed_count, t=total_events: [
-                            cat_pbar.config(value=p),
-                            cat_lbl.config(text=f"Processed {n} ({c}/{t})...")
-                        ])
+                        if completed_count % 5 == 0:
+                            pct = int((completed_count / total_events) * 100)
+                            self.root.after(0, lambda p=pct, n=name, c=completed_count, t=total_events: [
+                                cat_pbar.config(value=p),
+                                cat_lbl.config(text=f"Indexed {n} ({c}/{t})...")
+                            ])
 
-                        result = future.result()
-                        if result:
-                            compiled_records.extend(result)
+                        res = future.result()
+                        if res:
+                            compiled_records.extend(res)
 
                 self.master_records = compiled_records
 
+                # Save cache
                 cache_structure = {'records': self.master_records}
                 with open(CACHE_FILE, 'w') as f:
                     json.dump(cache_structure, f, indent=2)
@@ -2290,77 +2388,77 @@ class GWExplorerApp:
                 self.root.after(0, apply_filter)
                 self.root.after(0, lambda: [
                     cat_pbar.config(value=100),
-                    cat_lbl.config(text=f"Complete! Indexed {len(self.master_records)} valid tracks.",
+                    cat_lbl.config(text=f"Complete! Fully cached {len(self.master_records)} variants.",
                                    foreground="green")
                 ])
 
             except Exception as e:
                 self.root.after(0, lambda err=e: [
-                    messagebox.showerror("API Connection Error", f"Failed to parse catalog: {str(err)}"),
+                    messagebox.showerror("API Connection Error", f"Failed to download catalog: {str(err)}"),
                     cat_lbl.config(text="Download failed.", foreground="red")
                 ])
-
+                
         def populate_combos():
-            # Extract unique values from the master records
             unique_durs = sorted(list(set(str(r['duration']) for r in self.master_records)))
             unique_rates = sorted(list(set(str(r['rate']) for r in self.master_records)))
             unique_dets = sorted(
                 list(set(str(r.get('num_detectors', len(r['files_dict']))) for r in self.master_records)))
+            unique_cats = sorted(list(set(str(r.get('catalog', 'Unknown')) for r in self.master_records)))
 
-            # Assign to comboboxes
             dur_combo['values'] = ["Any"] + unique_durs
             rate_combo['values'] = ["Any"] + unique_rates
             det_combo['values'] = ["Any"] + unique_dets
+            cat_combo['values'] = ["Any"] + unique_cats
 
         def apply_filter(*args):
-            if not self.tree.winfo_exists():
-                return
+            if not self.tree.winfo_exists(): return
             for i in self.tree.get_children(): self.tree.delete(i)
 
             query_string = search_var.get().strip().upper()
             target_dur = dur_var.get()
             target_rate = rate_var.get()
             target_det = det_var.get()
+            target_cat = cat_var.get()
 
-            # --- ADD THIS: Save current state to main app memory ---
             self.catalog_filters["search"] = search_var.get()
             self.catalog_filters["dur"] = target_dur
             self.catalog_filters["rate"] = target_rate
             self.catalog_filters["det"] = target_det
-            # -------------------------------------------------------
+            self.catalog_filters["catalog"] = target_cat
 
             for item in self.master_records:
-                # 1. Text Search Filter
-                if query_string and query_string not in item['event'].upper():
-                    continue
-                # 2. Duration Filter
-                if target_dur != "Any" and str(item['duration']) != target_dur:
-                    continue
-                # 3. Rate Filter
-                if target_rate != "Any" and str(item['rate']) != target_rate:
-                    continue
-                # 4. Detector Count Filter
+                if query_string and query_string not in item['event'].upper(): continue
+                if target_dur != "Any" and str(item['duration']) != target_dur: continue
+                if target_rate != "Any" and str(item['rate']) != target_rate: continue
+
                 item_det_count = str(item.get('num_detectors', len(item['files_dict'])))
-                if target_det != "Any" and item_det_count != target_det:
-                    continue
+                if target_det != "Any" and item_det_count != target_det: continue
 
-                self.tree.insert('', tk.END,
-                                 values=(item['event'], item['duration'], item['rate'], item['filenames_str']))
+                item_cat = str(item.get('catalog', 'Unknown'))
+                if target_cat != "Any" and item_cat != target_cat: continue
 
+                self.tree.insert('', tk.END, values=(
+                    item['event'],
+                    item_cat,
+                    item['duration'],
+                    item['rate'],
+                    item['filenames_str']
+                ))
 
         search_var.trace_add("write", apply_filter)
+        cat_combo.bind("<<ComboboxSelected>>", apply_filter)
         dur_combo.bind("<<ComboboxSelected>>", apply_filter)
         rate_combo.bind("<<ComboboxSelected>>", apply_filter)
         det_combo.bind("<<ComboboxSelected>>", apply_filter)
-
 
         def load_selected_record():
             sel = self.tree.selection()
             if not sel: return
             row_values = self.tree.item(sel[0])['values']
             chosen_event = str(row_values[0])
-            chosen_duration = str(row_values[1])
-            chosen_rate = str(row_values[2])
+            chosen_catalog = str(row_values[1])
+            chosen_duration = str(row_values[2])
+            chosen_rate = str(row_values[3])
 
             record = next((r for r in self.master_records if str(r['event']) == chosen_event
                            and str(r['duration']) == chosen_duration and str(r['rate']) == chosen_rate), None)
@@ -2395,7 +2493,6 @@ class GWExplorerApp:
 
         ttk.Button(filter_frame, text="Force Clear Cache & Re-Download Server Registry",
                    command=lambda: query_api(force_download=True)).pack(fill=tk.X, pady=5)
-
 
         query_api(force_download=False)
 
@@ -2892,6 +2989,57 @@ class GWExplorerApp:
                 self.root.after(0, lambda p=pct: self.update_pbar(det, p))
 
         with np.errstate(divide='ignore', invalid='ignore'):
+            whitened = np.where(window_sum > 1e-10, whitened / window_sum, 0.0)
+
+        return whitened
+
+
+    def whiten_by_intervals_poss(self, strain, fs, interval_sec, det):
+        N = len(strain)
+        chunk_size = int(interval_sec * fs)
+        whitened = np.zeros_like(strain)
+        window_sum = np.zeros_like(strain)
+
+        t = np.linspace(-1, 1, chunk_size)
+        win = cmst(chunk_size)
+        starts = list(range(0, N, chunk_size // 2))
+        total_steps = len(starts)
+
+        # Determine a smoothing width for the frequency domain (e.g., ~4 Hz wide)
+        # The resolution of each bin is fs / chunk_size
+        bin_resolution = fs / chunk_size
+        smooth_bins = int(4.0 / bin_resolution)
+        if smooth_bins % 2 == 0: smooth_bins += 1  # Median filter requires an odd window size
+
+        for idx, start in enumerate(starts):
+            end = start + chunk_size
+            if end > N: break
+
+            slice_data = strain[start:end] * win
+            spec = np.fft.rfft(slice_data)
+
+            # 1. Get the raw Amplitude Spectral Density (ASD)
+            mag = np.abs(spec)
+
+            # 2. Extract the smooth noise floor, ignoring sharp signal spikes
+            # A median filter traces the background noise envelope perfectly.
+            psd_smooth = scipy.ndimage.median_filter(mag, size=smooth_bins)
+
+            # 3. Whiten by dividing by the smooth noise envelope
+            with np.errstate(divide='ignore', invalid='ignore'):
+                whitened_spec = spec / (psd_smooth + EPS)
+
+            clean_chunk = np.fft.irfft(whitened_spec, n=chunk_size) * win
+
+            whitened[start:end] += clean_chunk
+            window_sum[start:end] += win * win
+
+            pct = int((idx / total_steps) * 70)
+            if idx % 5 == 0:
+                self.root.after(0, lambda p=pct: self.update_pbar(det, p))
+
+        with np.errstate(divide='ignore', invalid='ignore'):
+            # 1e-10 is the standard threshold you defined previously
             whitened = np.where(window_sum > 1e-10, whitened / window_sum, 0.0)
 
         return whitened
