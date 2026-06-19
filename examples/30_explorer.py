@@ -10,10 +10,11 @@ from scipy.interpolate import interp1d
 import tkinter as tk
 from tkinter import messagebox, filedialog, ttk
 import matplotlib
-import matplotlib.gridspec as gridspec
-from matplotlib.figure import Figure
 
 matplotlib.use('TkAgg')
+
+import matplotlib.gridspec as gridspec
+from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from gwosc.locate import get_event_urls
@@ -468,8 +469,6 @@ class GWExplorerApp:
         self.create_widgets()
 
         self.root.protocol("WM_DELETE_WINDOW", self.safe_exit)
-        self.root.bind_all("<Control-c>", lambda event: self.safe_exit())
-
 
         # Check for the specific H1 file and auto-load if present
         available_startup_files = {
@@ -635,7 +634,6 @@ class GWExplorerApp:
             pass
         self.root.quit()
         self.root.destroy()
-        sys.exit(0)
 
     # ------------------------------------------------------------------
     # UI construction
@@ -2397,7 +2395,7 @@ class GWExplorerApp:
                     messagebox.showerror("API Connection Error", f"Failed to download catalog: {str(err)}"),
                     cat_lbl.config(text="Download failed.", foreground="red")
                 ])
-                
+
         def populate_combos():
             unique_durs = sorted(list(set(str(r['duration']) for r in self.master_records)))
             unique_rates = sorted(list(set(str(r['rate']) for r in self.master_records)))
@@ -2955,7 +2953,7 @@ class GWExplorerApp:
             self.root.after(0, lambda: self.hide_pbar(det))
             self.root.after(0, lambda err=err: messagebox.showerror("Pipeline Failure", err))
 
-    def whiten_by_intervals(self, strain, fs, interval_sec, det):
+    def whiten_by_intervals_poss(self, strain, fs, interval_sec, det):
         N = len(strain)
         chunk_size = int(interval_sec * fs)
         whitened = np.zeros_like(strain)
@@ -2994,7 +2992,7 @@ class GWExplorerApp:
         return whitened
 
 
-    def whiten_by_intervals_poss(self, strain, fs, interval_sec, det):
+    def whiten_by_intervals(self, strain, fs, interval_sec, det):
         N = len(strain)
         chunk_size = int(interval_sec * fs)
         whitened = np.zeros_like(strain)
