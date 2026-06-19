@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="cmst-window",
-    version="0.1.1",
+    version="0.1.2",
     author="Aron Palmer",
     author_email="palmer.aron+cmst@gmail.com", 
     description="The analytically stable, zero-preserving, hyper-flat window.",
