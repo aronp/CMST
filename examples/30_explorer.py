@@ -7,6 +7,7 @@ import requests
 from scipy import signal
 from scipy.signal import spectrogram
 from scipy.interpolate import interp1d
+from scipy.stats import norm
 import tkinter as tk
 from tkinter import messagebox, filedialog, ttk
 import matplotlib
@@ -1117,6 +1118,43 @@ class GWExplorerApp:
             ttk.Checkbutton(flip_row, text=det, variable=self.signal_flips[det], command=self.update_all_tabs).pack(
                 side=tk.LEFT, padx=5)
 
+    def significance_from_background(self, observed, background):
+        """
+        Turn an observed statistic + array of background trials into an honest
+        significance estimate, with no Gaussianity assumption on the statistic.
+
+        Returns a dict:
+          n          number of valid background trials
+          p_value    one-sided empirical p-value, (k+1)/(n+1) corrected
+          p_is_bound True if the observation beat EVERY trial -> p is only an
+                     upper bound, limited by how many trials you ran
+          sigma      Gaussian-EQUIVALENT one-sided significance = norm.isf(p)
+          percentile where the observation sits in the background (0-100)
+        """
+        bg = np.asarray(background, dtype=float)
+        bg = bg[np.isfinite(bg)]
+        n = bg.size
+        if n == 0:
+            return {"n": 0, "p_value": np.nan, "p_is_bound": False,
+                    "sigma": np.nan, "percentile": np.nan}
+
+        # trials at least as extreme as the observation (ties count -> conservative)
+        k = int(np.sum(bg >= observed))
+
+        # (k+1)/(n+1): keeps p > 0 and treats the observation as one more draw
+        # from the null. This is the standard Monte Carlo p-value correction.
+        p_value = (k + 1.0) / (n + 1.0)
+        p_is_bound = (k == 0)
+
+        # Gaussian-equivalent sigma from the one-sided tail. Clip to avoid -inf
+        # when the observation is below the entire background.
+        sigma = float(norm.isf(min(p_value, 1.0 - 1e-12)))
+
+        percentile = 100.0 * np.sum(bg < observed) / n
+
+        return {"n": n, "p_value": p_value, "p_is_bound": p_is_bound,
+                "sigma": sigma, "percentile": percentile}
+
     def trigger_monte_carlo(self):
         if not (self.detectors["H1"]["loaded"] and self.detectors["L1"]["loaded"]):
             messagebox.showerror("Missing Data",
@@ -1162,16 +1200,17 @@ class GWExplorerApp:
             f_min = max(35.0, self.f_min.get())
             f_max = self.f_max.get()
 
-            # 1. Score the Actual Target Signal (Locked to current UI state)
+            # 1. Score the actual target signal (locked to current UI state)
             ui_offsets = {det: self.get_detector_offset_ms(det) for det in active_detectors}
             ui_flips = {det: self.signal_flips[det].get() for det in active_detectors}
 
             actual_streams = self._extract_aligned_streams(t_center, t_width, f_min, f_max, active_detectors,
                                                            ui_offsets, ui_flips)
-            if actual_streams is None: raise ValueError("Failed to extract target window.")
+            if actual_streams is None:
+                raise ValueError("Failed to extract target window.")
             actual_coherence = self.calculate_pca_network_coherence(actual_streams)
 
-            # 2. Score the Background
+            # 2. Score the background
             edge_buffer = self.whiten_interval.get() + 1.0
             valid_start = edge_buffer + (t_width / 2)
             valid_end = self.total_duration - edge_buffer - (t_width / 2)
@@ -1185,35 +1224,53 @@ class GWExplorerApp:
                 while abs(rand_center - t_center) < t_width:
                     rand_center = np.random.uniform(valid_start, valid_end)
 
-                # --- THE UNIFIED BACKGROUND SEARCH ---
-                # Step A: Find the optimal accidental alignment for this noise
+                # Step A: find the optimal accidental alignment for this noise
                 bg_offsets, bg_flips = self._find_optimal_alignments(rand_center, t_width, f_min, f_max,
                                                                      active_detectors)
 
-                # Step B: Extract the noise using those accidental alignments
+                # Step B: extract the noise using those accidental alignments
                 bg_streams = self._extract_aligned_streams(rand_center, t_width, f_min, f_max, active_detectors,
                                                            bg_offsets, bg_flips)
 
-                # Step C: Score it
+                # Step C: score it
                 if bg_streams:
-                    bg_peaks.append(self.calculate_pca_network_coherence(bg_streams))
-                else:
-                    bg_peaks.append(0.0)
+                    coh = self.calculate_pca_network_coherence(bg_streams)
+                    if np.isfinite(coh):
+                        bg_peaks.append(coh)
 
-                # Update UI Progress
+                # Update UI progress
                 if i % 50 == 0:
                     pct = int((i / iterations) * 100)
                     self.root.after(0, lambda p=pct: self.sky_result_text.set(f"Running Fast FFT MC Search... {p}%"))
 
-            # 3. Calculate Sigma
-            bg_mean = np.mean(bg_peaks)
-            bg_std = np.std(bg_peaks) + EPS
-            sigma = (actual_coherence - bg_mean) / bg_std
+            # 3. Convert to an honest significance (runs ONCE, after the loop)
+            stats = self.significance_from_background(actual_coherence, bg_peaks)
+            bg_mean = float(np.mean(bg_peaks)) if bg_peaks else float("nan")
+            bg_std = float(np.std(bg_peaks)) if bg_peaks else float("nan")
 
-            result_str = f"Coherence: {actual_coherence:.3f} | BG Mean: {bg_mean:.3f} (±{bg_std:.3f}) | Sig: {sigma:.1f}σ"
+            if stats["n"] == 0:
+                result_str = "MC failed: no valid background trials."
+                color = "red"
+            elif stats["p_is_bound"]:
+                # Observation beat all N trials -> only a lower bound is defensible.
+                result_str = (
+                    f"Coherence: {actual_coherence:.3f} | "
+                    f"BG: {bg_mean:.3f}±{bg_std:.3f} | "
+                    f"p < {stats['p_value']:.1e} | "
+                    f"Sig > {stats['sigma']:.1f}σ (capped by {stats['n']} trials)"
+                )
+                color = "green"
+            else:
+                result_str = (
+                    f"Coherence: {actual_coherence:.3f} | "
+                    f"BG: {bg_mean:.3f}±{bg_std:.3f} | "
+                    f"p = {stats['p_value']:.2e} | "
+                    f"Sig = {stats['sigma']:.1f}σ ({stats['percentile']:.1f} pctile)"
+                )
+                color = "green"
 
-            self.root.after(0, lambda: self.sky_result_text.set(result_str))
-            self.root.after(0, lambda: self.lbl_offset_result.config(foreground="green"))
+            self.root.after(0, lambda s=result_str: self.sky_result_text.set(s))
+            self.root.after(0, lambda c=color: self.lbl_offset_result.config(foreground=c))
 
         except Exception as e:
             self.root.after(0, lambda err=str(e): self.sky_result_text.set(f"MC Error: {err}"))
@@ -1747,7 +1804,7 @@ class GWExplorerApp:
         self.freq_range_label = ttk.Label(panel, text="")
         self.freq_range_label.pack(anchor=tk.W, pady=(0, 2))
         self.freq_slider = RangeSlider(
-            panel, 0, 1000, self.f_min, self.f_max,
+            panel, 0, 2000, self.f_min, self.f_max,
             command=self.on_display_control_changed, width=200, min_gap=1.0, decimals=0
         )
         self.freq_slider.pack(fill=tk.X, pady=(0, 10))
@@ -2953,7 +3010,7 @@ class GWExplorerApp:
             self.root.after(0, lambda: self.hide_pbar(det))
             self.root.after(0, lambda err=err: messagebox.showerror("Pipeline Failure", err))
 
-    def whiten_by_intervals_poss(self, strain, fs, interval_sec, det):
+    def whiten_by_intervals(self, strain, fs, interval_sec, det):
         N = len(strain)
         chunk_size = int(interval_sec * fs)
         whitened = np.zeros_like(strain)
@@ -2992,7 +3049,7 @@ class GWExplorerApp:
         return whitened
 
 
-    def whiten_by_intervals(self, strain, fs, interval_sec, det):
+    def whiten_by_intervals_poss(self, strain, fs, interval_sec, det):
         N = len(strain)
         chunk_size = int(interval_sec * fs)
         whitened = np.zeros_like(strain)
