@@ -389,3 +389,34 @@ def generate_cmst_hp_fir(taps, fs, bandwidth, freq_power=4):
     return apply_spectral_inversion(generate_cmst_fir(taps, fs, bandwidth, freq_power))
 
 
+def make_ola_50(window):
+    """
+    Converts a generic window array into a 50% overlap-add normalized window.
+    Assumes the input array length is even.
+    """
+    window = np.asarray(window, dtype=float)
+    N = len(window)
+    
+    if N % 2 != 0:
+        raise ValueError("Window length N must be an even number for a clean 50% overlap.")
+        
+    hop = N // 2
+    denom = np.zeros_like(window)
+    
+    # 1. Add the current window
+    denom += window
+    
+    # 2. Add the overlap from the previous window (shifted right into the first half)
+    denom[:hop] += window[hop:]
+    
+    # 3. Add the overlap from the next window (shifted left into the second half)
+    denom[hop:] += window[:hop]
+    
+    # 4. Apply a deep safety floor to prevent division by zero in extreme decay tails
+    denom[denom < 1e-100] = 1.0
+    
+    return window / denom
+
+
+
+
