@@ -23,7 +23,7 @@ This window is an implementation of **CMST (Cosh Moment Sturm Transform)**. Unli
 We utilize a compensated log-concave mollifier that cancels low-order curvature to achieve Flatness:
 
 $$
-w(t) = \exp\left(1+t^p - \frac{1}{1-t^p}\right), 
+w(t) = \exp\left(\frac{t^{2p}}{1-t^p}\right), 
 $$
 
 where p is even.
